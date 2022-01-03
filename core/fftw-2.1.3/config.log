@@ -1,0 +1,153 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:590: checking for a BSD compatible install
+configure:643: checking whether build environment is sane
+configure:700: checking whether make sets ${MAKE}
+configure:746: checking for working aclocal
+configure:759: checking for working autoconf
+configure:772: checking for working automake
+configure:785: checking for working autoheader
+configure:798: checking for working makeinfo
+configure:905: checking type prefix for installed files
+configure:1006: checking for vendor's cc to be used instead of gcc
+configure:1010: checking for cc
+configure:1040: checking for gcc
+configure:1153: checking whether the C compiler (cc  ) works
+configure:1169: cc -o conftest    conftest.c  1>&5
+configure:1166:1: warning: return type defaults to 'int' [-Wimplicit-int]
+ main(){return(0);}
+ ^~~~
+configure:1195: checking whether the C compiler (cc  ) is a cross-compiler
+configure:1200: checking whether we are using GNU C
+configure:1228: checking whether cc accepts -g
+configure:1262: checking whether we are using gcc 2.90 or later
+configure:1303: checking for a BSD compatible install
+configure:1356: checking whether make sets ${MAKE}
+configure:1385: checking for ranlib
+configure:1413: checking whether ln -s works
+configure:1486: checking host system type
+configure:1507: checking build system type
+configure:1536: checking for ld used by GCC
+configure:1599: checking if the linker (/usr/bin/ld) is GNU ld
+configure:1615: checking for BSD-compatible nm
+ltconfig:603: checking for object suffix
+ltconfig:604: cc -c -g -O2  conftest.c 1>&5
+ltconfig:776: checking if cc PIC flag -fPIC works
+ltconfig:777: cc -c -g -O2 -fPIC -DPIC  conftest.c 1>&5
+ltconfig:829: checking if cc supports -c -o file.o
+ltconfig:830: cc -c -g -O2 -o out/conftest2.o  conftest.c 1>&5
+ltconfig:862: checking if cc supports -c -o file.lo
+ltconfig:863: cc -c -g -O2 -c -o conftest.lo  conftest.c 1>&5
+ltconfig:914: checking if cc supports -fno-rtti -fno-exceptions
+ltconfig:915: cc -c -g -O2 -fno-rtti -fno-exceptions -c conftest.c  conftest.c 1>&5
+ltconfig:958: checking if cc static flag -static works
+ltconfig:959: cc -o conftest -g -O2   -static conftest.c  1>&5
+conftest.c:1:1: warning: return type defaults to 'int' [-Wimplicit-int]
+ main(){return(0);}
+ ^~~~
+GNU ld (GNU Binutils for Ubuntu) 2.30
+ltconfig:1592: checking if global_symbol_pipe works
+ltconfig:1593: cc -c -g -O2  conftest.c 1>&5
+conftest.c:9:1: warning: return type defaults to 'int' [-Wimplicit-int]
+ main(){nm_test_var='a';nm_test_func();return(0);}
+ ^~~~
+ltconfig:1596: eval "/usr/bin/nm -B conftest.o | sed -n -e 's/^.*[ 	]\([ABCDGISTW]\)[ 	][ 	]*\(\)\([_A-Za-z][_A-Za-z0-9]*\)$/  /p' > conftest.nm"
+ltconfig:1648: cc -o conftest -g -O2 -fno-builtin   conftest.c conftstm.o 1>&5
+configure:1813: checking for perl
+configure:1849: checking for f77
+configure:1924: checking whether the Fortran 77 compiler (f77  ) works
+configure:1937: f77 -o conftest   conftest.f  1>&5
+configure:1963: checking whether the Fortran 77 compiler (f77  ) is a cross-compiler
+configure:1968: checking whether we are using GNU Fortran 77
+configure:1992: checking whether f77 accepts -g
+configure:2023: checking for Fortran 77 libraries
+configure:2182: checking how f77 mangles function names
+configure:2192: f77 -c -g -O2 mangle-func.f 1>&5
+configure:2220: cc -o conftest -g -O2   conftest.c mangle-func.o  -l gfortran -l m -L/usr/lib/gcc/x86_64-linux-gnu/7 -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/7/../../.. -lgfortran -lm -lgcc_s -lquadmath -lm  1>&5
+configure: In function 'main':
+configure:2216:1: warning: implicit declaration of function 'foobar' [-Wimplicit-function-declaration]
+ foobar();
+ ^~~~~~
+/tmp/ccYoAJ8e.o: In function `main':
+/home/kliment/git/ftdock-mod-plus/fftw-2.1.3/configure:2216: undefined reference to `foobar'
+collect2: error: ld returned 1 exit status
+configure: failed program was:
+#line 2213 "configure"
+#include "confdefs.h"
+
+int main() {
+foobar();
+; return 0; }
+configure:2235: cc -o conftest -g -O2   conftest.c mangle-func.o  -l gfortran -l m -L/usr/lib/gcc/x86_64-linux-gnu/7 -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/7/../../.. -lgfortran -lm -lgcc_s -lquadmath -lm  1>&5
+configure: In function 'main':
+configure:2231:1: warning: implicit declaration of function 'foobar_' [-Wimplicit-function-declaration]
+ foobar_();
+ ^~~~~~~
+configure:2322: checking if f77 functions with an underscore get an extra underscore
+configure:2342: cc -o conftest -g -O2   conftest.c mangle-func.o  -l gfortran -l m -L/usr/lib/gcc/x86_64-linux-gnu/7 -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/7/../../.. -lgfortran -lm -lgcc_s -lquadmath -lm  1>&5
+configure: In function 'main':
+configure:2338:1: warning: implicit declaration of function 'foo_bar__' [-Wimplicit-function-declaration]
+ $mangle_try();
+ ^~~~~~~~~
+/tmp/ccES6DEj.o: In function `main':
+/home/kliment/git/ftdock-mod-plus/fftw-2.1.3/configure:2338: undefined reference to `foo_bar__'
+collect2: error: ld returned 1 exit status
+configure: failed program was:
+#line 2335 "configure"
+#include "confdefs.h"
+
+int main() {
+foo_bar__();
+; return 0; }
+configure:2444: checking whether cc accepts -malign-double
+configure:2471: checking whether cc accepts -fstrict-aliasing
+configure:2769: checking whether cc accepts -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing
+configure:2812: checking whether cc accepts -mpreferred-stack-boundary=4
+configure:2837: checking whether the stack is correctly aligned by gcc
+configure:2857: cc -o conftest -O -malign-double   conftest.c  1>&5
+configure:2922: checking for sqrt in -lm
+configure:2970: checking how to run the C preprocessor
+configure:3050: checking for ANSI C header files
+configure:3157: checking for sys/time.h
+configure:3157: checking for unistd.h
+configure:3157: checking for getopt.h
+configure:3157: checking for malloc.h
+configure:3195: checking for working const
+configure:3270: checking for size_t
+configure:3303: checking whether time.h and sys/time.h may both be included
+configure:3355: checking for working alloca.h
+configure:3388: checking for alloca
+configure:3589: checking for gettimeofday
+configure:3644: checking for BSDgettimeofday
+configure:3699: checking for gethrtime
+configure:3754: checking for getopt
+configure:3809: checking for getopt_long
+configure:3863: checking for isnan
+configure:3873: cc -o conftest -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing   conftest.c -lm  1>&5
+configure:3894: checking for hrtime_t
+configure:3907: cc -o conftest -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing   conftest.c -lm  1>&5
+configure: In function 'main':
+configure:3903:1: error: unknown type name 'hrtime_t'; did you mean 'time_t'?
+ hrtime_t foobar;
+ ^~~~~~~~
+ time_t
+configure:3903:10: warning: unused variable 'foobar' [-Wunused-variable]
+ hrtime_t foobar;
+          ^~~~~~
+configure: failed program was:
+#line 3896 "configure"
+#include "confdefs.h"
+
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
+int main() {
+hrtime_t foobar;
+; return 0; }
+configure:3926: checking size of int
+configure:3965: checking size of long long
+configure:4023: checking whether cc accepts -fkeep-programmers-inline
+configure:4049: checking whether cc accepts -vomit-frame-pointer
+configure:4740: checking for mpicc

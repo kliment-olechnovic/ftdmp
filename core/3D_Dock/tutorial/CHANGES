@@ -1,0 +1,4 @@
+removed residues 1 and 58 (all but N) of 5pti
+
+changed ChainIDs to match 2kai
+5pti.parsed :	_ -> I
