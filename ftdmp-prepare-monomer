@@ -1,0 +1,235 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-prepare-monomer' prepares a monomer structure for docking with 'ftdmp-dock'
+
+Options:
+    --input | -i              string  *  input file path
+    --output | -o             string  *  output file path
+    --restrict-input          string     query to restrict input atoms, default is '[]'
+    --randomize                          flag to center and pseudo-randomly spin the structure
+    --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
+    --voronota-js-path        string     voronota-js executables path, default is ''
+    --prepare-for-relax                  flag to make structure ready for relaxation by adding missing heavy and hydrogen atoms
+    --conda-path              string     conda installation path needed to prepare for relaxation, default is ''
+    --conda-env               string     conda environment name needed to prepare for relaxation, default is ''
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+    ftdmp-prepare-monomer --input model.pdb --output prepared_model.pdb --restrict-input '[-chain A]' \
+      --randomize --voronota-js-path ~/git/voronota/expansion_js \
+      --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+INFILE=""
+OUTFILE=""
+RESTRICT_INPUT="[]"
+RANDOM_SEED="1"
+VORONOTA_JS_PATH=""
+CONDA_PATH=""
+CONDA_ENV=""
+RANDOMIZE="false"
+PREPARE_FOR_RELAX="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-i|--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	-o|--output)
+		OUTFILE="$OPTARG"
+		shift
+		;;
+	--restrict-input)
+		RESTRICT_INPUT="$OPTARG"
+		shift
+		;;
+	--random-seed)
+		RANDOM_SEED="$OPTARG"
+		shift
+		;;
+	--voronota-js-path)
+		VORONOTA_JS_PATH="$OPTARG"
+		shift
+		;;
+	--conda-path)
+		CONDA_PATH="$OPTARG"
+		shift
+		;;
+	--conda-env)
+		CONDA_ENV="$OPTARG"
+		shift
+		;;
+	--randomize)
+		RANDOMIZE="true"
+		;;
+	--prepare-for-relax)
+		PREPARE_FOR_RELAX="true"
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE" ]
+then
+	echo >&2 "Error: input file path not provided"
+	exit 1
+fi
+
+if [ -z "$OUTFILE" ]
+then
+	echo >&2 "Error: output file path not provided"
+	exit 1
+fi
+
+if [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+if [ -n "$VORONOTA_JS_PATH" ]
+then
+	export PATH=${VORONOTA_JS_PATH}:${PATH}
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+if [ "$RESTRICT_INPUT" != "[]" ] || [ "$RANDOMIZE" == "true" ]
+then
+	command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+	
+	{
+cat << EOF
+params={}
+params.input_file='$INFILE';
+params.output_file='$TMPLDIR/restricted_and_randomized_structure.pdb';
+params.restrict_input_atoms='$RESTRICT_INPUT';
+params.random_seed='$RANDOM_SEED';
+params.randomize='$RANDOMIZE';
+EOF
+
+cat << 'EOF'
+voronota_import("-file", params.input_file, "-include-heteroatoms");
+voronota_assert_partial_success("Failed to import file");
+
+voronota_restrict_atoms("-use", params.restrict_input_atoms);
+voronota_assert_full_success("Failed to restrict input atoms by the input query");
+
+voronota_setup_random_seed("-seed", params.random_seed);
+voronota_assert_full_success("Failed to setup random seed");
+
+if(params.randomize==="true")
+{
+	voronota_center_atoms();
+	voronota_assert_full_success("Failed to center atoms");
+	
+	voronota_move_atoms("-rotate-randomly");
+	voronota_assert_full_success("Failed to randomly rotate atoms");
+}
+
+voronota_export_atoms("-file", params.output_file, "-as-pdb");
+voronota_assert_full_success("Failed to export atoms");
+EOF
+	} | voronota-js --no-setup-defaults
+
+	if [ ! -s "$TMPLDIR/restricted_and_randomized_structure.pdb" ]
+	then
+		echo >&2 "Error: failed to restrict and randomize structure"
+		exit 1
+	fi
+else
+	cat "$INFILE" > "$TMPLDIR/restricted_and_randomized_structure.pdb"
+fi
+
+if [ "$PREPARE_FOR_RELAX" == "true" ]
+then
+	command -v voronota-js-focused-relax-with-openmm &> /dev/null || { echo >&2 "Error: 'voronota-js-focused-relax-with-openmm' executable not in binaries path"; exit 1; }
+	
+	if [ -z "$CONDA_DEFAULT_ENV" ]
+	then
+		if [ -z "$CONDA_PATH" ]
+		then
+			echo >&2 "Error: not in conda environment, and the conda path is not provided"
+			exit 1
+		fi
+		if [ ! -s "${CONDA_PATH}/bin/activate" ]
+		then
+			echo >&2 "Error: no conda activation script '${CONDA_PATH}/bin/activate'"
+			exit 1
+		fi
+		source "${CONDA_PATH}/bin/activate"
+	fi
+	
+	if [ -n "$CONDA_ENV" ]
+	then
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			conda activate "$CONDA_ENV"
+		fi
+		
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			echo >&2 "Error: no '$CONDA_ENV' environment"
+			exit 1
+		fi
+	fi
+	
+	voronota-js-focused-relax-with-openmm \
+	  --no-simulation \
+	  --forcefield amber14-all \
+	  --trim-output \
+	  --input "$TMPLDIR/restricted_and_randomized_structure.pdb" \
+	  --output "$TMPLDIR/relaxable_structure.pdb"
+	
+	if [ ! -s "$TMPLDIR/relaxable_structure.pdb" ]
+	then
+		echo >&2 "Error: failed to prepare structure for relaxation"
+		exit 1
+	fi
+else
+	mv "$TMPLDIR/restricted_and_randomized_structure.pdb" "$TMPLDIR/relaxable_structure.pdb"
+fi
+
+mkdir -p "$(dirname "$OUTFILE")"
+mv "$TMPLDIR/relaxable_structure.pdb" "$OUTFILE"
+
