@@ -1,0 +1,195 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-dock' produces many dimeric structures by docking two monomeric structures
+
+Options:
+    --input1 | -i1            string  *  monomer 1 input file path
+    --input2 | -i2            string  *  monomer 2 input file path
+    --output | -o             string  *  output directory path
+    --parallel-parts          number     total number of parallel parts, default is 1
+    --parallel-id             number     ID of the parallel part to process, default is '' for processing all parts
+    --voronota-js-path        string     voronota-js executables path, default is ''
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+    ftdmp-dock --input1 monomer1.pdb --input2 monomer1.pdb --output docking_results \
+      --parallel-parts 16 --voronota-js-path ~/git/voronota/expansion_js
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	FTDMPDIR="$(pwd)"
+	export PATH="${FTDMPDIR}:${PATH}"
+	if [ -d "${FTDMPDIR}/core/3D_Dock" ]
+	then
+		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}/core/3D_Dock/scripts:${PATH}"
+	fi
+	cd - &> /dev/null
+fi
+
+command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
+command -v build &> /dev/null || { echo >&2 "Error: 'build' executable not in binaries path"; exit 1; }
+command -v preprocess-pdb.perl &> /dev/null || { echo >&2 "Error: 'preprocess-pdb.perl' executable not in binaries path"; exit 1; }
+
+INFILE1=""
+INFILE2=""
+OUTDIR=""
+PARALLEL_PARTS="1"
+PARALLEL_ID=""
+VORONOTA_JS_PATH=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-i1|--input1)
+		INFILE1="$OPTARG"
+		shift
+		;;
+	-i2|--input2)
+		INFILE2="$OPTARG"
+		shift
+		;;
+	-o|--output)
+		OUTDIR="$OPTARG"
+		shift
+		;;
+	--parallel-parts)
+		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--parallel-id)
+		PARALLEL_ID="$OPTARG"
+		shift
+		;;
+	--voronota-js-path)
+		VORONOTA_JS_PATH="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE1" ]
+then
+	echo >&2 "Error: no static input file specified"
+	exit 1
+fi
+
+if [ ! -s "$INFILE1" ]
+then
+	echo >&2 "Error: no static input file '$INFILE1'"
+	exit 1
+fi
+
+if [ -z "$INFILE2" ]
+then
+	echo >&2 "Error: no static input file specified"
+	exit 1
+fi
+
+if [ ! -s "$INFILE2" ]
+then
+	echo >&2 "Error: no mobile input file '$INFILE2'"
+	exit 1
+fi
+
+if [ -z "$OUTDIR" ]
+then
+	echo >&2 "Error: no output directoty specified"
+	exit 1
+fi
+
+if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
+then
+	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
+	exit 1
+fi
+
+if [ -z "$PARALLEL_ID" ]
+then
+	seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --parallel-id
+	exit 0
+fi
+
+if [ "$PARALLEL_ID" -ne "$PARALLEL_ID" ] || [ "$PARALLEL_ID" -lt "1" ] || [ "$PARALLEL_ID" -gt "$PARALLEL_PARTS" ]
+then
+	echo >&2 "Error: invalid parallel part ID '$PARALLEL_ID', must be a positive number less than the total number of parts ($PARALLEL_PARTS)"
+	exit 1
+fi
+
+if [ -n "$VORONOTA_JS_PATH" ]
+then
+	export PATH=${VORONOTA_JS_PATH}:${PATH}
+fi
+
+command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+
+OUTDIR="${OUTDIR}/part${PARALLEL_ID}"
+mkdir -p "$OUTDIR"
+
+cp "$INFILE1" "$OUTDIR/monomer1.pdb"
+cp "$INFILE2" "$OUTDIR/monomer2.pdb"
+
+cd "$OUTDIR"
+
+preprocess-pdb.perl -pdb monomer1.pdb &> log_preprocess_pdb_monomer1.txt
+preprocess-pdb.perl -pdb monomer2.pdb &> log_preprocess_pdb_monomer2.txt
+
+rm "monomer1.pdb" "monomer2.pdb"
+
+if [ ! -s "monomer1.parsed" ]
+then
+	echo >&2 "Error: failed to prepare monomer 1"
+	exit 1
+fi
+
+if [ ! -s "monomer2.parsed" ]
+then
+	echo >&2 "Error: failed to prepare monomer 2"
+	exit 1
+fi
+
+ftdock -static monomer1.parsed -mobile monomer2.parsed -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+
+build -in ftdock_global.dat &> log_build.txt
+
+mkdir -p ./complexes
+
+find ./ -type f -name 'Complex_*.pdb' \
+| while read -r fname
+do
+	mv "$fname" "./complexes/part${PARALLEL_ID}_$(basename $fname)"
+done
+
