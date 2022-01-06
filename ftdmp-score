@@ -1,0 +1,124 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-score' evaluates docking results produced by 'ftdmp-dock'
+
+Options:
+    --input                   string  *  input file path
+    --monomers-prefix         string     monomer files prefix, default is ''
+    --parallel-parts          number     total number of parallel parts, default is 1
+    --voronota-js-path        string     voronota-js executables path, default is ''
+    --help | -h                          flag to display help message and exit
+
+Example:
+
+    ftdmp-score --input docking_results_table.txt --monomers-prefix monomers/ \
+      --processors 16 --voronota-js-path ~/git/voronota/expansion_js
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+INFILE=""
+MONOMERS_PREFIX=""
+PARALLEL_PARTS="1"
+VORONOTA_JS_PATH=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--monomers-prefix)
+		MONOMERS_PREFIX="$OPTARG"
+		shift
+		;;
+	--parallel-parts)
+		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--voronota-js-path)
+		VORONOTA_JS_PATH="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE" ]
+then
+	echo >&2 "Error: no input file specified"
+	exit 1
+fi
+
+if [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: no input file '$INFILE1'"
+	exit 1
+fi
+
+if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
+then
+	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
+	exit 1
+fi
+
+if [ -n "$VORONOTA_JS_PATH" ]
+then
+	export PATH=${VORONOTA_JS_PATH}:${PATH}
+fi
+
+command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+mkdir -p "${TMPLDIR}/docklines"
+
+cat "$INFILE" \
+| awk '{if($4!="totalspan"){print $0}}' \
+| while read -r DOCKLINE_id DOCKLINE_static DOCKLINE_mobile DOCKLINE_totalspan DOCKLINE_gridsize  DOCKLINE_scscore DOCKLINE_x DOCKLINE_y DOCKLINE_z DOCKLINE_a1 DOCKLINE_a2 DOCKLINE_a3
+do
+	DOCKLINE_scale="$(echo $DOCKLINE_totalspan $DOCKLINE_gridsize | awk '{print $1/$2}')"
+	
+	echo "import-docking-result -static-file ${MONOMERS_PREFIX}${DOCKLINE_static} -mobile-file ${MONOMERS_PREFIX}${DOCKLINE_mobile} -ftdock-transform ${DOCKLINE_scale} ${DOCKLINE_x} ${DOCKLINE_y} ${DOCKLINE_z} ${DOCKLINE_a1} ${DOCKLINE_a2} ${DOCKLINE_a3}" \
+	> "${TMPLDIR}/docklines/${DOCKLINE_id}"
+done
+
+find "${TMPLDIR}/docklines" -type f -not -empty \
+| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS"
+

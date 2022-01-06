@@ -16,5 +16,14 @@ rm -rf ./test/docking_results
   --logs-output ./test/docking_results \
   --voronota-js-path ~/git/voronota/expansion_js \
   --parallel-parts 16 \
-| wc -l
+| column -t \
+> ./test/docking_table.txt
+
+./ftdmp-score \
+ --input ./test/docking_table.txt \
+ --monomers-prefix ./test/monomers/ \
+ --parallel-parts 16 \
+ --voronota-js-path ~/git/voronota/expansion_js \
+| column -t \
+> ./test/scoring_table.txt
 

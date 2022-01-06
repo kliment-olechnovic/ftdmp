@@ -159,8 +159,8 @@ then
 	seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id
 	
 	{
-	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq
-	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 5,5 | tac
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 5,5 | tac | awk '{print NR " " $0}'
 	} \
 	> "${OUTDIR}/all_parts_results_table.txt"
 	
@@ -218,7 +218,6 @@ cat ftdock_global.dat | egrep '^G_DATA' \
 | awk -v gridsize="$FTDOCK_GRID_SIZE" -v totalspan="$FTDOCK_TOTAL_SPAN" '{print totalspan " " gridsize " " $4 " " $6 " " $7 " " $8 " " $9 " " $10 " " $11}' \
 | sed "s|^|${INNAME1} ${INNAME2} |"
 } \
-| column -t \
 > "part_results_table.txt"
 
 rm ./monomer*.pdb
