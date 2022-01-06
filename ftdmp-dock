@@ -9,7 +9,7 @@ cat >&2 << 'EOF'
 Options:
     --input1 | -i1            string  *  monomer 1 input file path
     --input2 | -i2            string  *  monomer 2 input file path
-    --output | -o             string  *  output directory path
+    --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
     --parallel-id             number     ID of the parallel part to process, default is '' for processing all parts
     --voronota-js-path        string     voronota-js executables path, default is ''
@@ -44,8 +44,8 @@ then
 	cd - &> /dev/null
 fi
 
+command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
 command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
-command -v build &> /dev/null || { echo >&2 "Error: 'build' executable not in binaries path"; exit 1; }
 
 INFILE1=""
 INFILE2=""
@@ -69,7 +69,7 @@ do
 		INFILE2="$OPTARG"
 		shift
 		;;
-	-o|--output)
+	--logs-output)
 		OUTDIR="$OPTARG"
 		shift
 		;;
@@ -124,28 +124,19 @@ then
 	exit 1
 fi
 
-if [ -z "$OUTDIR" ]
-then
-	echo >&2 "Error: no output directoty specified"
-	exit 1
-fi
-
 if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
 then
 	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
 	exit 1
 fi
 
-if [ -z "$PARALLEL_ID" ]
+if [ -n "$PARALLEL_ID" ]
 then
-	seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --parallel-id
-	exit 0
-fi
-
-if [ "$PARALLEL_ID" -ne "$PARALLEL_ID" ] || [ "$PARALLEL_ID" -lt "1" ] || [ "$PARALLEL_ID" -gt "$PARALLEL_PARTS" ]
-then
-	echo >&2 "Error: invalid parallel part ID '$PARALLEL_ID', must be a positive number less than the total number of parts ($PARALLEL_PARTS)"
-	exit 1
+	if [ "$PARALLEL_ID" -ne "$PARALLEL_ID" ] || [ "$PARALLEL_ID" -lt "1" ] || [ "$PARALLEL_ID" -gt "$PARALLEL_PARTS" ]
+	then
+		echo >&2 "Error: invalid parallel part ID '$PARALLEL_ID', must be a positive number less than the total number of parts ($PARALLEL_PARTS)"
+		exit 1
+	fi
 fi
 
 if [ -n "$VORONOTA_JS_PATH" ]
@@ -153,14 +144,37 @@ then
 	export PATH=${VORONOTA_JS_PATH}:${PATH}
 fi
 
-command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+if [ -z "$OUTDIR" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	OUTDIR="${TMPLDIR}/docking"
+fi
+
+if [ -z "$PARALLEL_ID" ]
+then
+	seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id
+	
+	{
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 5,5 | tac
+	} \
+	> "${OUTDIR}/all_parts_results_table.txt"
+	
+	cat "${OUTDIR}/all_parts_results_table.txt"
+	
+	exit 0
+fi
 
 OUTDIR="${OUTDIR}/part${PARALLEL_ID}"
 mkdir -p "$OUTDIR"
 
 ftdmp-prepare-monomer --input "$INFILE1" --output "$OUTDIR/monomer1"
 
-if [ ! -s "$OUTDIR/monomer1__full.pdb" ] || [ ! -s "$OUTDIR/monomer1__for_ftdock.pdb" ]
+if [ ! -s "$OUTDIR/monomer1__for_ftdock.pdb" ]
 then
 	echo >&2 "Error: failed to prepare monomer 1"
 	exit 1
@@ -168,7 +182,7 @@ fi
 
 ftdmp-prepare-monomer --input "$INFILE2" --output "$OUTDIR/monomer2"
 
-if [ ! -s "$OUTDIR/monomer2__full.pdb" ] || [ ! -s "$OUTDIR/monomer2__for_ftdock.pdb" ]
+if [ ! -s "$OUTDIR/monomer2__for_ftdock.pdb" ]
 then
 	echo >&2 "Error: failed to prepare monomer 1"
 	exit 1
@@ -178,13 +192,34 @@ cd "$OUTDIR"
 
 ftdock -static monomer1__for_ftdock.pdb -mobile monomer2__for_ftdock.pdb -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
 
-build -in ftdock_global.dat &> log_build.txt
+if [ ! -s "ftdock_global.dat" ]
+then
+	echo >&2 "Error: failed to run ftdock"
+	exit 1
+fi
 
-mkdir -p ./complexes
+FTDOCK_GRID_SIZE="$(cat ftdock_global.dat | egrep '^Global grid size ' | awk '{print $5}')"
 
-find ./ -type f -name 'Complex_*.pdb' \
-| while read -r fname
-do
-	mv "$fname" "./complexes/part${PARALLEL_ID}_$(basename $fname)"
-done
+FTDOCK_TOTAL_SPAN="$(cat ftdock_global.dat | egrep '^Global total span ' | awk '{print $6}')"
+
+if [ -z "$FTDOCK_GRID_SIZE" ] || [ -z "$FTDOCK_TOTAL_SPAN" ] || [ "$FTDOCK_GRID_SIZE" -ne "$FTDOCK_GRID_SIZE" ]
+then
+	echo >&2 "Error: failed to read ftdock grid parameters"
+	exit 1
+fi
+
+INNAME1="$(basename $INFILE1)"
+INNAME2="$(basename $INFILE2)"
+
+{
+echo "static mobile totalspan gridsize scscore x y z a1 a2 a3"
+
+cat ftdock_global.dat | egrep '^G_DATA' \
+| awk -v gridsize="$FTDOCK_GRID_SIZE" -v totalspan="$FTDOCK_TOTAL_SPAN" '{print totalspan " " gridsize " " $4 " " $6 " " $7 " " $8 " " $9 " " $10 " " $11}' \
+| sed "s|^|${INNAME1} ${INNAME2} |"
+} \
+| column -t \
+> "part_results_table.txt"
+
+rm ./monomer*.pdb
 
