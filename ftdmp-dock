@@ -37,16 +37,15 @@ then
 	cd $(dirname $ZEROARG)
 	FTDMPDIR="$(pwd)"
 	export PATH="${FTDMPDIR}:${PATH}"
-	if [ -d "${FTDMPDIR}/core/3D_Dock" ]
+	if [ -d "${FTDMPDIR}/core/3D_Dock/progs" ]
 	then
-		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}/core/3D_Dock/scripts:${PATH}"
+		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${PATH}"
 	fi
 	cd - &> /dev/null
 fi
 
 command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
 command -v build &> /dev/null || { echo >&2 "Error: 'build' executable not in binaries path"; exit 1; }
-command -v preprocess-pdb.perl &> /dev/null || { echo >&2 "Error: 'preprocess-pdb.perl' executable not in binaries path"; exit 1; }
 
 INFILE1=""
 INFILE2=""
@@ -159,29 +158,25 @@ command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'vo
 OUTDIR="${OUTDIR}/part${PARALLEL_ID}"
 mkdir -p "$OUTDIR"
 
-cp "$INFILE1" "$OUTDIR/monomer1.pdb"
-cp "$INFILE2" "$OUTDIR/monomer2.pdb"
+ftdmp-prepare-monomer --input "$INFILE1" --output "$OUTDIR/monomer1"
 
-cd "$OUTDIR"
-
-preprocess-pdb.perl -pdb monomer1.pdb &> log_preprocess_pdb_monomer1.txt
-preprocess-pdb.perl -pdb monomer2.pdb &> log_preprocess_pdb_monomer2.txt
-
-rm "monomer1.pdb" "monomer2.pdb"
-
-if [ ! -s "monomer1.parsed" ]
+if [ ! -s "$OUTDIR/monomer1__full.pdb" ] || [ ! -s "$OUTDIR/monomer1__for_ftdock.pdb" ]
 then
 	echo >&2 "Error: failed to prepare monomer 1"
 	exit 1
 fi
 
-if [ ! -s "monomer2.parsed" ]
+ftdmp-prepare-monomer --input "$INFILE2" --output "$OUTDIR/monomer2"
+
+if [ ! -s "$OUTDIR/monomer2__full.pdb" ] || [ ! -s "$OUTDIR/monomer2__for_ftdock.pdb" ]
 then
-	echo >&2 "Error: failed to prepare monomer 2"
+	echo >&2 "Error: failed to prepare monomer 1"
 	exit 1
 fi
 
-ftdock -static monomer1.parsed -mobile monomer2.parsed -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+cd "$OUTDIR"
+
+ftdock -static monomer1__for_ftdock.pdb -mobile monomer2__for_ftdock.pdb -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
 
 build -in ftdock_global.dat &> log_build.txt
 

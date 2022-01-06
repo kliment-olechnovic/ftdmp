@@ -8,7 +8,7 @@ cat >&2 << 'EOF'
 
 Options:
     --input | -i              string  *  input file path
-    --output | -o             string  *  output file path
+    --output | -o             string  *  output file path prefix
     --restrict-input          string     query to restrict input atoms, default is '[]'
     --randomize                          flag to center and pseudo-randomly spin the structure
     --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
@@ -20,7 +20,10 @@ Options:
 
 Examples:
 
-    ftdmp-prepare-monomer --input model.pdb --output prepared_model.pdb --restrict-input '[-chain A]' \
+	ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model \
+	  --voronota-js-path ~/git/voronota/expansion_js
+
+    ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model --restrict-input '[-chain A]' \
       --randomize --voronota-js-path ~/git/voronota/expansion_js \
       --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
 
@@ -131,37 +134,37 @@ then
 	export PATH=${VORONOTA_JS_PATH}:${PATH}
 fi
 
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
 if [ "$RESTRICT_INPUT" != "[]" ] || [ "$RANDOMIZE" == "true" ]
 then
-	command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
-	
 	{
 cat << EOF
 params={}
 params.input_file='$INFILE';
-params.output_file='$TMPLDIR/restricted_and_randomized_structure.pdb';
+params.output_file='$TMPLDIR/structure_stage1.pdb';
 params.restrict_input_atoms='$RESTRICT_INPUT';
 params.random_seed='$RANDOM_SEED';
 params.randomize='$RANDOMIZE';
 EOF
 
 cat << 'EOF'
-voronota_import("-file", params.input_file, "-include-heteroatoms");
+voronota_import("-file", params.input_file, "-include-heteroatoms", "-include-hydrogens");
 voronota_assert_partial_success("Failed to import file");
 
 voronota_restrict_atoms("-use", params.restrict_input_atoms);
 voronota_assert_full_success("Failed to restrict input atoms by the input query");
 
-voronota_setup_random_seed("-seed", params.random_seed);
-voronota_assert_full_success("Failed to setup random seed");
-
 if(params.randomize==="true")
 {
-	voronota_center_atoms();
+	voronota_center_atoms("-use", "[-non-hydrogen]", "-mean-for-origin");
 	voronota_assert_full_success("Failed to center atoms");
+	
+	voronota_setup_random_seed("-seed", params.random_seed);
+	voronota_assert_full_success("Failed to setup random seed");
 	
 	voronota_move_atoms("-rotate-randomly");
 	voronota_assert_full_success("Failed to randomly rotate atoms");
@@ -172,13 +175,13 @@ voronota_assert_full_success("Failed to export atoms");
 EOF
 	} | voronota-js --no-setup-defaults
 
-	if [ ! -s "$TMPLDIR/restricted_and_randomized_structure.pdb" ]
+	if [ ! -s "$TMPLDIR/structure_stage1.pdb" ]
 	then
-		echo >&2 "Error: failed to restrict and randomize structure"
+		echo >&2 "Error: failed stage 1 of structure preparation"
 		exit 1
 	fi
 else
-	cat "$INFILE" > "$TMPLDIR/restricted_and_randomized_structure.pdb"
+	cat "$INFILE" > "$TMPLDIR/structure_stage1.pdb"
 fi
 
 if [ "$PREPARE_FOR_RELAX" == "true" ]
@@ -218,18 +221,55 @@ then
 	  --no-simulation \
 	  --forcefield amber14-all \
 	  --trim-output \
-	  --input "$TMPLDIR/restricted_and_randomized_structure.pdb" \
-	  --output "$TMPLDIR/relaxable_structure.pdb"
+	  --input "$TMPLDIR/structure_stage1.pdb" \
+	  --output "$TMPLDIR/structure_stage2.pdb"
 	
-	if [ ! -s "$TMPLDIR/relaxable_structure.pdb" ]
+	if [ ! -s "$TMPLDIR/structure_stage2.pdb" ]
 	then
-		echo >&2 "Error: failed to prepare structure for relaxation"
+		echo >&2 "Error: failed stage 2 of structure preparation"
 		exit 1
 	fi
 else
-	mv "$TMPLDIR/restricted_and_randomized_structure.pdb" "$TMPLDIR/relaxable_structure.pdb"
+	mv "$TMPLDIR/structure_stage1.pdb" "$TMPLDIR/structure_stage2.pdb"
+fi
+
+{
+cat << EOF
+params={}
+params.input_file='$TMPLDIR/structure_stage2.pdb';
+params.output_file_full='$TMPLDIR/structure_stage3a.pdb';
+params.output_file_for_ftdock='$TMPLDIR/structure_stage3b.pdb';
+EOF
+
+cat << 'EOF'
+voronota_import("-file", params.input_file, "-include-heteroatoms", "-include-hydrogens");
+voronota_assert_partial_success("Failed to import file");
+
+voronota_center_atoms("-use", "[-non-hydrogen]", "-mean-for-origin");
+voronota_assert_full_success("Failed to center atoms");
+
+voronota_export_atoms("-file", params.output_file_full, "-as-pdb");
+voronota_assert_full_success("Failed to export atoms");
+
+voronota_delete_tags_of_atoms("-tags", "het");
+voronota_assert_full_success("Failed to set all heteroatoms as ordinary atoms");
+
+voronota_restrict_atoms("-use", "[-non-hydrogen]");
+voronota_assert_full_success("Failed to restrict atoms to non-hydrogen atoms");
+
+voronota_export_atoms("-file", params.output_file_for_ftdock, "-as-pdb");
+voronota_assert_full_success("Failed to export atoms");
+
+EOF
+} | voronota-js --no-setup-defaults
+
+if [ ! -s "$TMPLDIR/structure_stage3a.pdb" ] || [ ! -s "$TMPLDIR/structure_stage3b.pdb" ]
+then
+	echo >&2 "Error: failed stage 3 of structure preparation"
+	exit 1
 fi
 
 mkdir -p "$(dirname "$OUTFILE")"
-mv "$TMPLDIR/relaxable_structure.pdb" "$OUTFILE"
+mv "$TMPLDIR/structure_stage3a.pdb" "${OUTFILE}__full.pdb"
+mv "$TMPLDIR/structure_stage3b.pdb" "${OUTFILE}__for_ftdock.pdb"
 
