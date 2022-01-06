@@ -107,18 +107,19 @@ command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'vo
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
+cat "$INFILE" > "${TMPLDIR}/input"
+
 mkdir -p "${TMPLDIR}/docklines"
 
-cat "$INFILE" \
-| awk '{if($4!="totalspan"){print $0}}' \
-| while read -r DOCKLINE_id DOCKLINE_static DOCKLINE_mobile DOCKLINE_totalspan DOCKLINE_gridsize  DOCKLINE_scscore DOCKLINE_x DOCKLINE_y DOCKLINE_z DOCKLINE_a1 DOCKLINE_a2 DOCKLINE_a3
-do
-	DOCKLINE_scale="$(echo $DOCKLINE_totalspan $DOCKLINE_gridsize | awk '{print $1/$2}')"
-	
-	echo "import-docking-result -static-file ${MONOMERS_PREFIX}${DOCKLINE_static} -mobile-file ${MONOMERS_PREFIX}${DOCKLINE_mobile} -ftdock-transform ${DOCKLINE_scale} ${DOCKLINE_x} ${DOCKLINE_y} ${DOCKLINE_z} ${DOCKLINE_a1} ${DOCKLINE_a2} ${DOCKLINE_a3}" \
-	> "${TMPLDIR}/docklines/${DOCKLINE_id}"
-done
+cd "${TMPLDIR}/docklines"
+
+cat ../input \
+| awk -v mprefix="$MONOMERS_PREFIX" '{if($4!="totalspan"){print "import-docking-result -static-file " mprefix $2 " -mobile-file " mprefix $3 " -ftdock-transform " ($4/$5) " " $7 " " $8 " " $9 " " $10 " " $11 " " $12}}' \
+| split -l 1 --numeric-suffixes=1 -a 10
+
+cd - &> /dev/null
 
 find "${TMPLDIR}/docklines" -type f -not -empty \
-| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS"
+| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" \
+| sed 's/^x0\+//'
 
