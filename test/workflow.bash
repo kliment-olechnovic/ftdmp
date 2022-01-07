@@ -74,8 +74,8 @@ echo "Sorting joined table"
 
 time -p (cat ./test/output/all_joined_results_table.txt \
 | ./ftdmp-sort-table \
-  --columns "-DM_iface_energy -DM_iface_clash_score -BM_iface_energy" \
-  --tolerances "0 0.07 50" \
+  --columns "-DM_iface_energy -DM_iface_clash_score" \
+  --tolerances "0 0.05" \
 | column -t \
 > ./test/output/all_sorted_joined_results_table.txt)
 

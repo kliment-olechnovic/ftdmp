@@ -180,7 +180,7 @@ fi
 
 cd "$OUTDIR"
 
-ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -keep 1 -angle_step 9 -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
 
 if [ ! -s "ftdock_global.dat" ]
 then
