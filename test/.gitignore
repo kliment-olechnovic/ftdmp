@@ -1,2 +1,3 @@
-/output/docking_results/part*
+/output/docking_results
 /output/complexes
+/output/all_*
