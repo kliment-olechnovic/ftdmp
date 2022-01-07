@@ -44,20 +44,6 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 > ./test/output/all_scoring_results_table.txt)
 
 
-#echo
-#echo "Scoring in default mode with side-chain rebuilding"
-#
-#time -p (cat ./test/output/all_docking_results_table.txt \
-#| ./ftdmp-score \
-#  -m1 ./test/output/monomers/6V3P_A.pdb \
-#  -m2 ./test/output/monomers/6V3P_B.pdb \
-#  --parallel-parts 16 \
-#  --colnames-prefix DMsr_ \
-#  --parameters '--run-faspr ./core/FASPR/FASPR' \
-#| column -t \
-#> ./test/output/all_scoring_sr_results_table.txt)
-
-
 echo
 echo "Scoring in blanket mode"
 
