@@ -25,8 +25,18 @@ cat ./test/docking_table.txt \
 | ./ftdmp-score \
   -m1 ./test/monomers/6V3P_A.pdb \
   -m2 ./test/monomers/6V3P_B.pdb \
- --parallel-parts 16 \
- --voronota-js-path ~/git/voronota/expansion_js \
+  --parallel-parts 16 \
+  --voronota-js-path ~/git/voronota/expansion_js \
 | column -t \
 > ./test/scoring_table.txt
+
+rm -rf ./test/complexes
+
+join <(sort -k 1b,1 ./test/docking_table.txt) <(head -6 ./test/scoring_table.txt | sort -k 1b,1) \
+| ./ftdmp-build-complex \
+  -m1 ./test/monomers/6V3P_A.pdb \
+  -m2 ./test/monomers/6V3P_B.pdb \
+  -o ./test/complexes/ \
+  --voronota-js-path ~/git/voronota/expansion_js
+
 

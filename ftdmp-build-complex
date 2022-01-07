@@ -1,0 +1,148 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-build' generates structure files from docking results produced by 'ftdmp-dock'
+
+Options:
+    --monomer1 | -m1          string  *  monomer 1 input file path
+    --monomer2 | -m2          string  *  monomer 2 input file path
+    --output-prefix | -o      string  *  output file path prefix, default is ''
+    --voronota-js-path        string     voronota-js executables path, default is ''
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    space-separated table of docking results
+
+Standard output:
+    list of generated files
+    
+Example:
+
+    cat docking_results_table.txt | head -5 | ftdmp-build -m1 monomer1.pdb -m2 monomer2.pdb -o complexes/
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+MONOMERFILE1=""
+MONOMERFILE2=""
+OUTPUT_PREFIX=""
+VORONOTA_JS_PATH=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-m1|--monomer1)
+		MONOMERFILE1="$OPTARG"
+		shift
+		;;
+	-m2|--monomer2)
+		MONOMERFILE2="$OPTARG"
+		shift
+		;;
+	-o|--output-prefix)
+		OUTPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	--voronota-js-path)
+		VORONOTA_JS_PATH="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static input file '$MONOMERFILE1'"
+	exit 1
+fi
+
+if [ -z "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no static input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
+	exit 1
+fi
+
+if [ -n "$VORONOTA_JS_PATH" ]
+then
+	export PATH=${VORONOTA_JS_PATH}:${PATH}
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+mkdir -p "${TMPLDIR}/docklines"
+
+cd "${TMPLDIR}/docklines"
+
+cat ../input \
+| awk -v m1="$MONOMERFILE1" -v m2="$MONOMERFILE2" -v op="$OUTPUT_PREFIX" -v q="'" \
+'{
+  if($1!="ID")
+  {
+    print "voronota_import_docking_result(\"-static-file " q m1 q " -mobile-file " q m2 q " -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 "\"); voronota_assert_full_success(\"Failed to import docking results for ID " $1 "\"); outfile=" q op $1 ".pdb" q "; voronota_export_atoms(\"-as-pdb -file \"+outfile); voronota_assert_full_success(\"Failed to write file \"+outfile); writeln(outfile);" > $1;
+  }
+}'
+
+cd - &> /dev/null
+
+mkdir -p "$(dirname "${OUTPUT_PREFIX}name")"
+
+find "${TMPLDIR}/docklines" -type f -not -empty \
+| xargs -L 1 -P 1 voronota-js --no-setup-defaults
+

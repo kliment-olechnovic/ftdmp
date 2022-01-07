@@ -166,7 +166,7 @@ find "${TMPLDIR}/docklines" -type f -not -empty \
 
 if [ "$JOINED_TABLES" == "true" ]
 then
-	join <(sort "${TMPLDIR}/input") <(sort "${TMPLDIR}/output") > "${TMPLDIR}/joined_output"
+	join <(sort -k 1b,1 "${TMPLDIR}/input") <(sort -k 1b,1 "${TMPLDIR}/output") > "${TMPLDIR}/joined_output"
 	
 	cat "${TMPLDIR}/joined_output" | egrep '^ID '
 	cat "${TMPLDIR}/joined_output" | egrep -v '^ID '
