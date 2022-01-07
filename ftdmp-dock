@@ -9,13 +9,13 @@ cat >&2 << 'EOF'
 Options:
     --monomer1 | -m1          string  *  monomer 1 input file path
     --monomer2 | -m2          string  *  monomer 2 input file path
+    --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
-    --parallel-id             number     ID of the parallel part to process, default is '' for processing all parts
     --help | -h                          flag to display help message and exit
 
 Standard output:
-    space-separated table of docking results (if called to process all parts)
+    space-separated table of docking results
     
 Examples:
 
@@ -51,6 +51,7 @@ command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in 
 
 MONOMERFILE1=""
 MONOMERFILE2=""
+JOBNAME=""
 OUTDIR=""
 PARALLEL_PARTS="1"
 PARALLEL_ID=""
@@ -68,6 +69,10 @@ do
 		;;
 	-m2|--monomer2)
 		MONOMERFILE2="$OPTARG"
+		shift
+		;;
+	--job-name)
+		JOBNAME="$OPTARG"
 		shift
 		;;
 	--logs-output)
@@ -150,7 +155,7 @@ then
 	
 	{
 	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
-	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk '{print NR " " $0}'
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk -v jobname="$JOBNAME" '{print jobname NR " " $0}'
 	} \
 	> "${OUTDIR}/all_parts_results_table.txt"
 	

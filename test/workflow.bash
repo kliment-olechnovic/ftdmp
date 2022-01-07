@@ -25,6 +25,7 @@ echo "Docking"
 time -p (./ftdmp-dock \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
+  --job-name 6V3P_rd_ \
   --logs-output ./test/output/docking_results \
   --parallel-parts 16 \
 | column -t \
