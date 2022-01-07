@@ -7,18 +7,20 @@ cat >&2 << 'EOF'
 'ftdmp-dock' produces many dimeric structures by docking two monomeric structures
 
 Options:
-    --input1 | -i1            string  *  monomer 1 input file path
-    --input2 | -i2            string  *  monomer 2 input file path
+    --monomer1 | -m1          string  *  monomer 1 input file path
+    --monomer2 | -m2          string  *  monomer 2 input file path
     --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
     --parallel-id             number     ID of the parallel part to process, default is '' for processing all parts
     --voronota-js-path        string     voronota-js executables path, default is ''
     --help | -h                          flag to display help message and exit
 
+Standard output:
+    space-separated table of docking results (if called to process all parts)
+    
 Examples:
 
-    ftdmp-dock --input1 monomer1.pdb --input2 monomer1.pdb --output docking_results \
-      --parallel-parts 16 --voronota-js-path ~/git/voronota/expansion_js
+    ftdmp-dock -m1 monomer1.pdb -m2 monomer2.pdb --logs-output docking_results --parallel-parts 16
 
 EOF
 exit 1
@@ -47,8 +49,8 @@ fi
 command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
 command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
 
-INFILE1=""
-INFILE2=""
+MONOMERFILE1=""
+MONOMERFILE2=""
 OUTDIR=""
 PARALLEL_PARTS="1"
 PARALLEL_ID=""
@@ -61,12 +63,12 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-i1|--input1)
-		INFILE1="$OPTARG"
+	-m1|--monomer1)
+		MONOMERFILE1="$OPTARG"
 		shift
 		;;
-	-i2|--input2)
-		INFILE2="$OPTARG"
+	-m2|--monomer2)
+		MONOMERFILE2="$OPTARG"
 		shift
 		;;
 	--logs-output)
@@ -100,27 +102,27 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$INFILE1" ]
+if [ -z "$MONOMERFILE1" ]
 then
 	echo >&2 "Error: no static input file specified"
 	exit 1
 fi
 
-if [ ! -s "$INFILE1" ]
+if [ ! -s "$MONOMERFILE1" ]
 then
-	echo >&2 "Error: no static input file '$INFILE1'"
+	echo >&2 "Error: no static input file '$MONOMERFILE1'"
 	exit 1
 fi
 
-if [ -z "$INFILE2" ]
+if [ -z "$MONOMERFILE2" ]
 then
 	echo >&2 "Error: no static input file specified"
 	exit 1
 fi
 
-if [ ! -s "$INFILE2" ]
+if [ ! -s "$MONOMERFILE2" ]
 then
-	echo >&2 "Error: no mobile input file '$INFILE2'"
+	echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
 	exit 1
 fi
 
@@ -160,7 +162,7 @@ then
 	
 	{
 	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
-	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 5,5 | tac | awk '{print NR " " $0}'
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk '{print NR " " $0}'
 	} \
 	> "${OUTDIR}/all_parts_results_table.txt"
 	
@@ -172,25 +174,25 @@ fi
 OUTDIR="${OUTDIR}/part${PARALLEL_ID}"
 mkdir -p "$OUTDIR"
 
-ftdmp-prepare-monomer --input "$INFILE1" --output "$OUTDIR/monomer1"
+ftdmp-prepare-monomer --input "$MONOMERFILE1" --output-for-ftdock "$OUTDIR/monomer1.pdb"
 
-if [ ! -s "$OUTDIR/monomer1__for_ftdock.pdb" ]
+if [ ! -s "$OUTDIR/monomer1.pdb" ]
 then
 	echo >&2 "Error: failed to prepare monomer 1"
 	exit 1
 fi
 
-ftdmp-prepare-monomer --input "$INFILE2" --output "$OUTDIR/monomer2"
+ftdmp-prepare-monomer --input "$MONOMERFILE2" --output-for-ftdock "$OUTDIR/monomer2.pdb"
 
-if [ ! -s "$OUTDIR/monomer2__for_ftdock.pdb" ]
+if [ ! -s "$OUTDIR/monomer2.pdb" ]
 then
-	echo >&2 "Error: failed to prepare monomer 1"
+	echo >&2 "Error: failed to prepare monomer 2"
 	exit 1
 fi
 
 cd "$OUTDIR"
 
-ftdock -static monomer1__for_ftdock.pdb -mobile monomer2__for_ftdock.pdb -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
 
 if [ ! -s "ftdock_global.dat" ]
 then
@@ -208,17 +210,13 @@ then
 	exit 1
 fi
 
-INNAME1="$(basename $INFILE1)"
-INNAME2="$(basename $INFILE2)"
-
 {
-echo "static mobile totalspan gridsize scscore x y z a1 a2 a3"
+echo "scscore scale x y z a1 a2 a3"
 
 cat ftdock_global.dat | egrep '^G_DATA' \
-| awk -v gridsize="$FTDOCK_GRID_SIZE" -v totalspan="$FTDOCK_TOTAL_SPAN" '{print totalspan " " gridsize " " $4 " " $6 " " $7 " " $8 " " $9 " " $10 " " $11}' \
-| sed "s|^|${INNAME1} ${INNAME2} |"
+| awk -v gridsize="$FTDOCK_GRID_SIZE" -v totalspan="$FTDOCK_TOTAL_SPAN" '{print $4 " " (totalspan/gridsize) " " $6 " " $7 " " $8 " " $9 " " $10 " " $11}'
 } \
 > "part_results_table.txt"
 
-rm ./monomer*.pdb
+rm "monomer1.pdb" "monomer2.pdb"
 

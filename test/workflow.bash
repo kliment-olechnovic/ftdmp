@@ -1,27 +1,30 @@
 #!/bin/bash
 
-./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/monomers/6V3P_A --restrict-input '[-chain A]' \
+rm -rf ./test/monomers
+
+./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/monomers/6V3P_A.pdb --restrict-input '[-chain A]' \
   --randomize --voronota-js-path ~/git/voronota/expansion_js \
   --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
 
-./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/monomers/6V3P_B --restrict-input '[-chain B]' \
+./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/monomers/6V3P_B.pdb --restrict-input '[-chain B]' \
   --randomize --voronota-js-path ~/git/voronota/expansion_js \
   --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
   
 rm -rf ./test/docking_results
 
 ./ftdmp-dock \
-  -i1 ./test/monomers/6V3P_A__full.pdb \
-  -i2 ./test/monomers/6V3P_B__full.pdb \
+  -m1 ./test/monomers/6V3P_A.pdb \
+  -m2 ./test/monomers/6V3P_B.pdb \
   --logs-output ./test/docking_results \
   --voronota-js-path ~/git/voronota/expansion_js \
   --parallel-parts 16 \
 | column -t \
 > ./test/docking_table.txt
 
-./ftdmp-score \
- --input ./test/docking_table.txt \
- --monomers-prefix ./test/monomers/ \
+cat ./test/docking_table.txt \
+| ./ftdmp-score \
+  -m1 ./test/monomers/6V3P_A.pdb \
+  -m2 ./test/monomers/6V3P_B.pdb \
  --parallel-parts 16 \
  --voronota-js-path ~/git/voronota/expansion_js \
 | column -t \

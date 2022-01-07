@@ -8,7 +8,7 @@ cat >&2 << 'EOF'
 
 Options:
     --input | -i              string  *  input file path
-    --output | -o             string  *  output file path prefix
+    --output | -o             string  *  output file path for full monomer
     --restrict-input          string     query to restrict input atoms, default is '[]'
     --randomize                          flag to center and pseudo-randomly spin the structure
     --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
@@ -47,6 +47,7 @@ fi
 
 INFILE=""
 OUTFILE=""
+OUTFILE_FOR_FTDOCK=""
 RESTRICT_INPUT="[]"
 RANDOM_SEED="1"
 VORONOTA_JS_PATH=""
@@ -68,6 +69,10 @@ do
 		;;
 	-o|--output)
 		OUTFILE="$OPTARG"
+		shift
+		;;
+	--output-for-ftdock)
+		OUTFILE_FOR_FTDOCK="$OPTARG"
 		shift
 		;;
 	--restrict-input)
@@ -117,7 +122,7 @@ then
 	exit 1
 fi
 
-if [ -z "$OUTFILE" ]
+if [ -z "$OUTFILE" ] && [ -z "$OUTFILE_FOR_FTDOCK" ]
 then
 	echo >&2 "Error: output file path not provided"
 	exit 1
@@ -269,7 +274,15 @@ then
 	exit 1
 fi
 
-mkdir -p "$(dirname "$OUTFILE")"
-mv "$TMPLDIR/structure_stage3a.pdb" "${OUTFILE}__full.pdb"
-mv "$TMPLDIR/structure_stage3b.pdb" "${OUTFILE}__for_ftdock.pdb"
+if [ -n "$OUTFILE" ]
+then
+	mkdir -p "$(dirname "$OUTFILE")"
+	mv "$TMPLDIR/structure_stage3a.pdb" "${OUTFILE}"
+fi
+
+if [ -n "$OUTFILE_FOR_FTDOCK" ]
+then
+	mkdir -p "$(dirname "$OUTFILE_FOR_FTDOCK")"
+	mv "$TMPLDIR/structure_stage3b.pdb" "${OUTFILE_FOR_FTDOCK}"
+fi
 

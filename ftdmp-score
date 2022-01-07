@@ -7,16 +7,24 @@ cat >&2 << 'EOF'
 'ftdmp-score' evaluates docking results produced by 'ftdmp-dock'
 
 Options:
-    --input                   string  *  input file path
-    --monomers-prefix         string     monomer files prefix, default is ''
+    --monomer1 | -m1          string  *  monomer 1 input file path
+    --monomer2 | -m2          string  *  monomer 2 input file path
     --parallel-parts          number     total number of parallel parts, default is 1
     --voronota-js-path        string     voronota-js executables path, default is ''
+    --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
+    --colnames-prefix         string     prefix for output column names
+    --join-tables                        flag to output joined input and result tables
     --help | -h                          flag to display help message and exit
 
+Standard input:
+    space-separated table of docking results
+
+Standard output:
+    space-separated table of scoring results
+    
 Example:
 
-    ftdmp-score --input docking_results_table.txt --monomers-prefix monomers/ \
-      --processors 16 --voronota-js-path ~/git/voronota/expansion_js
+    cat docking_results_table.txt | ftdmp-score -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
 
 EOF
 exit 1
@@ -36,10 +44,13 @@ then
 	cd - &> /dev/null
 fi
 
-INFILE=""
-MONOMERS_PREFIX=""
+MONOMERFILE1=""
+MONOMERFILE2=""
 PARALLEL_PARTS="1"
 VORONOTA_JS_PATH=""
+IFACE_VOROMQA_PARAMETERS=""
+COLNAMES_PREFIX=""
+JOINED_TABLES="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -48,12 +59,12 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	--input)
-		INFILE="$OPTARG"
+	-m1|--monomer1)
+		MONOMERFILE1="$OPTARG"
 		shift
 		;;
-	--monomers-prefix)
-		MONOMERS_PREFIX="$OPTARG"
+	-m2|--monomer2)
+		MONOMERFILE2="$OPTARG"
 		shift
 		;;
 	--parallel-parts)
@@ -63,6 +74,17 @@ do
 	--voronota-js-path)
 		VORONOTA_JS_PATH="$OPTARG"
 		shift
+		;;
+	--parameters)
+		IFACE_VOROMQA_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--colnames-prefix)
+		COLNAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--join-tables)
+		JOINED_TABLES="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -79,15 +101,27 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$INFILE" ]
+if [ -z "$MONOMERFILE1" ]
 then
-	echo >&2 "Error: no input file specified"
+	echo >&2 "Error: no static input file specified"
 	exit 1
 fi
 
-if [ ! -s "$INFILE" ]
+if [ ! -s "$MONOMERFILE1" ]
 then
-	echo >&2 "Error: no input file '$INFILE1'"
+	echo >&2 "Error: no static input file '$MONOMERFILE1'"
+	exit 1
+fi
+
+if [ -z "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no static input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
 	exit 1
 fi
 
@@ -107,19 +141,36 @@ command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'vo
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
-cat "$INFILE" > "${TMPLDIR}/input"
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
 
 mkdir -p "${TMPLDIR}/docklines"
 
 cd "${TMPLDIR}/docklines"
 
 cat ../input \
-| awk -v mprefix="$MONOMERS_PREFIX" '{if($4!="totalspan"){print "import-docking-result -static-file " mprefix $2 " -mobile-file " mprefix $3 " -ftdock-transform " ($4/$5) " " $7 " " $8 " " $9 " " $10 " " $11 " " $12}}' \
-| split -l 1 --numeric-suffixes=1 -a 10
+| awk -v m1="$MONOMERFILE1" -v m2="$MONOMERFILE2" '{if($1!="ID"){print "import-docking-result -static-file \"" m1 "\" -mobile-file \"" m2 "\" -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 > $1}}'
 
 cd - &> /dev/null
 
 find "${TMPLDIR}/docklines" -type f -not -empty \
-| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" \
-| sed 's/^x0\+//'
+| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" $IFACE_VOROMQA_PARAMETERS \
+| sed '1 s/^input_name /ID /' \
+| sed "1 s/\s\+/ ${COLNAMES_PREFIX}/g" \
+> "${TMPLDIR}/output"
+
+if [ "$JOINED_TABLES" == "true" ]
+then
+	join <(sort "${TMPLDIR}/input") <(sort "${TMPLDIR}/output") > "${TMPLDIR}/joined_output"
+	
+	cat "${TMPLDIR}/joined_output" | egrep '^ID '
+	cat "${TMPLDIR}/joined_output" | egrep -v '^ID '
+else
+	cat "${TMPLDIR}/output"
+fi
 
