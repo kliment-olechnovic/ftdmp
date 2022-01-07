@@ -75,6 +75,12 @@ do
 	mv "${TMPLDIR}/new_joined_output" "${TMPLDIR}/joined_output"
 done
 
+if [ ! -s "${TMPLDIR}/joined_output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
 cat "${TMPLDIR}/joined_output" | egrep "^${HEADERSTART} "
 cat "${TMPLDIR}/joined_output" | egrep -v "^${HEADERSTART} "
 

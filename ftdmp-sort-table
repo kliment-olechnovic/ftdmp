@@ -1,0 +1,152 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-sort-table' sorts an input
+
+Options:
+    --columns                 string  *  space-separated list of signed column name
+    --tolerances              string     space-separated list of tolerances, default is no tolerances
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    space-separated table
+
+Standard output:
+    space-separated table
+    
+Examples:    
+    cat scoring_results_table.txt | ftdmp-sort-table -columns "-iface_energy +scscore" -tolerances "0.0 0.0"
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+
+COLUMNS=""
+TOLERANCES=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--columns)
+		COLUMNS="$OPTARG"
+		shift
+		;;
+	--tolerances)
+		TOLERANCES="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$COLUMNS" ]
+then
+	echo >&2 "Error: no columns specified"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+echo "$COLUMNS" | sed 's/\s/\n/g' | egrep '.' \
+| while read -r COLNAME
+do
+	MULTIPLIER="1"
+	if [[ "$COLNAME" == "-"* ]]
+	then
+		MULTIPLIER="-1"
+	fi
+	
+	echo "${COLNAME} ${MULTIPLIER}"
+done \
+| sed 's/^-//' \
+| sed 's/^+//' \
+> "${TMPLDIR}/columns_info"
+
+N_COLUMNS="$(cat "${TMPLDIR}/columns_info" | wc -l)"
+
+if [ -n "$TOLERANCES" ]
+then
+	echo "$TOLERANCES" | sed 's/\s/\n/g' | egrep '.' \
+	> "${TMPLDIR}/tolerances_info"
+	
+	N_TOLERANCES="$(cat "${TMPLDIR}/tolerances_info" | wc -l)"
+
+	if [ "$N_COLUMNS" -ne "$N_TOLERANCES" ]
+	then
+		echo >&2 "Error: numbers of columns and tolerances do not match"
+		exit 1
+	fi
+	
+	paste "${TMPLDIR}/columns_info" "${TMPLDIR}/tolerances_info" > "${TMPLDIR}/full_columns_info"
+else
+	cat "${TMPLDIR}/columns_info" | awk '{print $1 " " $2 " 0"}' > "${TMPLDIR}/full_columns_info"
+fi
+
+{
+	echo "voronota_tournament_sort('-input-file _stdin -output-file _stdout"
+	echo "-columns"
+	cat "${TMPLDIR}/full_columns_info" | awk '{print $1}'
+	echo "-multipliers"
+	cat "${TMPLDIR}/full_columns_info" | awk '{print $2}'
+	echo "-tolerances"
+	cat "${TMPLDIR}/full_columns_info" | awk '{print $3}'
+	echo "');"
+	echo "voronota_assert_full_success('Failed to sort');"
+} \
+| tr '\n' ' ' \
+| sed 's/$/\n/' \
+> "${TMPLDIR}/sorting_script"
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+cat "${TMPLDIR}/input" | voronota-js --no-setup-defaults "${TMPLDIR}/sorting_script" > "${TMPLDIR}/output"
+
+if [ ! -s "${TMPLDIR}/output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+cat "${TMPLDIR}/output"
+
