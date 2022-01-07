@@ -1,0 +1,80 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-join-tables' joins table by the first column
+
+Options:
+    list of table files
+
+Standard output:
+    space-separated table
+    
+Example:
+
+    ftdmp-join-tables docking_results_table.txt scoring_table1.txt scoring_table2.txt
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+while [[ $# > 0 ]]
+do
+	INFILE="$1"
+	shift
+	
+	if [ -z "$INFILE" ]
+	then
+		echo >&2 "Error: empty file name in arguments"
+		exit 1
+	fi
+	
+	if [ ! -s "$INFILE" ]
+	then
+		echo >&2 "Error: no input file '$INFILE'"
+		exit 1
+	fi
+	
+	echo "$INFILE" >> "$TMPLDIR/input_list"
+done
+
+INCOUNT="$(cat "$TMPLDIR/input_list" | wc -l)"
+
+if [ "$INCOUNT" -lt "1" ]
+then
+	echo >&2 "Error: no input files provided"
+	exit 1
+fi
+
+FIRSTFILE="$(cat "$TMPLDIR/input_list" | head -1)"
+
+HEADERSTART="$(head -1 "$FIRSTFILE" | awk '{print $1}')"
+
+if [ "$INCOUNT" -eq "1" ]
+then
+	cat "$FIRSTFILE"
+	exit 0
+fi
+
+cat "$FIRSTFILE" > "${TMPLDIR}/joined_output"
+
+cat "$TMPLDIR/input_list" | tail -n +2 \
+| while read -r NEXTFILE
+do
+	join <(sort -k 1b,1 "${TMPLDIR}/joined_output") <(sort -k 1b,1 "$NEXTFILE") > "${TMPLDIR}/new_joined_output"
+	mv "${TMPLDIR}/new_joined_output" "${TMPLDIR}/joined_output"
+done
+
+cat "${TMPLDIR}/joined_output" | egrep "^${HEADERSTART} "
+cat "${TMPLDIR}/joined_output" | egrep -v "^${HEADERSTART} "
+

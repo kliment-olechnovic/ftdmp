@@ -12,7 +12,6 @@ Options:
     --parallel-parts          number     total number of parallel parts, default is 1
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --colnames-prefix         string     prefix for output column names
-    --join-tables                        flag to output joined input and result tables
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -50,7 +49,6 @@ MONOMERFILE2=""
 PARALLEL_PARTS="1"
 IFACE_VOROMQA_PARAMETERS=""
 COLNAMES_PREFIX=""
-JOINED_TABLES="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -78,9 +76,6 @@ do
 	--colnames-prefix)
 		COLNAMES_PREFIX="$OPTARG"
 		shift
-		;;
-	--join-tables)
-		JOINED_TABLES="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -153,13 +148,12 @@ find "${TMPLDIR}/docklines" -type f -not -empty \
 | sed "1 s/\s\+/ ${COLNAMES_PREFIX}/g" \
 > "${TMPLDIR}/output"
 
-if [ "$JOINED_TABLES" == "true" ]
+if [ ! -s "${TMPLDIR}/output" ]
 then
-	join <(sort -k 1b,1 "${TMPLDIR}/input") <(sort -k 1b,1 "${TMPLDIR}/output") > "${TMPLDIR}/joined_output"
-	
-	cat "${TMPLDIR}/joined_output" | egrep '^ID '
-	cat "${TMPLDIR}/joined_output" | egrep -v '^ID '
-else
-	cat "${TMPLDIR}/output"
+	echo >&2 "Error: no output produced"
+	exit 1
 fi
+
+cat "${TMPLDIR}/output"
+
 
