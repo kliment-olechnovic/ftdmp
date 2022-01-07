@@ -1,9 +1,13 @@
 #!/bin/bash
 
+cd "$(dirname $0)"
+cd ..
+
 export PATH="$HOME/git/voronota/expansion_js:$PATH"
 
 rm -rf ./test/output
 
+echo
 echo "Preparing monomers"
 
 time -p ( \
@@ -15,6 +19,7 @@ time -p ( \
 )
 
 
+echo
 echo "Docking"
 
 time -p (./ftdmp-dock \
@@ -26,6 +31,7 @@ time -p (./ftdmp-dock \
 > ./test/output/all_docking_results_table.txt)
 
 
+echo
 echo "Scoring in default mode"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
@@ -37,6 +43,22 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 | column -t \
 > ./test/output/all_scoring_results_table.txt)
 
+
+#echo
+#echo "Scoring in default mode with side-chain rebuilding"
+#
+#time -p (cat ./test/output/all_docking_results_table.txt \
+#| ./ftdmp-score \
+#  -m1 ./test/output/monomers/6V3P_A.pdb \
+#  -m2 ./test/output/monomers/6V3P_B.pdb \
+#  --parallel-parts 16 \
+#  --colnames-prefix DMsr_ \
+#  --parameters '--run-faspr ./core/FASPR/FASPR' \
+#| column -t \
+#> ./test/output/all_scoring_sr_results_table.txt)
+
+
+echo
 echo "Scoring in blanket mode"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
@@ -50,6 +72,7 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 > ./test/output/all_scoring_blanket_results_table.txt)
 
 
+echo
 echo "Joining tables"
 
 time -p (./ftdmp-join-tables \
@@ -60,12 +83,13 @@ time -p (./ftdmp-join-tables \
 > ./test/output/all_joined_results_table.txt)
 
 
+echo
 echo "Sorting joined table"
 
 time -p (cat ./test/output/all_joined_results_table.txt \
 | ./ftdmp-sort-table \
   --columns "-DM_iface_energy -DM_iface_clash_score -BM_iface_energy" \
-  --tolerances "0 0.07 30" \
+  --tolerances "0 0.07 50" \
 | column -t \
 > ./test/output/all_sorted_joined_results_table.txt)
 
@@ -74,12 +98,16 @@ cat ./test/output/all_sorted_joined_results_table.txt \
 > ./test/output/top_sorted_joined_results_table.txt
 
 
+echo
 echo "Building top complexes"
 
 time -p (cat ./test/output/top_sorted_joined_results_table.txt \
+| head -26 \
 | ./ftdmp-build-complex \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   -o ./test/output/complexes/ \
 > /dev/null)
+
+echo
 
