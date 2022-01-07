@@ -12,7 +12,6 @@ Options:
     --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
     --parallel-id             number     ID of the parallel part to process, default is '' for processing all parts
-    --voronota-js-path        string     voronota-js executables path, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -46,6 +45,7 @@ then
 	cd - &> /dev/null
 fi
 
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
 command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
 
@@ -54,7 +54,6 @@ MONOMERFILE2=""
 OUTDIR=""
 PARALLEL_PARTS="1"
 PARALLEL_ID=""
-VORONOTA_JS_PATH=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -81,10 +80,6 @@ do
 		;;
 	--parallel-id)
 		PARALLEL_ID="$OPTARG"
-		shift
-		;;
-	--voronota-js-path)
-		VORONOTA_JS_PATH="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -140,13 +135,6 @@ then
 		exit 1
 	fi
 fi
-
-if [ -n "$VORONOTA_JS_PATH" ]
-then
-	export PATH=${VORONOTA_JS_PATH}:${PATH}
-fi
-
-command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
 if [ -z "$OUTDIR" ]
 then

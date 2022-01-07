@@ -10,7 +10,6 @@ Options:
     --monomer1 | -m1          string  *  monomer 1 input file path
     --monomer2 | -m2          string  *  monomer 2 input file path
     --parallel-parts          number     total number of parallel parts, default is 1
-    --voronota-js-path        string     voronota-js executables path, default is ''
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --colnames-prefix         string     prefix for output column names
     --join-tables                        flag to output joined input and result tables
@@ -44,10 +43,11 @@ then
 	cd - &> /dev/null
 fi
 
+command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
-VORONOTA_JS_PATH=""
 IFACE_VOROMQA_PARAMETERS=""
 COLNAMES_PREFIX=""
 JOINED_TABLES="false"
@@ -69,10 +69,6 @@ do
 		;;
 	--parallel-parts)
 		PARALLEL_PARTS="$OPTARG"
-		shift
-		;;
-	--voronota-js-path)
-		VORONOTA_JS_PATH="$OPTARG"
 		shift
 		;;
 	--parameters)
@@ -130,13 +126,6 @@ then
 	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
 	exit 1
 fi
-
-if [ -n "$VORONOTA_JS_PATH" ]
-then
-	export PATH=${VORONOTA_JS_PATH}:${PATH}
-fi
-
-command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
 
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT

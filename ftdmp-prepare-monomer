@@ -12,7 +12,6 @@ Options:
     --restrict-input          string     query to restrict input atoms, default is '[]'
     --randomize                          flag to center and pseudo-randomly spin the structure
     --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
-    --voronota-js-path        string     voronota-js executables path, default is ''
     --prepare-for-relax                  flag to make structure ready for relaxation by adding missing heavy and hydrogen atoms
     --conda-path              string     conda installation path needed to prepare for relaxation, default is ''
     --conda-env               string     conda environment name needed to prepare for relaxation, default is ''
@@ -20,12 +19,10 @@ Options:
 
 Examples:
 
-	ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model \
-	  --voronota-js-path ~/git/voronota/expansion_js
+	ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model
 
     ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model --restrict-input '[-chain A]' \
-      --randomize --voronota-js-path ~/git/voronota/expansion_js \
-      --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
+      --randomize --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
 
 EOF
 exit 1
@@ -45,12 +42,13 @@ then
 	cd - &> /dev/null
 fi
 
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
 INFILE=""
 OUTFILE=""
 OUTFILE_FOR_FTDOCK=""
 RESTRICT_INPUT="[]"
 RANDOM_SEED="1"
-VORONOTA_JS_PATH=""
 CONDA_PATH=""
 CONDA_ENV=""
 RANDOMIZE="false"
@@ -81,10 +79,6 @@ do
 		;;
 	--random-seed)
 		RANDOM_SEED="$OPTARG"
-		shift
-		;;
-	--voronota-js-path)
-		VORONOTA_JS_PATH="$OPTARG"
 		shift
 		;;
 	--conda-path)
@@ -133,13 +127,6 @@ then
 	echo >&2 "Error: input file '$INFILE' does not exist"
 	exit 1
 fi
-
-if [ -n "$VORONOTA_JS_PATH" ]
-then
-	export PATH=${VORONOTA_JS_PATH}:${PATH}
-fi
-
-command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
