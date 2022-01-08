@@ -9,6 +9,7 @@ cat >&2 << 'EOF'
 Options:
     --columns                 string  *  space-separated list of signed column name
     --tolerances              string     space-separated list of tolerances, default is no tolerances
+    --add-rank-column         string     name of rank column to add
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -42,6 +43,7 @@ command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-ifac
 
 COLUMNS=""
 TOLERANCES=""
+ADD_RANK_COLUMN=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -56,6 +58,10 @@ do
 		;;
 	--tolerances)
 		TOLERANCES="$OPTARG"
+		shift
+		;;
+	--add-rank-column)
+		ADD_RANK_COLUMN="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -125,6 +131,10 @@ fi
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $2}'
 	echo "-tolerances"
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $3}'
+	if [ -n "$ADD_RANK_COLUMN" ]
+	then
+		echo "-add-rank-column ${ADD_RANK_COLUMN}"
+	fi
 	echo "');"
 	echo "voronota_assert_full_success('Failed to sort');"
 } \

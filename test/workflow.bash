@@ -36,7 +36,7 @@ echo
 echo "Scoring in default mode"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
-| ./ftdmp-score \
+| ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --parallel-parts 16 \
@@ -49,7 +49,7 @@ echo
 echo "Scoring in blanket mode"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
-| ./ftdmp-score \
+| ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --parallel-parts 16 \
@@ -75,8 +75,15 @@ echo "Sorting joined table"
 
 time -p (cat ./test/output/all_joined_results_table.txt \
 | ./ftdmp-sort-table \
+  --columns "-DM_iface_energy " \
+  --add-rank-column "DM_iface_energy_rank" \
+| ./ftdmp-sort-table \
+  --columns "-BM_iface_energy " \
+  --add-rank-column "BM_iface_energy_rank" \
+| ./ftdmp-sort-table \
   --columns "-DM_iface_energy -DM_iface_clash_score" \
   --tolerances "0 0.05" \
+  --add-rank-column "DM_tour_rank" \
 | column -t \
 > ./test/output/all_sorted_joined_results_table.txt)
 
