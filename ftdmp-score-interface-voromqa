@@ -4,7 +4,7 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-score' evaluates docking results produced by 'ftdmp-dock'
+'ftdmp-score-interface-voromqa' evaluates docking results produced by 'ftdmp-dock'
 
 Options:
     --monomer1 | -m1          string  *  monomer 1 input file path
@@ -23,7 +23,7 @@ Standard output:
     
 Example:
 
-    cat docking_results_table.txt | ftdmp-score -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
+    cat docking_results_table.txt | ftdmp-score-interface-voromqa -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
 
 EOF
 exit 1
