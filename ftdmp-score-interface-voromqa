@@ -12,6 +12,7 @@ Options:
     --parallel-parts          number     total number of parallel parts, default is 1
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --colnames-prefix         string     prefix for output column names
+    --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -49,6 +50,7 @@ MONOMERFILE2=""
 PARALLEL_PARTS="1"
 IFACE_VOROMQA_PARAMETERS=""
 COLNAMES_PREFIX=""
+ADJOIN="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -77,6 +79,9 @@ do
 		COLNAMES_PREFIX="$OPTARG"
 		shift
 		;;
+	--adjoin)
+		ADJOIN="true"
+		;;
 	-h|--help)
 		HELP_MODE="true"
 		;;
@@ -90,6 +95,11 @@ done
 if [ "$HELP_MODE" == "true" ]
 then
 	print_help_and_exit
+fi
+
+if [ "$ADJOIN" == "true" ]
+then
+	command -v ftdmp-join-tables &> /dev/null || { echo >&2 "Error: 'ftdmp-join-tables' executable not in binaries path"; exit 1; }
 fi
 
 if [ -z "$MONOMERFILE1" ]
@@ -154,6 +164,10 @@ then
 	exit 1
 fi
 
-cat "${TMPLDIR}/output"
-
+if [ "$ADJOIN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/input" "${TMPLDIR}/output"
+else
+	cat "${TMPLDIR}/output"
+fi
 

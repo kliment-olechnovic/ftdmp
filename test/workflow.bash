@@ -33,7 +33,7 @@ time -p (./ftdmp-dock \
 
 
 echo
-echo "Scoring in default mode"
+echo "Scoring, sorting, filtering"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
 | ./ftdmp-score-interface-voromqa \
@@ -41,61 +41,63 @@ time -p (cat ./test/output/all_docking_results_table.txt \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --parallel-parts 16 \
   --colnames-prefix DM_ \
-| column -t \
-> ./test/output/all_scoring_results_table.txt)
-
-
-echo
-echo "Scoring in blanket mode"
-
-time -p (cat ./test/output/all_docking_results_table.txt \
+  --adjoin \
+| tee ./test/output/all_results_table.txt \
+| ./ftdmp-sort-table \
+  --columns "-DM_iface_energy" \
+| head -301 \
+| ./ftdmp-score-interface-voromqa \
+  -m1 ./test/output/monomers/6V3P_A.pdb \
+  -m2 ./test/output/monomers/6V3P_B.pdb \
+  --parallel-parts 16 \
+  --colnames-prefix DMsr_ \
+  --parameters '--run-faspr ./core/FASPR/FASPR' \
+  --adjoin \
 | ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --parallel-parts 16 \
   --colnames-prefix BM_ \
   --parameters '--blanket' \
-| column -t \
-> ./test/output/all_scoring_blanket_results_table.txt)
-
-
-echo
-echo "Joining tables"
-
-time -p (./ftdmp-join-tables \
-  ./test/output/all_docking_results_table.txt \
-  ./test/output/all_scoring_results_table.txt \
-  ./test/output/all_scoring_blanket_results_table.txt \
-| column -t \
-> ./test/output/all_joined_results_table.txt)
-
-
-echo
-echo "Sorting joined table"
-
-time -p (cat ./test/output/all_joined_results_table.txt \
+  --adjoin \
+| ./ftdmp-score-interface-voromqa \
+  -m1 ./test/output/monomers/6V3P_A.pdb \
+  -m2 ./test/output/monomers/6V3P_B.pdb \
+  --parallel-parts 16 \
+  --colnames-prefix BMsr_ \
+  --parameters '--blanket --run-faspr ./core/FASPR/FASPR' \
+  --adjoin \
 | ./ftdmp-sort-table \
-  --columns "-DM_iface_energy " \
+  --columns "-DM_iface_energy" \
   --add-rank-column "DM_iface_energy_rank" \
 | ./ftdmp-sort-table \
-  --columns "-BM_iface_energy " \
+  --columns "-DMsr_iface_energy" \
+  --add-rank-column "DMsr_iface_energy_rank" \
+| ./ftdmp-sort-table \
+  --columns "-BM_iface_energy" \
   --add-rank-column "BM_iface_energy_rank" \
+| ./ftdmp-sort-table \
+  --columns "-BMsr_iface_energy " \
+  --add-rank-column "BMsr_iface_energy_rank" \
 | ./ftdmp-sort-table \
   --columns "-DM_iface_energy -DM_iface_clash_score" \
   --tolerances "0 0.05" \
   --add-rank-column "DM_tour_rank" \
+| ./ftdmp-sort-table \
+  --columns "-DMsr_iface_energy -DMsr_iface_clash_score" \
+  --tolerances "0 0.05" \
+  --add-rank-column "DMsr_tour_rank" \
+| ./ftdmp-sort-table \
+  --columns "-DM_iface_energy -DM_iface_clash_score" \
+  --tolerances "0 0.05" \
 | column -t \
-> ./test/output/all_sorted_joined_results_table.txt)
-
-cat ./test/output/all_sorted_joined_results_table.txt \
-| head -101 \
-> ./test/output/top_sorted_joined_results_table.txt
+> ./test/output/results_table.txt)
 
 
 echo
 echo "Building top complexes"
 
-time -p (cat ./test/output/top_sorted_joined_results_table.txt \
+time -p (cat ./test/output/results_table.txt \
 | head -26 \
 | ./ftdmp-build-complex \
   -m1 ./test/output/monomers/6V3P_A.pdb \
