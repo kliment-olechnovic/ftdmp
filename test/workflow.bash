@@ -107,3 +107,20 @@ time -p (cat ./test/output/results_table.txt \
 
 echo
 
+
+echo
+echo "Checking results with reference"
+
+time -p (cat ./test/output/results_table.txt \
+| ./ftdmp-score-interface-cadscore \
+  -m1 ./test/output/monomers/6V3P_A.pdb \
+  -m2 ./test/output/monomers/6V3P_B.pdb \
+  --reference ./test/reference_dimer/6V3P_AB.pdb \
+  --parallel-parts 16 \
+  --colnames-prefix CADS_ \
+  --adjoin \
+| ./ftdmp-sort-table \
+  --columns "CADS_iface_cadscore" \
+| column -t \
+> ./test/output/reference_check_table.txt)
+
