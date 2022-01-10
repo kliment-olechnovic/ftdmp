@@ -1,0 +1,131 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-jury' computes ranks jury score
+
+Options:
+    --similarities            string  *  similarities table input file path
+    --ranks                   string  *  ranks table input file path
+    --top-slices              string     top slices to use, default is '10 20 30 40 50'
+    --cluster                 number     similarity threshold to select cluster representatives, default is 1.0
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    space-separated table of sorted ranks jury scores
+    
+Example:
+
+    ftdmp-jury --similarities similarities.txt --ranks ranks.txt --top-slices '10 20 30 99999'
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+SIMILARITIESFILE=""
+RANKSFILE=""
+TOPSLICES="10 20 30 40 50"
+CLUSTERTHRESHOLD="1"
+HELP_MODE="false"
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--similarities)
+		SIMILARITIESFILE="$OPTARG"
+		shift
+		;;
+	--ranks)
+		RANKSFILE="$OPTARG"
+		shift
+		;;
+	--top-slices)
+		TOPSLICES="$OPTARG"
+		shift
+		;;
+	--cluster)
+		CLUSTERTHRESHOLD="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$SIMILARITIESFILE" ]
+then
+	echo >&2 "Error: no similarities input file specified"
+	exit 1
+fi
+
+if [ ! -s "$SIMILARITIESFILE" ]
+then
+	echo >&2 "Error: no similarities input file '$SIMILARITIESFILE'"
+	exit 1
+fi
+
+if [ -z "$RANKSFILE" ]
+then
+	echo >&2 "Error: no ranks input file specified"
+	exit 1
+fi
+
+if [ ! -s "$RANKSFILE" ]
+then
+	echo >&2 "Error: no ranks input file '$RANKSFILE'"
+	exit 1
+fi
+
+if [ -z "$TOPSLICES" ]
+then
+	echo >&2 "Error: no top slices specified"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+{
+cat << EOF
+voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
+-input-ranks-file '$RANKSFILE'
+-output-file _stdout
+-top-slices $TOPSLICES
+-similarity-threshold $CLUSTERTHRESHOLD
+");
+EOF
+} \
+| tr '\n' ' ' \
+| sed 's/$/\n/' \
+| voronota-js --no-setup-defaults
+

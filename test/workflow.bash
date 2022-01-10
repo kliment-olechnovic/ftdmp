@@ -39,7 +39,7 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 | ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 16 \
+  --parallel-parts 32 \
   --colnames-prefix DM_ \
   --adjoin \
 | tee ./test/output/all_results_table.txt \
@@ -49,21 +49,21 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 | ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 16 \
+  --parallel-parts 32 \
   --colnames-prefix DMsr_ \
   --parameters '--run-faspr ./core/FASPR/FASPR' \
   --adjoin \
 | ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 16 \
+  --parallel-parts 32 \
   --colnames-prefix BM_ \
   --parameters '--blanket' \
   --adjoin \
 | ./ftdmp-score-interface-voromqa \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 16 \
+  --parallel-parts 32 \
   --colnames-prefix BMsr_ \
   --parameters '--blanket --run-faspr ./core/FASPR/FASPR' \
   --adjoin \
@@ -95,20 +95,6 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 
 
 echo
-echo "Building top complexes"
-
-time -p (cat ./test/output/results_table.txt \
-| head -26 \
-| ./ftdmp-build-complex \
-  -m1 ./test/output/monomers/6V3P_A.pdb \
-  -m2 ./test/output/monomers/6V3P_B.pdb \
-  -o ./test/output/complexes/ \
-> /dev/null)
-
-echo
-
-
-echo
 echo "Checking results with reference"
 
 time -p (cat ./test/output/results_table.txt \
@@ -116,7 +102,7 @@ time -p (cat ./test/output/results_table.txt \
   -m1 ./test/output/monomers/6V3P_A.pdb \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --reference ./test/reference_dimer/6V3P_AB.pdb \
-  --parallel-parts 16 \
+  --parallel-parts 32 \
   --colnames-prefix CADS_ \
   --adjoin \
 | ./ftdmp-sort-table \
@@ -135,4 +121,35 @@ time -p (cat ./test/output/results_table.txt \
   -m2 ./test/output/monomers/6V3P_B.pdb \
   --parallel-parts 32 \
 > ./test/output/similarity_matrix.txt)
+
+
+echo
+echo "Calculating ranks jury scores"
+
+cat ./test/output/results_table.txt \
+| tail -n +2 \
+| awk '{print $1 " " $30 " " $31 " " $32 " " $33 " " $34 " " $35}' \
+> ./test/output/ranks.txt
+
+./ftdmp-jury \
+  --similarities ./test/output/similarity_matrix.txt \
+  --ranks ./test/output/ranks.txt \
+  --top-slices "50 100 99999" \
+  --cluster 0.9 \
+| column -t \
+> ./test/output/jury_results.txt
+
+
+echo
+echo "Building top complexes"
+
+time -p (cat ./test/output/results_table.txt \
+| head -101 \
+| ./ftdmp-build-complex \
+  -m1 ./test/output/monomers/6V3P_A.pdb \
+  -m2 ./test/output/monomers/6V3P_B.pdb \
+  -o ./test/output/complexes/ \
+> /dev/null)
+
+#cat ./test/output/jury_results.txt | head -10 | awk '{print "./test/output/complexes/" $1 ".pdb"}' | xargs voronota-gl ./test/reference_dimer/6V3P_AB.pdb
 
