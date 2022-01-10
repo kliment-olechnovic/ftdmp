@@ -7,8 +7,8 @@ cat >&2 << 'EOF'
 'ftdmp-dock' produces many dimeric structures by docking two monomeric structures
 
 Options:
-    --monomer1 | -m1          string  *  monomer 1 input file path
-    --monomer2 | -m2          string  *  monomer 2 input file path
+    --monomer1                string  *  monomer 1 input file path
+    --monomer2                string  *  monomer 2 input file path
     --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
@@ -67,11 +67,11 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-m1|--monomer1)
+	--monomer1)
 		MONOMERFILE1="$OPTARG"
 		shift
 		;;
-	-m2|--monomer2)
+	--monomer2)
 		MONOMERFILE2="$OPTARG"
 		shift
 		;;

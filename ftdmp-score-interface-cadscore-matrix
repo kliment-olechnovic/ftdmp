@@ -7,8 +7,10 @@ cat >&2 << 'EOF'
 'ftdmp-score-interface-cadscore-matrix' computes similarity matrix for docking results produced by 'ftdmp-dock'
 
 Options:
-    --monomer1 | -m1          string  *  monomer 1 input file path
-    --monomer2 | -m2          string  *  monomer 2 input file path
+    --input-prefix            string     input file path prefix
+    --input-suffix            string     input file path suffix
+    --monomer1                string  *  monomer 1 input file path
+    --monomer2                string  *  monomer 2 input file path
     --parallel-parts          number     total number of parallel parts, default is 1
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --help | -h                          flag to display help message and exit
@@ -43,10 +45,13 @@ fi
 
 command -v voronota-js-fast-iface-cadscore &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-cadscore' executable not in binaries path"; exit 1; }
 
+INPUT_PREFIX=""
+INPUT_SUFFIX=""
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
 IFACE_CADSCORE_PARAMETERS=""
+USE_MONOMERS="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -55,12 +60,22 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-m1|--monomer1)
-		MONOMERFILE1="$OPTARG"
+	--input-prefix)
+		INPUT_PREFIX="$OPTARG"
 		shift
 		;;
-	-m2|--monomer2)
+	--input-suffix)
+		INPUT_SUFFIX="$OPTARG"
+		shift
+		;;
+	--monomer1)
+		MONOMERFILE1="$OPTARG"
+		USE_MONOMERS="true"
+		shift
+		;;
+	--monomer2)
 		MONOMERFILE2="$OPTARG"
+		USE_MONOMERS="true"
 		shift
 		;;
 	--parallel-parts)
@@ -86,28 +101,31 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$MONOMERFILE1" ]
+if [ "$USE_MONOMERS" == "true" ]
 then
-	echo >&2 "Error: no static input file specified"
-	exit 1
-fi
-
-if [ ! -s "$MONOMERFILE1" ]
-then
-	echo >&2 "Error: no static input file '$MONOMERFILE1'"
-	exit 1
-fi
-
-if [ -z "$MONOMERFILE2" ]
-then
-	echo >&2 "Error: no static input file specified"
-	exit 1
-fi
-
-if [ ! -s "$MONOMERFILE2" ]
-then
-	echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
-	exit 1
+	if [ -z "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: no static input file specified"
+		exit 1
+	fi
+	
+	if [ ! -s "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: no static input file '$MONOMERFILE1'"
+		exit 1
+	fi
+	
+	if [ -z "$MONOMERFILE2" ]
+	then
+		echo >&2 "Error: no mobile input file specified"
+		exit 1
+	fi
+	
+	if [ ! -s "$MONOMERFILE2" ]
+	then
+		echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
+		exit 1
+	fi
 fi
 
 if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
@@ -127,17 +145,27 @@ then
 	exit 1
 fi
 
-mkdir -p "${TMPLDIR}/docklines"
-
-cd "${TMPLDIR}/docklines"
-
-cat ../input \
-| awk -v m1="$MONOMERFILE1" -v m2="$MONOMERFILE2" '{if($1!="ID"){print "import-docking-result -static-file \"" m1 "\" -mobile-file \"" m2 "\" -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 > $1}}'
-
-cd - &> /dev/null
-
-find "${TMPLDIR}/docklines" -type f -not -empty \
-| voronota-js-fast-iface-cadscore --target _all_vs_all --model _list --target-input-is-script --model-input-is-script --processors "$PARALLEL_PARTS" $IFACE_CADSCORE_PARAMETERS \
+{
+if [ "$USE_MONOMERS" == "true" ]
+then
+	mkdir -p "${TMPLDIR}/docklines"
+	
+	cd "${TMPLDIR}/docklines"
+	
+	cat ../input \
+	| awk -v m1="$MONOMERFILE1" -v m2="$MONOMERFILE2" '{if($1!="ID"){print "import-docking-result -static-file \"" m1 "\" -mobile-file \"" m2 "\" -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 > $1}}'
+	
+	cd - &> /dev/null
+	
+	find "${TMPLDIR}/docklines" -type f -not -empty \
+	| voronota-js-fast-iface-cadscore --target _all_vs_all --model _list --target-input-is-script --model-input-is-script --processors "$PARALLEL_PARTS" $IFACE_CADSCORE_PARAMETERS
+else
+	cat "${TMPLDIR}/input" \
+	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
+	| voronota-js-fast-iface-cadscore --target _all_vs_all --model _list --processors "$PARALLEL_PARTS" $IFACE_CADSCORE_PARAMETERS \
+	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
+fi
+} \
 | tail -n +2 \
 | awk '{print $1 " " $2 " " $3 " " $4}' \
 > "${TMPLDIR}/output"
