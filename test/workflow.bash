@@ -124,3 +124,15 @@ time -p (cat ./test/output/results_table.txt \
 | column -t \
 > ./test/output/reference_check_table.txt)
 
+
+echo
+echo "Calculating similarity matrix"
+
+time -p (cat ./test/output/results_table.txt \
+| head -101 \
+| ./ftdmp-score-interface-cadscore-matrix \
+  -m1 ./test/output/monomers/6V3P_A.pdb \
+  -m2 ./test/output/monomers/6V3P_B.pdb \
+  --parallel-parts 32 \
+> ./test/output/similarity_matrix.txt)
+
