@@ -178,7 +178,7 @@ fi
 
 if [ "$PREPARE_FOR_RELAX" == "true" ]
 then
-	command -v voronota-js-focused-relax-with-openmm &> /dev/null || { echo >&2 "Error: 'voronota-js-focused-relax-with-openmm' executable not in binaries path"; exit 1; }
+	command -v ftdmp-relax-with-openmm &> /dev/null || { echo >&2 "Error: 'ftdmp-relax-with-openmm' executable not in binaries path"; exit 1; }
 	
 	if [ -z "$CONDA_DEFAULT_ENV" ]
 	then
@@ -209,7 +209,7 @@ then
 		fi
 	fi
 	
-	voronota-js-focused-relax-with-openmm \
+	ftdmp-relax-with-openmm \
 	  --no-simulation \
 	  --forcefield amber14-all \
 	  --trim-output \
