@@ -4,11 +4,11 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-dock' produces many dimeric structures by docking two monomeric structures
+'ftdmp-dock-two-monomers' produces many dimeric structures by docking two monomeric structures
 
 Options:
-    --monomer1                string  *  monomer 1 input file path
-    --monomer2                string  *  monomer 2 input file path
+    --monomer1                string  *  static monomer input file path
+    --monomer2                string  *  mobile monomer input file path
     --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
     --parallel-parts          number     total number of parallel parts, default is 1
@@ -21,7 +21,7 @@ Standard output:
     
 Examples:
 
-    ftdmp-dock -m1 monomer1.pdb -m2 monomer2.pdb --logs-output docking_results --parallel-parts 16
+    ftdmp-dock-two-monomers --monomer1 monomer1.pdb --monomer2 monomer2.pdb --logs-output docking_results --parallel-parts 16
 
 EOF
 exit 1
@@ -116,25 +116,25 @@ fi
 
 if [ -z "$MONOMERFILE1" ]
 then
-	echo >&2 "Error: no static input file specified"
+	echo >&2 "Error: no static monomer input file specified"
 	exit 1
 fi
 
 if [ ! -s "$MONOMERFILE1" ]
 then
-	echo >&2 "Error: no static input file '$MONOMERFILE1'"
+	echo >&2 "Error: no static monomer input file '$MONOMERFILE1'"
 	exit 1
 fi
 
 if [ -z "$MONOMERFILE2" ]
 then
-	echo >&2 "Error: no static input file specified"
+	echo >&2 "Error: no mobile monomer input file specified"
 	exit 1
 fi
 
 if [ ! -s "$MONOMERFILE2" ]
 then
-	echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
+	echo >&2 "Error: no mobile monomer input file '$MONOMERFILE2'"
 	exit 1
 fi
 

@@ -4,13 +4,13 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-score-interface-cadscore-matrix' computes similarity matrix for docking results produced by 'ftdmp-dock'
+'ftdmp-calc-interface-cadscore-matrix' computes similarity matrix for docking results produced by 'ftdmp-dock'
 
 Options:
     --input-prefix            string     input file path prefix
     --input-suffix            string     input file path suffix
-    --monomer1                string  *  monomer 1 input file path
-    --monomer2                string  *  monomer 2 input file path
+    --monomer1                string  *  static monomer input file path
+    --monomer2                string  *  mobile monomer input file path
     --parallel-parts          number     total number of parallel parts, default is 1
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --help | -h                          flag to display help message and exit
@@ -23,7 +23,7 @@ Standard output:
     
 Example:
 
-    cat docking_results_table.txt | ftdmp-score-interface-cadscore-matrix -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
+    cat docking_results_table.txt | ftdmp-calc-interface-cadscore-matrix -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
 
 EOF
 exit 1

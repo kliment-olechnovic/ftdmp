@@ -22,13 +22,13 @@ time -p ( \
 echo
 echo "Docking"
 
-time -p (./ftdmp-dock \
+time -p (./ftdmp-dock-two-monomers \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
   --job-name 6V3P_rd_ \
   --logs-output ./test/output/docking_results \
   --parallel-parts 16 \
-  --ftdock-keep 3 \
+  --ftdock-keep 1 \
 | column -t \
 > ./test/output/all_docking_results_table.txt)
 
@@ -37,34 +37,34 @@ echo
 echo "Scoring, sorting, filtering"
 
 time -p (cat ./test/output/all_docking_results_table.txt \
-| ./ftdmp-score-interface-voromqa \
+| ./ftdmp-calc-interface-voromqa-scores \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
   --colnames-prefix DM_ \
   --adjoin \
 | tee ./test/output/all_results_table.txt \
 | ./ftdmp-sort-table \
   --columns "-DM_iface_energy" \
 | head -301 \
-| ./ftdmp-score-interface-voromqa \
+| ./ftdmp-calc-interface-voromqa-scores \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
   --colnames-prefix DMsr_ \
   --parameters '--run-faspr ./core/FASPR/FASPR' \
   --adjoin \
-| ./ftdmp-score-interface-voromqa \
+| ./ftdmp-calc-interface-voromqa-scores \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
   --colnames-prefix BM_ \
   --parameters '--blanket' \
   --adjoin \
-| ./ftdmp-score-interface-voromqa \
+| ./ftdmp-calc-interface-voromqa-scores \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
   --colnames-prefix BMsr_ \
   --parameters '--blanket --run-faspr ./core/FASPR/FASPR' \
   --adjoin \
@@ -99,11 +99,11 @@ echo
 echo "Checking results with reference"
 
 time -p (cat ./test/output/results_table.txt \
-| ./ftdmp-score-interface-cadscore \
+| ./ftdmp-calc-interface-cadscore-for-reference \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
   --reference ./test/reference_dimer/6V3P_AB.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
   --colnames-prefix CADS_ \
   --adjoin \
 | ./ftdmp-sort-table \
@@ -117,10 +117,10 @@ echo "Calculating similarity matrix"
 
 time -p (cat ./test/output/results_table.txt \
 | head -101 \
-| ./ftdmp-score-interface-cadscore-matrix \
+| ./ftdmp-calc-interface-cadscore-matrix \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --parallel-parts 32 \
+  --parallel-parts 16 \
 > ./test/output/similarity_matrix.txt)
 
 
@@ -132,10 +132,10 @@ cat ./test/output/results_table.txt \
 | awk '{print $1 " " $30 " " $31 " " $32 " " $33 " " $34 " " $35}' \
 > ./test/output/ranks.txt
 
-./ftdmp-jury \
+./ftdmp-calc-ranks-jury-scores \
   --similarities ./test/output/similarity_matrix.txt \
   --ranks ./test/output/ranks.txt \
-  --top-slices "50 100 99999" \
+  --top-slices "25 50 75 100 99999" \
   --cluster 0.9 \
 | column -t \
 > ./test/output/jury_results.txt

@@ -4,7 +4,7 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-jury' computes ranks jury score
+'ftdmp-calc-ranks-jury-scores' computes ranks jury score
 
 Options:
     --similarities            string  *  similarities table input file path
@@ -18,7 +18,7 @@ Standard output:
     
 Example:
 
-    ftdmp-jury --similarities similarities.txt --ranks ranks.txt --top-slices '10 20 30 99999'
+    ftdmp-calc-ranks-jury-scores --similarities similarities.txt --ranks ranks.txt --top-slices '10 20 30 99999'
 
 EOF
 exit 1
