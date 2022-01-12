@@ -7,14 +7,14 @@ cat >&2 << 'EOF'
 'ftdmp-calc-interface-cadscore-for-reference' compares docking results produced by 'ftdmp-dock' to a reference
 
 Options:
+    --reference               string  *  reference file path
     --input-prefix            string     input file path prefix
     --input-suffix            string     input file path suffix, default is '.pdb'
-    --monomer1                string  *  static monomer input file path
-    --monomer2                string  *  mobile monomer input file path
-    --reference               string  *  reference file path
-    --parallel-parts          number     total number of parallel parts, default is 1
-    --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
-    --colnames-prefix         string     prefix for output column names
+    --monomer1                string     static monomer input file path
+    --monomer2                string     mobile monomer input file path
+    --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+    --parallel                number     total number of parallel parts, default is 1
+    --colnames-prefix         string     prefix for output column names, default is 'CR_'
     --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
 
@@ -26,7 +26,7 @@ Standard output:
     
 Example:
 
-    cat docking_results_table.txt | ftdmp-calc-interface-cadscore-for-reference -m1 monomer1.pdb -m2 monomer2.pdb --reference --parallel-parts 16
+    cat docking_results_table.txt | ftdmp-calc-interface-cadscore-for-reference -m1 monomer1.pdb -m2 monomer2.pdb --reference --parallel 16
 
 EOF
 exit 1
@@ -52,10 +52,9 @@ INPUT_PREFIX=""
 INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
 MONOMERFILE2=""
-REFERENCEFILE=""
 PARALLEL_PARTS="1"
-IFACE_CADSCORE_PARAMETERS=""
-COLNAMES_PREFIX=""
+SUBSELECT_CONTACTS="[]"
+COLNAMES_PREFIX="CR_"
 USE_MONOMERS="false"
 ADJOIN="false"
 HELP_MODE="false"
@@ -88,12 +87,12 @@ do
 		REFERENCEFILE="$OPTARG"
 		shift
 		;;
-	--parallel-parts)
+	--parallel)
 		PARALLEL_PARTS="$OPTARG"
 		shift
 		;;
-	--parameters)
-		IFACE_CADSCORE_PARAMETERS="$OPTARG"
+	--subselect-contacts)
+		SUBSELECT_CONTACTS="$OPTARG"
 		shift
 		;;
 	--colnames-prefix)
@@ -192,11 +191,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --model-input-is-script --processors "$PARALLEL_PARTS" $IFACE_CADSCORE_PARAMETERS
+	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --model-input-is-script --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --processors "$PARALLEL_PARTS" $IFACE_CADSCORE_PARAMETERS \
+	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
 fi
 } \

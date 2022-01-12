@@ -7,12 +7,12 @@ cat >&2 << 'EOF'
 'ftdmp-prepare-monomer' prepares a monomer structure for docking with 'ftdmp-dock'
 
 Options:
-    --input | -i              string  *  input file path
-    --output | -o             string  *  output file path for full monomer
+    --input                   string  *  input file path
+    --output                  string  *  output file path for full monomer
     --restrict-input          string     query to restrict input atoms, default is '[]'
     --randomize                          flag to center and pseudo-randomly spin the structure
     --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
-    --prepare-for-relax                  flag to make structure ready for relaxation by adding missing heavy and hydrogen atoms
+    --forcefield              string     forcefield name to make structure ready for relaxation, default is ''
     --conda-path              string     conda installation path needed to prepare for relaxation, default is ''
     --conda-env               string     conda environment name needed to prepare for relaxation, default is ''
     --help | -h                          flag to display help message and exit
@@ -22,7 +22,7 @@ Examples:
 	ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model
 
     ftdmp-prepare-monomer --input input/model.pdb --output output/prepared_model --restrict-input '[-chain A]' \
-      --randomize --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2
+      --randomize --forcefield --conda-path ~/anaconda3 --conda-env alphafold2
 
 EOF
 exit 1
@@ -38,7 +38,7 @@ fi
 if [[ $ZEROARG == *"/"* ]]
 then
 	cd $(dirname $ZEROARG)
-	export PATH=$(pwd):$PATH
+	export PATH="$(pwd):${PATH}"
 	cd - &> /dev/null
 fi
 
@@ -49,10 +49,10 @@ OUTFILE=""
 OUTFILE_FOR_FTDOCK=""
 RESTRICT_INPUT="[]"
 RANDOM_SEED="1"
+FORCEFIELD=""
 CONDA_PATH=""
 CONDA_ENV=""
 RANDOMIZE="false"
-PREPARE_FOR_RELAX="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -61,11 +61,11 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-i|--input)
+	--input)
 		INFILE="$OPTARG"
 		shift
 		;;
-	-o|--output)
+	--output)
 		OUTFILE="$OPTARG"
 		shift
 		;;
@@ -81,6 +81,10 @@ do
 		RANDOM_SEED="$OPTARG"
 		shift
 		;;
+	--forcefield)
+		FORCEFIELD="$OPTARG"
+		shift
+		;;
 	--conda-path)
 		CONDA_PATH="$OPTARG"
 		shift
@@ -91,9 +95,6 @@ do
 		;;
 	--randomize)
 		RANDOMIZE="true"
-		;;
-	--prepare-for-relax)
-		PREPARE_FOR_RELAX="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -125,6 +126,12 @@ fi
 if [ ! -s "$INFILE" ]
 then
 	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+if [ -n "$FORCEFIELD" ] && [ "$FORCEFIELD" != "amber99sb" ] && [ "$FORCEFIELD" != "amber14-all" ] && [ "$FORCEFIELD" != "charmm36" ]
+then
+	echo >&2 "Error: invalid forcefield name '$FORCEFIELD'"
 	exit 1
 fi
 
@@ -176,42 +183,13 @@ else
 	cat "$INFILE" > "$TMPLDIR/structure_stage1.pdb"
 fi
 
-if [ "$PREPARE_FOR_RELAX" == "true" ]
+if [ -n "$FORCEFIELD" ]
 then
-	command -v ftdmp-relax-with-openmm &> /dev/null || { echo >&2 "Error: 'ftdmp-relax-with-openmm' executable not in binaries path"; exit 1; }
-	
-	if [ -z "$CONDA_DEFAULT_ENV" ]
-	then
-		if [ -z "$CONDA_PATH" ]
-		then
-			echo >&2 "Error: not in conda environment, and the conda path is not provided"
-			exit 1
-		fi
-		if [ ! -s "${CONDA_PATH}/bin/activate" ]
-		then
-			echo >&2 "Error: no conda activation script '${CONDA_PATH}/bin/activate'"
-			exit 1
-		fi
-		source "${CONDA_PATH}/bin/activate"
-	fi
-	
-	if [ -n "$CONDA_ENV" ]
-	then
-		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
-		then
-			conda activate "$CONDA_ENV"
-		fi
-		
-		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
-		then
-			echo >&2 "Error: no '$CONDA_ENV' environment"
-			exit 1
-		fi
-	fi
-	
 	ftdmp-relax-with-openmm \
+	  --conda-path "$CONDA_PATH" \
+	  --conda-env "$CONDA_ENV" \
 	  --no-simulation \
-	  --forcefield amber14-all \
+	  --forcefield "$FORCEFIELD" \
 	  --trim-output \
 	  --input "$TMPLDIR/structure_stage1.pdb" \
 	  --output "$TMPLDIR/structure_stage2.pdb"

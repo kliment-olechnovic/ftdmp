@@ -7,8 +7,8 @@ cat >&2 << 'EOF'
 'ftdmp-relax-with-openmm' script relaxes a molecular structure using OpenMM.
 
 Options:
-    --input | -i              string  *  input file path
-    --output | -o             string  *  output file path
+    --input                   string  *  input file path
+    --output                  string  *  output file path, setting to '_same_as_input' will overwrite input file
     --focus                   string     focus mode, default is 'whole_structure', others are: 'interface_side_chains', 'whole_interface', 'not_interface'
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
@@ -24,7 +24,6 @@ Options:
     --no-preparation                     flag to not run any preparation of input structure before simulations
     --limit-preparation                  flag to only add solvent if needed in the preparation stage
     --no-simulation                      flag to not run any simulations
-    --print-time                         flag to print time in seconds
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -40,12 +39,6 @@ Examples:
 EOF
 exit 1
 }
-
-SECONDS=0
-SECONDS_PREPARE=0
-SECONDS_SIMULATE=0
-SECONDS_SCORE=0
-SECONDS_OUTPUT=0
 
 readonly ZEROARG=$0
 
@@ -78,7 +71,6 @@ TRIM_OUTPUT="false"
 NO_PREPARATION="false"
 LIMIT_PREPARATION="false"
 NO_SIMULATION="false"
-PRINT_TIME="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -87,11 +79,11 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-i|--input)
+	--input)
 		INFILE="$OPTARG"
 		shift
 		;;
-	-o|--output)
+	--output)
 		OUTFILE="$OPTARG"
 		shift
 		;;
@@ -149,9 +141,6 @@ do
 		;;
 	--no-simulation)
 		NO_SIMULATION="true"
-		;;
-	--print-time)
-		PRINT_TIME="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -370,8 +359,6 @@ then
 	exit 1
 fi
 
-SECONDS_PREPARE="$SECONDS"
-
 if [ "$NO_SIMULATION" == "true" ]
 then
 	cp "prepared.pdb" "relaxed.pdb"
@@ -497,8 +484,6 @@ then
 	exit 1
 fi
 
-SECONDS_SIMULATE="$SECONDS"
-
 {
 if [ "$NO_PREPARATION" == "true" ]
 then
@@ -529,8 +514,6 @@ then
 	cat list_to_score.txt | voronota-js-voromqa -i _list --processors 2 $SCORING_PARAMS | column -t
 fi
 
-SECONDS_SCORE="$SECONDS"
-
 if [ "$TRIM_OUTPUT" == "true" ]
 then
 	{
@@ -557,16 +540,13 @@ cd - &> /dev/null
 
 if [ -n "$OUTFILE" ] && [ "$OUTFILE" != "/dev/null" ]
 then
-	mkdir -p "$(dirname "$OUTFILE")"
-	mv "$TMPLDIR/relaxed.pdb" "$OUTFILE"
-fi
-
-SECONDS_OUTPUT="$SECONDS"
-
-if [ "$PRINT_TIME" == "true" ]
-then
-	echo "$SECONDS_PREPARE $SECONDS_SIMULATE $SECONDS_SCORE $SECONDS_OUTPUT" \
-	| awk '{print "seconds:" $1 "+" ($2-$1) "+" ($3-$2) "+" ($4-$3) "=" $4}'
+	if [ "$OUTFILE" == "_same_as_input" ]
+	then
+		mv "$TMPLDIR/relaxed.pdb" "$INFILE"
+	else
+		mkdir -p "$(dirname "$OUTFILE")"
+		mv "$TMPLDIR/relaxed.pdb" "$OUTFILE"
+	fi
 fi
 
 exit 0

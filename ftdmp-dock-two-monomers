@@ -11,7 +11,7 @@ Options:
     --monomer2                string  *  mobile monomer input file path
     --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
-    --parallel-parts          number     total number of parallel parts, default is 1
+    --parallel                number     total number of parallel parts, default is 1
     --ftdock-keep             number     ftdock keep parameter, default is 1
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
     --help | -h                          flag to display help message and exit
@@ -83,7 +83,7 @@ do
 		OUTDIR="$OPTARG"
 		shift
 		;;
-	--parallel-parts)
+	--parallel)
 		PARALLEL_PARTS="$OPTARG"
 		shift
 		;;

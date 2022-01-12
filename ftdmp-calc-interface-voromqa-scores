@@ -8,12 +8,14 @@ cat >&2 << 'EOF'
 
 Options:
     --input-prefix            string     input file path prefix
-    --input-suffix            string     input file path suffix
+    --input-suffix            string     input file path suffix, default is '.pdb'
     --monomer1                string     static monomer input file path
     --monomer2                string     mobile monomer input file path
-    --parallel-parts          number     total number of parallel parts, default is 1
-    --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
-    --colnames-prefix         string     prefix for output column names
+    --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+    --rebuild-sidechains                 flag to rebuild sidechains using FASPR
+    --blanket                            flag to use blanket
+    --parallel                number     total number of parallel parts, default is 1
+    --colnames-prefix         string     prefix for output column names, default is 'FIV_'
     --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
 
@@ -25,7 +27,7 @@ Standard output:
     
 Example:
 
-    cat docking_results_table.txt | ftdmp-calc-interface-voromqa-scores -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
+    cat docking_results_table.txt | ftdmp-calc-interface-voromqa-scores -m1 monomer1.pdb -m2 monomer2.pdb --parallel 16
 
 EOF
 exit 1
@@ -38,24 +40,29 @@ then
 	print_help_and_exit
 fi
 
+FTDMPDIR="."
+
 if [[ $ZEROARG == *"/"* ]]
 then
 	cd $(dirname $ZEROARG)
-	export PATH=$(pwd):$PATH
+	FTDMPDIR="$(pwd)"
+	export PATH="${FTDMPDIR}:${PATH}"
 	cd - &> /dev/null
 fi
 
 command -v voronota-js-fast-iface-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
 
 INPUT_PREFIX=""
-INPUT_SUFFIX=""
+INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
-IFACE_VOROMQA_PARAMETERS=""
-COLNAMES_PREFIX=""
+SUBSELECT_CONTACTS="[]"
+COLNAMES_PREFIX="FIV_"
 USE_MONOMERS="false"
 ADJOIN="false"
+REBUILD_SIDECHAINS="false"
+BLANKET="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -82,12 +89,12 @@ do
 		USE_MONOMERS="true"
 		shift
 		;;
-	--parallel-parts)
+	--parallel)
 		PARALLEL_PARTS="$OPTARG"
 		shift
 		;;
-	--parameters)
-		IFACE_VOROMQA_PARAMETERS="$OPTARG"
+	--subselect-contacts)
+		SUBSELECT_CONTACTS="$OPTARG"
 		shift
 		;;
 	--colnames-prefix)
@@ -96,6 +103,12 @@ do
 		;;
 	--adjoin)
 		ADJOIN="true"
+		;;
+	--rebuild-sidechains)
+		REBUILD_SIDECHAINS="true"
+		;;
+	--blanket)
+		BLANKET="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -110,11 +123,6 @@ done
 if [ "$HELP_MODE" == "true" ]
 then
 	print_help_and_exit
-fi
-
-if [ "$ADJOIN" == "true" ]
-then
-	command -v ftdmp-join-tables &> /dev/null || { echo >&2 "Error: 'ftdmp-join-tables' executable not in binaries path"; exit 1; }
 fi
 
 if [ "$USE_MONOMERS" == "true" ]
@@ -150,6 +158,19 @@ then
 	exit 1
 fi
 
+MORE_FAST_IFACE_VOROMQA_PARAMETERS=()
+
+if [ "$REBUILD_SIDECHAINS" == "true" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--run-faspr")
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("${FTDMPDIR}/core/FASPR/FASPR")
+fi
+
+if [ "$BLANKET" == "true" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--blanket")
+fi
+
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
@@ -174,11 +195,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" $IFACE_VOROMQA_PARAMETERS
+	| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-voromqa --input _list --processors "$PARALLEL_PARTS" $IFACE_VOROMQA_PARAMETERS \
+	| voronota-js-fast-iface-voromqa --input _list --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
 fi
 } \

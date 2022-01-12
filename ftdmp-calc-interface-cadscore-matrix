@@ -7,11 +7,12 @@ cat >&2 << 'EOF'
 'ftdmp-calc-interface-cadscore-matrix' computes similarity matrix for docking results produced by 'ftdmp-dock'
 
 Options:
+    --matrix-output           string  *  matrix output file path
     --input-prefix            string     input file path prefix
-    --input-suffix            string     input file path suffix
-    --monomer1                string  *  static monomer input file path
-    --monomer2                string  *  mobile monomer input file path
-    --parallel-parts          number     total number of parallel parts, default is 1
+    --input-suffix            string     input file path suffix, default is '.pdb'
+    --monomer1                string     static monomer input file path
+    --monomer2                string     mobile monomer input file path
+    --parallel                number     total number of parallel parts, default is 1
     --parameters              string     parameters to pass to voronota-js-fast-iface-voromqa, default is ''
     --help | -h                          flag to display help message and exit
 
@@ -19,11 +20,11 @@ Standard input:
     space-separated table of docking results
 
 Standard output:
-    space-separated table of scoring results
+    space-separated table of docking results
     
 Example:
 
-    cat docking_results_table.txt | ftdmp-calc-interface-cadscore-matrix -m1 monomer1.pdb -m2 monomer2.pdb --parallel-parts 16
+    cat docking_results_table.txt | ftdmp-calc-interface-cadscore-matrix --monomer1 monomer1.pdb --monomer2 monomer2.pdb --parallel 16
 
 EOF
 exit 1
@@ -45,8 +46,9 @@ fi
 
 command -v voronota-js-fast-iface-cadscore &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-cadscore' executable not in binaries path"; exit 1; }
 
+MATRIX_OUTPUT=""
 INPUT_PREFIX=""
-INPUT_SUFFIX=""
+INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
@@ -60,6 +62,10 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
+	--matrix-output)
+		MATRIX_OUTPUT="$OPTARG"
+		shift
+		;;
 	--input-prefix)
 		INPUT_PREFIX="$OPTARG"
 		shift
@@ -78,7 +84,7 @@ do
 		USE_MONOMERS="true"
 		shift
 		;;
-	--parallel-parts)
+	--parallel)
 		PARALLEL_PARTS="$OPTARG"
 		shift
 		;;
@@ -99,6 +105,12 @@ done
 if [ "$HELP_MODE" == "true" ]
 then
 	print_help_and_exit
+fi
+
+if [ -z "$MATRIX_OUTPUT" ]
+then
+	echo >&2 "Error: matrix output file path not provided"
+	exit 1
 fi
 
 if [ "$USE_MONOMERS" == "true" ]
@@ -176,5 +188,8 @@ then
 	exit 1
 fi
 
-cat "${TMPLDIR}/output"
+mkdir -p "$(dirname "$MATRIX_OUTPUT")"
+cat "${TMPLDIR}/output" > "$MATRIX_OUTPUT"
+
+cat "${TMPLDIR}/input"
 

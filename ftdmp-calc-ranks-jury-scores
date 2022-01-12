@@ -8,17 +8,22 @@ cat >&2 << 'EOF'
 
 Options:
     --similarities            string  *  similarities table input file path
-    --ranks                   string  *  ranks table input file path
+    --rank-columns            string  *  rank column names to use
     --top-slices              string     top slices to use, default is '10 20 30 40 50'
     --cluster                 number     similarity threshold to select cluster representatives, default is 1.0
+    --colnames-prefix         string     prefix for output column names, default is 'RJS_'
+    --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
 
+Standard input:
+    space-separated table of docking results
+    
 Standard output:
-    space-separated table of sorted ranks jury scores
+    space-separated table of scoring results
     
 Example:
 
-    ftdmp-calc-ranks-jury-scores --similarities similarities.txt --ranks ranks.txt --top-slices '10 20 30 99999'
+    ftdmp-calc-ranks-jury-scores --similarities similarities.txt --rank-columns "colname1 colname2 colname3" --top-slices '10 20 30 99999'
 
 EOF
 exit 1
@@ -41,9 +46,11 @@ fi
 command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
 SIMILARITIESFILE=""
-RANKSFILE=""
+RANKCOLUMNS=""
 TOPSLICES="10 20 30 40 50"
 CLUSTERTHRESHOLD="1"
+COLNAMES_PREFIX="RJS_"
+ADJOIN="false"
 HELP_MODE="false"
 while [[ $# > 0 ]]
 do
@@ -55,8 +62,8 @@ do
 		SIMILARITIESFILE="$OPTARG"
 		shift
 		;;
-	--ranks)
-		RANKSFILE="$OPTARG"
+	--rank-columns)
+		RANKCOLUMNS="$OPTARG"
 		shift
 		;;
 	--top-slices)
@@ -66,6 +73,13 @@ do
 	--cluster)
 		CLUSTERTHRESHOLD="$OPTARG"
 		shift
+		;;
+	--colnames-prefix)
+		COLNAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--adjoin)
+		ADJOIN="true"
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -88,21 +102,9 @@ then
 	exit 1
 fi
 
-if [ ! -s "$SIMILARITIESFILE" ]
+if [ -z "$RANKCOLUMNS" ]
 then
-	echo >&2 "Error: no similarities input file '$SIMILARITIESFILE'"
-	exit 1
-fi
-
-if [ -z "$RANKSFILE" ]
-then
-	echo >&2 "Error: no ranks input file specified"
-	exit 1
-fi
-
-if [ ! -s "$RANKSFILE" ]
-then
-	echo >&2 "Error: no ranks input file '$RANKSFILE'"
+	echo >&2 "Error: no rank columns specified"
 	exit 1
 fi
 
@@ -114,6 +116,33 @@ fi
 
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+if [ ! -s "$SIMILARITIESFILE" ]
+then
+	echo >&2 "Error: no similarities input file '$SIMILARITIESFILE'"
+	exit 1
+fi
+
+RANKSFILE="${TMPLDIR}/ranks"
+
+cat "${TMPLDIR}/input" \
+| ftdmp-extract-table-columns ID $RANKCOLUMNS \
+| tail -n +2 \
+> "$RANKSFILE"
+
+if [ ! -s "$RANKSFILE" ]
+then
+	echo >&2 "Error: failed to extract rank columns"
+	exit 1
+fi
 
 {
 cat << EOF
@@ -127,5 +156,31 @@ EOF
 } \
 | tr '\n' ' ' \
 | sed 's/$/\n/' \
-| voronota-js --no-setup-defaults
+| voronota-js --no-setup-defaults \
+> "${TMPLDIR}/jury_scores"
+
+if [ ! -s "${TMPLDIR}/jury_scores" ]
+then
+	echo >&2 "Error: failed to compute jury scores"
+	exit 1
+fi
+
+{
+echo "ID $(echo $TOPSLICES)" | sed "s/\s\+/ top/g" | awk '{print $0 " rank"}' | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
+cat "${TMPLDIR}/jury_scores" | awk '{print $0 " " NR}'
+} \
+> "${TMPLDIR}/output"
+
+if [ ! -s "${TMPLDIR}/output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+if [ "$ADJOIN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/input" "${TMPLDIR}/output"
+else
+	cat "${TMPLDIR}/output"
+fi
 

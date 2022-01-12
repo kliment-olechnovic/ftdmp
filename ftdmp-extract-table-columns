@@ -1,0 +1,77 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-extract-table-columns' extracts only specified table columns
+
+Options:
+    space-separated table
+
+Standard output:
+    space-separated table
+    
+Example:
+
+    ftdmp-extract-table-columns colname1 colname2 colname3
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+while [[ $# > 0 ]]
+do
+	COLNAME="$1"
+	shift
+	
+	if [ -z "$COLNAME" ]
+	then
+		echo >&2 "Error: empty column name in arguments"
+		exit 1
+	fi
+	
+	echo "$COLNAME" >> "$TMPLDIR/input_list"
+done
+
+INCOUNT="$(cat "$TMPLDIR/input_list" | wc -l)"
+
+if [ "$INCOUNT" -lt "1" ]
+then
+	echo >&2 "Error: no input column names provided"
+	exit 1
+fi
+
+cat > "$TMPLDIR/input_table"
+
+head -1 "$TMPLDIR/input_table" | sed 's/\s\+/\n/g' | egrep . > "$TMPLDIR/input_table_columns"
+
+MATCHEDCOUNT="$(cat "$TMPLDIR/input_table_columns" | awk '{print ";" $1 ";"}' | grep -f <(cat "$TMPLDIR/input_list" | awk '{print ";" $1 ";"}') | wc -l)"
+
+if [ "$INCOUNT" != "$MATCHEDCOUNT" ]
+then
+	echo >&2 "Error: provided column names do not match the input table column names"
+	exit 1
+fi
+
+{
+echo 'NR==1 {for(i=1;i<=NF;i++){f[$i]=i}}'
+echo '{print'
+cat "$TMPLDIR/input_list" | sed 's/^/\$(f[\"/' | sed 's/$/\"]),/'
+echo "}"
+} \
+| tr '\n' ' ' \
+| sed 's/,\s*}/}/' \
+| sed 's/$/\n/' \
+> "$TMPLDIR/awk_script"
+
+cat "$TMPLDIR/input_table" | awk -f "$TMPLDIR/awk_script"
+
