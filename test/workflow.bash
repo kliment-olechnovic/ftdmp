@@ -5,32 +5,35 @@ cd ..
 
 export PATH="$HOME/git/voronota/expansion_js:$PATH"
 
-rm -rf ./test/output
+if [ "$1" != "rescore" ]
+then
+	rm -rf ./test/output
+	
+	echo
+	echo "Preparing monomers"
+	
+	time -p ( \
+	./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/output/monomers/6V3P_A.pdb --restrict-input '[-chain A]' \
+	  --randomize --random-seed 1 --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2 \
+	; \
+	./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/output/monomers/6V3P_B.pdb --restrict-input '[-chain B]' \
+	  --randomize --random-seed 2 --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2 \
+	)
 
-echo
-echo "Preparing monomers"
 
-time -p ( \
-./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/output/monomers/6V3P_A.pdb --restrict-input '[-chain A]' \
-  --randomize --random-seed 1 --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2 \
-; \
-./ftdmp-prepare-monomer -i ./test/reference_dimer/6V3P_AB.pdb -o ./test/output/monomers/6V3P_B.pdb --restrict-input '[-chain B]' \
-  --randomize --random-seed 2 --prepare-for-relax --conda-path ~/anaconda3 --conda-env alphafold2 \
-)
-
-
-echo
-echo "Docking"
-
-time -p (./ftdmp-dock-two-monomers \
-  --monomer1 ./test/output/monomers/6V3P_A.pdb \
-  --monomer2 ./test/output/monomers/6V3P_B.pdb \
-  --job-name 6V3P_rd_ \
-  --logs-output ./test/output/docking_results \
-  --parallel-parts 16 \
-  --ftdock-keep 1 \
-| column -t \
-> ./test/output/all_docking_results_table.txt)
+	echo
+	echo "Docking"
+	
+	time -p (./ftdmp-dock-two-monomers \
+	  --monomer1 ./test/output/monomers/6V3P_A.pdb \
+	  --monomer2 ./test/output/monomers/6V3P_B.pdb \
+	  --job-name 6V3P_rd_ \
+	  --logs-output ./test/output/docking_results \
+	  --parallel-parts 16 \
+	  --ftdock-keep 1 \
+	| column -t \
+	> ./test/output/all_docking_results_table.txt)
+fi
 
 
 echo
@@ -46,7 +49,7 @@ time -p (cat ./test/output/all_docking_results_table.txt \
 | tee ./test/output/all_results_table.txt \
 | ./ftdmp-sort-table \
   --columns "-DM_iface_energy" \
-| head -301 \
+| head -501 \
 | ./ftdmp-calc-interface-voromqa-scores \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
@@ -88,11 +91,32 @@ time -p (cat ./test/output/all_docking_results_table.txt \
   --columns "-DMsr_iface_energy -DMsr_iface_clash_score" \
   --tolerances "0 0.05" \
   --add-rank-column "DMsr_tour_rank" \
-| ./ftdmp-sort-table \
-  --columns "-DM_iface_energy -DM_iface_clash_score" \
-  --tolerances "0 0.05" \
+| awk -v max_rank=100 '
+NR==1 {for(i=1;i<=NF;i++){f[$i]=i}}
+{
+  if(NR==1 ||
+     ($(f["DM_iface_energy_rank"])<=max_rank ||
+      $(f["DMsr_iface_energy_rank"])<=max_rank ||
+      $(f["BM_iface_energy_rank"])<=max_rank  ||
+      $(f["BMsr_iface_energy_rank"])<=max_rank ||
+      $(f["DM_tour_rank"])<=max_rank ||
+      $(f["DMsr_tour_rank"])<=max_rank))
+  {print $0}
+}' \
 | column -t \
-> ./test/output/results_table.txt)
+| tee ./test/output/results_table.txt \
+| awk '
+NR==1 {for(i=1;i<=NF;i++){f[$i]=i}}
+NR>1  {
+  print $(f["ID"]),
+        $(f["DM_iface_energy_rank"]),
+        $(f["DMsr_iface_energy_rank"]),
+        $(f["BM_iface_energy_rank"]),
+        $(f["BMsr_iface_energy_rank"]),
+        $(f["DM_tour_rank"]),
+        $(f["DMsr_tour_rank"])
+}' \
+> ./test/output/ranks.txt)
 
 
 echo
@@ -116,7 +140,6 @@ echo
 echo "Calculating similarity matrix"
 
 time -p (cat ./test/output/results_table.txt \
-| head -101 \
 | ./ftdmp-calc-interface-cadscore-matrix \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
@@ -127,10 +150,6 @@ time -p (cat ./test/output/results_table.txt \
 echo
 echo "Calculating ranks jury scores"
 
-cat ./test/output/results_table.txt \
-| tail -n +2 \
-| awk '{print $1 " " $30 " " $31 " " $32 " " $33 " " $34 " " $35}' \
-> ./test/output/ranks.txt
 
 ./ftdmp-calc-ranks-jury-scores \
   --similarities ./test/output/similarity_matrix.txt \
@@ -144,8 +163,9 @@ cat ./test/output/results_table.txt \
 echo
 echo "Building top complexes"
 
+rm -rf ./test/output/complexes
+
 time -p (cat ./test/output/results_table.txt \
-| head -101 \
 | ./ftdmp-build-complex \
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
