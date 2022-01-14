@@ -80,6 +80,7 @@ rm -rf ./test/output
   --monomer1 ./test/output/monomers/6V3P_A.pdb \
   --monomer2 ./test/output/monomers/6V3P_B.pdb \
   --matrix-output "./test/output/similarity_matrix.txt" \
+  --parallel 16 \
 | ./ftdmp-calc-ranks-jury-scores \
   --similarities ./test/output/similarity_matrix.txt \
   --rank-columns "FIV_iface_energy_rank  FIVsr_iface_energy_rank  bFIV_iface_energy_rank  bFIVsr_iface_energy_rank  FIV_tour_rank  FIVsr_tour_rank" \
