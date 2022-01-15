@@ -40,22 +40,22 @@ if [ -z "$SCORING_RANKS" ]
 then
 	if [ "$SCORING_MODE_PROTEIN" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIV_iface_energy_rank  FIV_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIV_iface_energy_rank  FIV_iface_energy_norm_rank FIV_energy_clash_tour_rank  FIV_energy_norm_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIV_sr_iface_energy_rank  FIV_sr_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIV_sr_iface_energy_rank  FIV_sr_iface_energy_norm_rank  FIV_sr_energy_clash_tour_rank  FIV_sr_energy_norm_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_GENERIC" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIVb_iface_energy_rank  FIVb_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIVb_iface_energy_rank  FIVb_iface_energy_norm_rank  FIVb_energy_clash_tour_rank  FIVb_energy_norm_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIVb_sr_iface_energy_rank  FIVb_sr_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIVb_sr_iface_energy_rank  FIVb_sr_iface_energy_norm_rank  FIVb_sr_energy_clash_tour_rank  FIVb_sr_energy_norm_clash_tour_rank"
 	fi
 fi
 
@@ -155,9 +155,16 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --columns "-FIV_iface_energy" \
 		  --add-rank-column "FIV_iface_energy_rank" \
 		| ./ftdmp-sort-table \
+		  --columns "-FIV_iface_energy_norm" \
+		  --add-rank-column "FIV_iface_energy_norm_rank" \
+		| ./ftdmp-sort-table \
 		  --columns "-FIV_iface_energy -FIV_iface_clash_score" \
 		  --tolerances "0 0.05" \
-		  --add-rank-column "FIV_tour_rank"
+		  --add-rank-column "FIV_energy_clash_tour_rank" \
+		| ./ftdmp-sort-table \
+		  --columns "-FIV_iface_energy -FIV_iface_energy_norm -FIV_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIV_energy_norm_clash_tour_rank"
 	else
 		cat
 	fi
@@ -169,9 +176,16 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --columns "-FIVb_iface_energy" \
 		  --add-rank-column "FIVb_iface_energy_rank" \
 		| ./ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy_norm" \
+		  --add-rank-column "FIVb_iface_energy_norm_rank" \
+		| ./ftdmp-sort-table \
 		  --columns "-FIVb_iface_energy -FIVb_iface_clash_score" \
 		  --tolerances "0 0.05" \
-		  --add-rank-column "FIVb_tour_rank"
+		  --add-rank-column "FIVb_energy_clash_tour_rank" \
+		| ./ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy -FIVb_iface_energy_norm -FIVb_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIVb_energy_norm_clash_tour_rank"
 	else
 		cat
 	fi
@@ -183,9 +197,16 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --columns "-FIV_sr_iface_energy" \
 		  --add-rank-column "FIV_sr_iface_energy_rank" \
 		| ./ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy_norm" \
+		  --add-rank-column "FIV_sr_iface_energy_norm_rank" \
+		| ./ftdmp-sort-table \
 		  --columns "-FIV_sr_iface_energy -FIV_sr_iface_clash_score" \
 		  --tolerances "0 0.05" \
-		  --add-rank-column "FIV_sr_tour_rank"
+		  --add-rank-column "FIV_sr_energy_clash_tour_rank" \
+		| ./ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy -FIV_sr_iface_energy_norm -FIV_sr_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIV_sr_energy_norm_clash_tour_rank"
 	else
 		cat
 	fi
@@ -197,9 +218,16 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --columns "-FIVb_sr_iface_energy" \
 		  --add-rank-column "FIVb_sr_iface_energy_rank" \
 		| ./ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy_norm" \
+		  --add-rank-column "FIVb_sr_iface_energy_norm_rank" \
+		| ./ftdmp-sort-table \
 		  --columns "-FIVb_sr_iface_energy -FIVb_sr_iface_clash_score" \
 		  --tolerances "0 0.05" \
-		  --add-rank-column "FIVb_sr_tour_rank"
+		  --add-rank-column "FIVb_sr_energy_clash_tour_rank" \
+		| ./ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy -FIVb_sr_iface_energy_norm -FIVb_sr_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIVb_sr_energy_norm_clash_tour_rank"
 	else
 		cat
 	fi
