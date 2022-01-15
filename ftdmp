@@ -219,18 +219,23 @@ SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results.txt"
 
 cat "$DOCKING_RESULTS_FILE" \
 | {
-	if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+	if [ -s "${OUTPUT_PATH}/scoring_results_FICS.txt" ]
 	then
-		ftdmp-calc-interface-cadscore-for-reference --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --colnames-prefix FICS_ \
-		  --adjoin \
-		| ftdmp-sort-table --columns "FICS_iface_cadscore" \
-		| tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
+		cat "${OUTPUT_PATH}/scoring_results_FICS.txt"
 	else
-		cat
+		if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+		then
+			ftdmp-calc-interface-cadscore-for-reference --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+			  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+			  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+			  --parallel "$SCORING_PROCESSORS" \
+			  --colnames-prefix FICS_ \
+			  --adjoin \
+			| ftdmp-sort-table --columns "FICS_iface_cadscore" \
+			| tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
+		else
+			cat
+		fi
 	fi
 } \
 | {
