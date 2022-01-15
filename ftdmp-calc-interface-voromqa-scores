@@ -40,8 +40,6 @@ then
 	print_help_and_exit
 fi
 
-FTDMPDIR="."
-
 if [[ $ZEROARG == *"/"* ]]
 then
 	cd $(dirname $ZEROARG)
@@ -162,6 +160,11 @@ MORE_FAST_IFACE_VOROMQA_PARAMETERS=()
 
 if [ "$REBUILD_SIDECHAINS" == "true" ]
 then
+	if [ -z "$FTDMPDIR" ]
+	then
+		echo >&2 "Error: no script directory path in variable FTDMPDIR (required to locate FASPR)"
+		exit 1
+	fi
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--run-faspr")
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("${FTDMPDIR}/core/FASPR/FASPR")
 fi

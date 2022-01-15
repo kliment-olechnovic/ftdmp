@@ -1,0 +1,397 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp' docks, scores and ranks two structures of proteins or nucleic acids
+
+Options:
+    --io-config               string  *  input and output configuration bash file path
+    --mode-config             string  *  mode configuration bash file path
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+    ftdmp --io-config ./configure_input.bash --mode-config ./configure_mode.bash
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export FTDMPDIR="$(pwd)"
+	export PATH="${FTDMPDIR}:${PATH}"
+	if [ -d "${FTDMPDIR}/core/3D_Dock/progs" ]
+	then
+		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${PATH}"
+	fi
+	cd - &> /dev/null
+else
+	echo >&2 "Error: required to be run using explicit path"
+	exit 1
+fi
+
+IO_CONFIG=""
+MODE_CONFIG=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--io-config)
+		IO_CONFIG="$OPTARG"
+		shift
+		;;
+	--mode-config)
+		MODE_CONFIG="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$IO_CONFIG" ]
+then
+	echo >&2 "Error: input-output configuration file path not provided"
+	exit 1
+fi
+
+if [ ! -s "$IO_CONFIG" ]
+then
+	echo >&2 "Error: input-output configuration file '$IO_CONFIG' does not exist"
+	exit 1
+fi
+
+if [ -z "$MODE_CONFIG" ]
+then
+	echo >&2 "Error: mode configuration file path not provided"
+	exit 1
+fi
+
+if [ ! -s "$MODE_CONFIG" ]
+then
+	echo >&2 "Error: mode configuration file '$MODE_CONFIG' does not exist"
+	exit 1
+fi
+
+STATIC_STRUCTURE_SELECTION="[]"
+MOBILE_STRUCTURE_SELECTION="[]"
+INTERFACE_SUBSELECTION="[]"
+
+source "$IO_CONFIG"
+
+[ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: OUTPUT_PATH variable not set"; exit 1;}
+[ -n "$JOB_NAME" ] || { echo >&2 "Error: JOB_NAME variable not set"; exit 1;}
+[ -n "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: STATIC_STRUCTURE_FILE variable not set"; exit 1;}
+[ -s "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: STATIC_STRUCTURE_FILE variable set to non-existing or empty file"; exit 1;}
+[ -n "$STATIC_STRUCTURE_SELECTION" ] || { echo >&2 "Error: STATIC_STRUCTURE_SELECTION variable not set"; exit 1;}
+[ -n "$STATIC_STRUCTURE_NAME" ] || { echo >&2 "Error: STATIC_STRUCTURE_NAME variable not set"; exit 1;}
+[ -n "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: MOBILE_STRUCTURE_FILE variable not set"; exit 1;}
+[ -s "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: MOBILE_STRUCTURE_FILE variable set to non-existing or empty file"; exit 1;}
+[ -n "$MOBILE_STRUCTURE_SELECTION" ] || { echo >&2 "Error: MOBILE_STRUCTURE_SELECTION variable not set"; exit 1; }
+[ -n "$MOBILE_STRUCTURE_NAME" ] || { echo >&2 "Error: MOBILE_STRUCTURE_NAME variable not set"; exit 1; }
+[ -n "$INTERFACE_SUBSELECTION" ] || { echo >&2 "Error: INTERFACE_SUBSELECTION variable not set"; exit 1; }
+
+OPENMM_FORCEFIELD="amber99sb"
+FTDOCK_KEEP="1"
+FTDOCK_ANGLE_STEP="9"
+DOCKING_PROCESSORS=16
+SCORING_PROCESSORS=16
+SCORING_TOP_STAGE1=500
+SCORING_TOP_STAGE2=50
+SCORING_MODE_PROTEIN="true"
+SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
+SCORING_MODE_GENERIC="true"
+SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
+SCORING_RANKS=""
+SCORING_RANKS_JURY_SLICES="25 50 75 100 99999"
+NUMBER_OF_COMPLEXES_TO_BUILD=10
+
+source "$MODE_CONFIG"
+
+if [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
+then
+	echo >&2 "Error: no scoring mode enabled"
+	exit 1
+fi
+
+if [ -z "$SCORING_RANKS" ]
+then
+	if [ "$SCORING_MODE_PROTEIN" == "true" ]
+	then
+		SCORING_RANKS="$SCORING_RANKS  FIV_iface_energy_rank  FIV_iface_energy_norm_rank FIV_energy_clash_tour_rank  FIV_energy_norm_clash_tour_rank"
+	fi
+	
+	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+	then
+		SCORING_RANKS="$SCORING_RANKS  FIV_sr_iface_energy_rank  FIV_sr_iface_energy_norm_rank  FIV_sr_energy_clash_tour_rank  FIV_sr_energy_norm_clash_tour_rank"
+	fi
+	
+	if [ "$SCORING_MODE_GENERIC" == "true" ]
+	then
+		SCORING_RANKS="$SCORING_RANKS  FIVb_iface_energy_rank  FIVb_iface_energy_norm_rank  FIVb_energy_clash_tour_rank  FIVb_energy_norm_clash_tour_rank"
+	fi
+	
+	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+	then
+		SCORING_RANKS="$SCORING_RANKS  FIVb_sr_iface_energy_rank  FIVb_sr_iface_energy_norm_rank  FIVb_sr_energy_clash_tour_rank  FIVb_sr_energy_norm_clash_tour_rank"
+	fi
+fi
+
+if [ -n "$VORONOTA_JS_PATH" ]
+then
+	export PATH="${VORONOTA_JS_PATH}:${PATH}"
+fi
+
+OUTPUT_PATH="${OUTPUT_PATH}/${JOB_NAME}"
+mkdir -p "$OUTPUT_PATH"
+
+PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/${STATIC_STRUCTURE_NAME}.pdb"
+
+ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" --restrict-input "$STATIC_STRUCTURE_SELECTION" \
+  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+
+PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/${MOBILE_STRUCTURE_NAME}.pdb"
+
+ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" --restrict-input "$MOBILE_STRUCTURE_SELECTION" \
+  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+
+DOCKING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
+
+if [ ! -s "$DOCKING_RESULTS_FILE" ]
+then
+	ftdmp-dock-two-monomers --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+	  --job-name "${JOB_NAME}_" \
+	  --parallel "$DOCKING_PROCESSORS" \
+	  --ftdock-keep "$FTDOCK_KEEP" \
+	  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
+	> "$DOCKING_RESULTS_FILE"
+fi
+
+SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results.txt"
+
+cat "$DOCKING_RESULTS_FILE" \
+| {
+	if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+	then
+		ftdmp-calc-interface-cadscore-for-reference --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --colnames-prefix FICS_ \
+		  --adjoin \
+		| tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_PROTEIN" == "true" ]
+	then
+		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --colnames-prefix FIV_ \
+		  --adjoin \
+		| tee "${OUTPUT_PATH}/scoring_results_FIV.txt" \
+		| ftdmp-sort-table --columns "-FIV_iface_energy" \
+		| head -n "$((SCORING_TOP_STAGE1+1))"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_GENERIC" == "true" ]
+	then
+		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --blanket \
+		  --colnames-prefix FIVb_ \
+		  --adjoin \
+		| tee "${OUTPUT_PATH}/scoring_results_FIVb.txt" \
+		| ftdmp-sort-table --columns "-FIVb_iface_energy" \
+		| head -n "$((SCORING_TOP_STAGE1+1))"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+	then
+		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --rebuild-sidechains \
+		  --colnames-prefix FIV_sr_ \
+		  --adjoin \
+		| tee "${OUTPUT_PATH}/scoring_results_FIV_sr.txt" \
+		| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
+		| head -n "$((SCORING_TOP_STAGE1+1))"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+	then
+		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --blanket --rebuild-sidechains \
+		  --colnames-prefix FIVb_sr_ \
+		  --adjoin \
+		| tee "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt" \
+		| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
+		| head -n "$((SCORING_TOP_STAGE1+1))"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_PROTEIN" == "true" ]
+	then
+		ftdmp-sort-table \
+		  --columns "-FIV_iface_energy" \
+		  --add-rank-column "FIV_iface_energy_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_iface_energy_norm" \
+		  --add-rank-column "FIV_iface_energy_norm_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_iface_energy -FIV_iface_clash_score" \
+		  --tolerances "0 0.05" \
+		  --add-rank-column "FIV_energy_clash_tour_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_iface_energy -FIV_iface_energy_norm -FIV_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIV_energy_norm_clash_tour_rank"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_GENERIC" == "true" ]
+	then
+		ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy" \
+		  --add-rank-column "FIVb_iface_energy_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy_norm" \
+		  --add-rank-column "FIVb_iface_energy_norm_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy -FIVb_iface_clash_score" \
+		  --tolerances "0 0.05" \
+		  --add-rank-column "FIVb_energy_clash_tour_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_iface_energy -FIVb_iface_energy_norm -FIVb_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIVb_energy_norm_clash_tour_rank"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+	then
+		ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy" \
+		  --add-rank-column "FIV_sr_iface_energy_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy_norm" \
+		  --add-rank-column "FIV_sr_iface_energy_norm_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy -FIV_sr_iface_clash_score" \
+		  --tolerances "0 0.05" \
+		  --add-rank-column "FIV_sr_energy_clash_tour_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIV_sr_iface_energy -FIV_sr_iface_energy_norm -FIV_sr_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIV_sr_energy_norm_clash_tour_rank"
+	else
+		cat
+	fi
+} \
+| {
+	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+	then
+		ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy" \
+		  --add-rank-column "FIVb_sr_iface_energy_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy_norm" \
+		  --add-rank-column "FIVb_sr_iface_energy_norm_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy -FIVb_sr_iface_clash_score" \
+		  --tolerances "0 0.05" \
+		  --add-rank-column "FIVb_sr_energy_clash_tour_rank" \
+		| ftdmp-sort-table \
+		  --columns "-FIVb_sr_iface_energy -FIVb_sr_iface_energy_norm -FIVb_sr_iface_clash_score" \
+		  --tolerances "0 0 0.05" \
+		  --add-rank-column "FIVb_sr_energy_norm_clash_tour_rank"
+	else
+		cat
+	fi
+} \
+> "$SCORING_RESULTS_FILE"
+
+TOP_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results.txt"
+
+cat "$SCORING_RESULTS_FILE" \
+| ftdmp-filter-table \
+  "<=${SCORING_TOP_STAGE2}" $SCORING_RANKS \
+| ftdmp-calc-interface-cadscore-matrix --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+  --matrix-output "${OUTPUT_PATH}/similarity_matrix.txt" \
+  --parallel "$SCORING_PROCESSORS" \
+| ftdmp-calc-ranks-jury-scores \
+  --similarities "${OUTPUT_PATH}/similarity_matrix.txt" \
+  --rank-columns "$SCORING_RANKS" \
+  --top-slices "$SCORING_RANKS_JURY_SLICES" \
+  --cluster 0.9 \
+  --colnames-prefix RJS_ \
+  --adjoin \
+| ftdmp-sort-table \
+  --columns "-RJS_rank" \
+| column -t \
+> "$TOP_SCORING_RESULTS_FILE"
+
+TOP_COMPLEXES_DIR="${OUTPUT_PATH}/top_complexes"
+
+rm -rf "$TOP_COMPLEXES_DIR"
+
+if [ "$NUMBER_OF_COMPLEXES_TO_BUILD" -gt "0" ]
+then
+	cat "$TOP_SCORING_RESULTS_FILE" \
+	| head -n "$((NUMBER_OF_COMPLEXES_TO_BUILD+1))" \
+	| ftdmp-build-complex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+	  --output-prefix "${TOP_COMPLEXES_DIR}/" \
+	  --output-suffix ".pdb" \
+	| tail -n +2 \
+	| awk -v prefix="${TOP_COMPLEXES_DIR}/" -v suffix=".pdb" '{print prefix $1 suffix}' \
+	> "${OUTPUT_PATH}/top_complexes_ordered_list.txt"
+fi
+
