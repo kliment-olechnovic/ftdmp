@@ -186,10 +186,22 @@ PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/${STATIC_STRUCTURE_NAME}
 ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" --restrict-input "$STATIC_STRUCTURE_SELECTION" \
   --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
 
+if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
+then
+	echo >&2 "Error: failed to prepare static monomer structure"
+	exit 1
+fi
+
 PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/${MOBILE_STRUCTURE_NAME}.pdb"
 
 ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" --restrict-input "$MOBILE_STRUCTURE_SELECTION" \
-  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+  --randomize --random-seed 2 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+
+if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
+then
+	echo >&2 "Error: failed to prepare mobile monomer structure"
+	exit 1
+fi
 
 DOCKING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
 
