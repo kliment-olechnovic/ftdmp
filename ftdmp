@@ -154,22 +154,22 @@ if [ -z "$SCORING_RANKS" ]
 then
 	if [ "$SCORING_MODE_PROTEIN" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIV_iface_energy_rank  FIV_iface_energy_norm_rank FIV_energy_clash_tour_rank  FIV_energy_norm_clash_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIV_iface_energy_rank FIV_energy_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIV_sr_iface_energy_rank  FIV_sr_iface_energy_norm_rank  FIV_sr_energy_clash_tour_rank  FIV_sr_energy_norm_clash_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIV_sr_iface_energy_rank  FIV_sr_energy_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_GENERIC" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIVb_iface_energy_rank  FIVb_iface_energy_norm_rank  FIVb_energy_clash_tour_rank  FIVb_energy_norm_clash_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIVb_iface_energy_rank  FIVb_energy_clash_tour_rank"
 	fi
 	
 	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 	then
-		SCORING_RANKS="$SCORING_RANKS  FIVb_sr_iface_energy_rank  FIVb_sr_iface_energy_norm_rank  FIVb_sr_energy_clash_tour_rank  FIVb_sr_energy_norm_clash_tour_rank"
+		SCORING_RANKS="$SCORING_RANKS  FIVb_sr_iface_energy_rank  FIVb_sr_energy_clash_tour_rank"
 	fi
 fi
 
