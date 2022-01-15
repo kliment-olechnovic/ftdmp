@@ -7,8 +7,9 @@ cat >&2 << 'EOF'
 'ftdmp' docks, scores and ranks two structures of proteins or nucleic acids
 
 Options:
-    --io-config               string  *  input and output configuration bash file path
+    --input-config            string  *  input and output configuration bash file path
     --mode-config             string  *  mode configuration bash file path
+    --output-dir              string  *  output direectory path
     --help | -h                          flag to display help message and exit
 
 Examples:
@@ -41,7 +42,8 @@ else
 	exit 1
 fi
 
-IO_CONFIG=""
+OUTPUT_PATH=""
+INPUT_CONFIG=""
 MODE_CONFIG=""
 HELP_MODE="false"
 
@@ -51,12 +53,16 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	--io-config)
-		IO_CONFIG="$OPTARG"
+	--input-config)
+		INPUT_CONFIG="$OPTARG"
 		shift
 		;;
 	--mode-config)
 		MODE_CONFIG="$OPTARG"
+		shift
+		;;
+	--output-dir)
+		OUTPUT_PATH="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -74,15 +80,15 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$IO_CONFIG" ]
+if [ -z "$INPUT_CONFIG" ]
 then
 	echo >&2 "Error: input-output configuration file path not provided"
 	exit 1
 fi
 
-if [ ! -s "$IO_CONFIG" ]
+if [ ! -s "$INPUT_CONFIG" ]
 then
-	echo >&2 "Error: input-output configuration file '$IO_CONFIG' does not exist"
+	echo >&2 "Error: input configuration file '$INPUT_CONFIG' does not exist"
 	exit 1
 fi
 
@@ -98,13 +104,18 @@ then
 	exit 1
 fi
 
+if [ -z "$OUTPUT_PATH" ]
+then
+	echo >&2 "Error: output directory path not provided"
+	exit 1
+fi
+
 STATIC_STRUCTURE_SELECTION="[]"
 MOBILE_STRUCTURE_SELECTION="[]"
 INTERFACE_SUBSELECTION="[]"
 
-source "$IO_CONFIG"
+source "$INPUT_CONFIG"
 
-[ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: OUTPUT_PATH variable not set"; exit 1;}
 [ -n "$JOB_NAME" ] || { echo >&2 "Error: JOB_NAME variable not set"; exit 1;}
 [ -n "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: STATIC_STRUCTURE_FILE variable not set"; exit 1;}
 [ -s "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: STATIC_STRUCTURE_FILE variable set to non-existing or empty file"; exit 1;}
