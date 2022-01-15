@@ -204,6 +204,7 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --parallel "$SCORING_PROCESSORS" \
 		  --colnames-prefix FICS_ \
 		  --adjoin \
+		| ftdmp-sort-table --columns "FICS_iface_cadscore" \
 		| tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
 	else
 		cat
@@ -217,6 +218,7 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --parallel "$SCORING_PROCESSORS" \
 		  --colnames-prefix FIV_ \
 		  --adjoin \
+		| ftdmp-sort-table --columns "-FIV_iface_energy" \
 		| tee "${OUTPUT_PATH}/scoring_results_FIV.txt" \
 		| ftdmp-sort-table --columns "-FIV_iface_energy" \
 		| head -n "$((SCORING_TOP_STAGE1+1))"
@@ -233,6 +235,7 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --blanket \
 		  --colnames-prefix FIVb_ \
 		  --adjoin \
+		| ftdmp-sort-table --columns "-FIVb_iface_energy" \
 		| tee "${OUTPUT_PATH}/scoring_results_FIVb.txt" \
 		| ftdmp-sort-table --columns "-FIVb_iface_energy" \
 		| head -n "$((SCORING_TOP_STAGE1+1))"
@@ -249,6 +252,7 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --rebuild-sidechains \
 		  --colnames-prefix FIV_sr_ \
 		  --adjoin \
+		| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
 		| tee "${OUTPUT_PATH}/scoring_results_FIV_sr.txt" \
 		| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
 		| head -n "$((SCORING_TOP_STAGE1+1))"
@@ -265,6 +269,7 @@ cat "$DOCKING_RESULTS_FILE" \
 		  --blanket --rebuild-sidechains \
 		  --colnames-prefix FIVb_sr_ \
 		  --adjoin \
+		| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
 		| tee "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt" \
 		| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
 		| head -n "$((SCORING_TOP_STAGE1+1))"
