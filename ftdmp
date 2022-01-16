@@ -217,39 +217,48 @@ fi
 
 SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results.txt"
 
+SCORING_TOP_STAGE1="$((SCORING_TOP_STAGE1+1))"
+
 cat "$DOCKING_RESULTS_FILE" \
 | {
-	if [ -s "${OUTPUT_PATH}/scoring_results_FICS.txt" ]
+	if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
 	then
-		cat "${OUTPUT_PATH}/scoring_results_FICS.txt"
-	else
-		if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+		if [ -s "${OUTPUT_PATH}/scoring_results_FICS.txt" ]
 		then
+			cat "${OUTPUT_PATH}/scoring_results_FICS.txt"
+		else
 			ftdmp-calc-interface-cadscore-for-reference --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 			  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
 			  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 			  --parallel "$SCORING_PROCESSORS" \
 			  --colnames-prefix FICS_ \
 			  --adjoin \
-			| ftdmp-sort-table --columns "FICS_iface_cadscore" \
-			| tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
-		else
-			cat
+			  | ftdmp-sort-table --columns "FICS_iface_cadscore" \
+			  | tee "${OUTPUT_PATH}/scoring_results_FICS.txt"
 		fi
+	else
+		cat
 	fi
 } \
 | {
 	if [ "$SCORING_MODE_PROTEIN" == "true" ]
 	then
-		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --colnames-prefix FIV_ \
-		  --adjoin \
+		{
+			if [ -s "${OUTPUT_PATH}/scoring_results_FIV.txt" ] && [ "$(cat "${OUTPUT_PATH}/scoring_results_FIV.txt" | wc -l)" -gt "$SCORING_TOP_STAGE1" ]
+			then
+				cat "${OUTPUT_PATH}/scoring_results_FIV.txt"
+			else
+				ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+				  --parallel "$SCORING_PROCESSORS" \
+				  --colnames-prefix FIV_ \
+				  --adjoin \
+				| ftdmp-sort-table --columns "-FIV_iface_energy" \
+				| tee "${OUTPUT_PATH}/scoring_results_FIV.txt"
+			fi
+		} \
 		| ftdmp-sort-table --columns "-FIV_iface_energy" \
-		| tee "${OUTPUT_PATH}/scoring_results_FIV.txt" \
-		| ftdmp-sort-table --columns "-FIV_iface_energy" \
-		| head -n "$((SCORING_TOP_STAGE1+1))"
+		| head -n "$SCORING_TOP_STAGE1"
 	else
 		cat
 	fi
@@ -257,16 +266,23 @@ cat "$DOCKING_RESULTS_FILE" \
 | {
 	if [ "$SCORING_MODE_GENERIC" == "true" ]
 	then
-		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --blanket \
-		  --colnames-prefix FIVb_ \
-		  --adjoin \
+		{
+			if [ -s "${OUTPUT_PATH}/scoring_results_FIVb.txt" ] && [ "$(cat "${OUTPUT_PATH}/scoring_results_FIVb.txt" | wc -l)" -gt "$SCORING_TOP_STAGE1" ]
+			then
+				cat "${OUTPUT_PATH}/scoring_results_FIVb.txt"
+			else
+				ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+				  --parallel "$SCORING_PROCESSORS" \
+				  --blanket \
+				  --colnames-prefix FIVb_ \
+				  --adjoin \
+				| ftdmp-sort-table --columns "-FIVb_iface_energy" \
+				| tee "${OUTPUT_PATH}/scoring_results_FIVb.txt"
+			fi
+		} \
 		| ftdmp-sort-table --columns "-FIVb_iface_energy" \
-		| tee "${OUTPUT_PATH}/scoring_results_FIVb.txt" \
-		| ftdmp-sort-table --columns "-FIVb_iface_energy" \
-		| head -n "$((SCORING_TOP_STAGE1+1))"
+		| head -n "$SCORING_TOP_STAGE1"
 	else
 		cat
 	fi
@@ -274,16 +290,23 @@ cat "$DOCKING_RESULTS_FILE" \
 | {
 	if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 	then
-		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --rebuild-sidechains \
-		  --colnames-prefix FIV_sr_ \
-		  --adjoin \
+		{
+			if [ -s "${OUTPUT_PATH}/scoring_results_FIV_sr.txt" ] && [ "$(cat "${OUTPUT_PATH}/scoring_results_FIV_sr.txt" | wc -l)" -gt "$SCORING_TOP_STAGE1" ]
+			then
+				cat "${OUTPUT_PATH}/scoring_results_FIV_sr.txt"
+			else
+				ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+				  --parallel "$SCORING_PROCESSORS" \
+				  --rebuild-sidechains \
+				  --colnames-prefix FIV_sr_ \
+				  --adjoin \
+				| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
+				| tee "${OUTPUT_PATH}/scoring_results_FIV_sr.txt"
+			fi
+		} \
 		| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
-		| tee "${OUTPUT_PATH}/scoring_results_FIV_sr.txt" \
-		| ftdmp-sort-table --columns "-FIV_sr_iface_energy" \
-		| head -n "$((SCORING_TOP_STAGE1+1))"
+		| head -n "$SCORING_TOP_STAGE1"
 	else
 		cat
 	fi
@@ -291,16 +314,23 @@ cat "$DOCKING_RESULTS_FILE" \
 | {
 	if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 	then
-		ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --blanket --rebuild-sidechains \
-		  --colnames-prefix FIVb_sr_ \
-		  --adjoin \
+		{
+			if [ -s "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt" ] && [ "$(cat "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt" | wc -l)" -gt "$SCORING_TOP_STAGE1" ]
+			then
+				cat "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt"
+			else
+				ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+				  --parallel "$SCORING_PROCESSORS" \
+				  --blanket --rebuild-sidechains \
+				  --colnames-prefix FIVb_sr_ \
+				  --adjoin \
+				| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
+				| tee "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt"
+			fi
+		} \
 		| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
-		| tee "${OUTPUT_PATH}/scoring_results_FIVb_sr.txt" \
-		| ftdmp-sort-table --columns "-FIVb_sr_iface_energy" \
-		| head -n "$((SCORING_TOP_STAGE1+1))"
+		| head -n "$SCORING_TOP_STAGE1"
 	else
 		cat
 	fi

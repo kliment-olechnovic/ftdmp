@@ -51,7 +51,7 @@ do
 	echo "$COLNAME" >> "$TMPLDIR/input_list"
 done
 
-INCOUNT="$(cat "$TMPLDIR/input_list" | wc -l)"
+INCOUNT="$(cat "$TMPLDIR/input_list" | sort | uniq | wc -l)"
 
 if [ "$INCOUNT" -lt "1" ]
 then
@@ -63,7 +63,7 @@ cat > "$TMPLDIR/input_table"
 
 head -1 "$TMPLDIR/input_table" | sed 's/\s\+/\n/g' | egrep . > "$TMPLDIR/input_table_columns"
 
-MATCHEDCOUNT="$(cat "$TMPLDIR/input_table_columns" | awk '{print ";" $1 ";"}' | grep -f <(cat "$TMPLDIR/input_list" | awk '{print ";" $1 ";"}') | wc -l)"
+MATCHEDCOUNT="$(cat "$TMPLDIR/input_table_columns" | awk '{print ";" $1 ";"}' | grep -f <(cat "$TMPLDIR/input_list" | awk '{print ";" $1 ";"}') | sort | uniq | wc -l)"
 
 if [ "$INCOUNT" != "$MATCHEDCOUNT" ]
 then
