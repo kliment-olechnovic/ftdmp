@@ -1,9 +1,19 @@
 time -p (./ftdmp --input-config ./test/configs/input_6v3p_redock.bash --mode-config ./test/configs/mode_protein_protein.bash --output-dir ./test/output/mode_protein_protein)
 
-cat ./test/output/mode_protein_protein/6v3p_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/6V3P_AB.pdb
+#cat ./test/output/mode_protein_protein/6v3p_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/6V3P_AB.pdb
 
 
 time -p (./ftdmp --input-config ./test/configs/input_1b7f_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
 
-cat ./test/output/mode_protein_na/1b7f_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1B7F_AP.pdb
+#cat ./test/output/mode_protein_na/1b7f_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1B7F_AP.pdb
+
+
+time -p (./ftdmp --input-config ./test/configs/input_2bna_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
+
+#cat ./test/output/mode_protein_na/2bna_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/2BNA_AB.pdb
+
+
+time -p (./ftdmp --input-config ./test/configs/input_1x9n_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
+
+#cat ./test/output/mode_protein_na/1x9n_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1X9N_A_BCD.pdb
 
