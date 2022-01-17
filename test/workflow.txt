@@ -17,3 +17,8 @@ time -p (./ftdmp --input-config ./test/configs/input_1x9n_redock.bash --mode-con
 
 #cat ./test/output/mode_protein_na/1x9n_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1X9N_A_BCD.pdb
 
+
+time -p (./ftdmp --input-config ./test/configs/input_capri188.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
+
+#cat ./test/output/mode_protein_na/capri188/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl
+
