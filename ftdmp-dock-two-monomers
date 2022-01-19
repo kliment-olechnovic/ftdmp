@@ -12,8 +12,9 @@ Options:
     --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
     --parallel                number     total number of parallel parts, default is 1
-    --ftdock-keep             number     ftdock keep parameter, default is 1
+    --ftdock-keep             number     ftdock keep parameter, default is 5
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
+    --min-squared-sep         number     minimum separation between same-rotation translations, default is 225
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -21,7 +22,7 @@ Standard output:
     
 Examples:
 
-    ftdmp-dock-two-monomers --monomer1 monomer1.pdb --monomer2 monomer2.pdb --logs-output docking_results --parallel-parts 16
+    ftdmp-dock-two-monomers --monomer1 monomer1.pdb --monomer2 monomer2.pdb --logs-output docking_results --parallel 8
 
 EOF
 exit 1
@@ -57,8 +58,9 @@ JOBNAME=""
 OUTDIR=""
 PARALLEL_PARTS="1"
 PARALLEL_ID=""
-FTDOCK_KEEP="1"
+FTDOCK_KEEP="5"
 FTDOCK_ANGLE_STEP="9"
+MIN_SQUARED_SEP="400"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -97,6 +99,10 @@ do
 		;;
 	--ftdock-angle-step)
 		FTDOCK_ANGLE_STEP="$OPTARG"
+		shift
+		;;
+	--min-squared-sep)
+		MIN_SQUARED_SEP="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -197,7 +203,7 @@ fi
 
 cd "$OUTDIR"
 
-ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -keep "$FTDOCK_KEEP" -angle_step "$FTDOCK_ANGLE_STEP" -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -keep "$FTDOCK_KEEP" -angle_step "$FTDOCK_ANGLE_STEP" -reduce_translations "$MIN_SQUARED_SEP" -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
 
 if [ ! -s "ftdock_global.dat" ]
 then

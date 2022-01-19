@@ -30,9 +30,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int main( int argc , char *argv[] ) {
 
-  /* index counters */
+  /* index counters and other utility variables */
 
   int	i ;
+  int	j ;
+  int   case_found ;
 
   /* Command line options */
 
@@ -52,6 +54,7 @@ int main( int argc , char *argv[] ) {
 
   int		parallel_parts ;
   int		parallel_id ;
+  int       reduce_translations ;
 
   char		*default_global_grid_size ;
   char		*default_angle_step ;
@@ -165,6 +168,7 @@ int main( int argc , char *argv[] ) {
 
   parallel_parts = 1 ;
   parallel_id = 1 ;
+  reduce_translations = 0 ;
 
   default_global_grid_size = "(default calculated)" ;
   default_angle_step = "(default)" ;
@@ -284,8 +288,17 @@ int main( int argc , char *argv[] ) {
                         			}
                         			sscanf( argv[i] , "%d" , &parallel_id ) ;
                         		} else {
-                        			printf( "Bad command line\n" ) ;
-                        			exit( EXIT_FAILURE ) ;
+                            		if( strcmp( argv[i] , "-reduce_translations" ) == 0 ) {
+                            			i ++ ;
+                            			if( ( i == argc ) || ( strncmp( argv[i] , "-" , 1 ) == 0 ) ) {
+                            			printf( "Bad command line\n" ) ;
+                            			exit( EXIT_FAILURE ) ;
+                            			}
+                            			sscanf( argv[i] , "%d" , &reduce_translations ) ;
+                            		} else {
+                            			printf( "Bad command line\n" ) ;
+                            			exit( EXIT_FAILURE ) ;
+                            		}
                         		}
                         	}
                         }
@@ -765,13 +778,29 @@ int main( int argc , char *argv[] ) {
       }
     }
 
-    for( i = 0 ; i < keep_per_rotation ; i ++ ) {
+    for( i = 0 ; i < keep_per_rotation ; i ++ )
+    {
+		case_found=0;
+		if(reduce_translations>0)
+		{
+			for(j=0;j<i && case_found==0;j++)
+			{
+				if(((Scores[i].coord[1]-Scores[j].coord[1])*(Scores[i].coord[1]-Scores[j].coord[1])+
+				    (Scores[i].coord[2]-Scores[j].coord[2])*(Scores[i].coord[2]-Scores[j].coord[2])+
+				    (Scores[i].coord[3]-Scores[j].coord[3])*(Scores[i].coord[3]-Scores[j].coord[3]))<reduce_translations)
+				{
+					case_found=1;
+				}
+			}
+		}
 
-      max_es_value = min( max_es_value , Scores[i].rpscore ) ;
-      fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
-                rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3 ] ,
-                 Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
-
+		if(case_found==0)
+		{
+			max_es_value = min( max_es_value , Scores[i].rpscore ) ;
+			fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
+					rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3 ] ,
+					 Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
+		}
     }
 
     fclose( ftdock_file ) ;
