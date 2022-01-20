@@ -14,7 +14,7 @@ Options:
     --parallel                number     total number of parallel parts, default is 1
     --ftdock-keep             number     ftdock keep parameter, default is 5
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
-    --min-squared-sep         number     minimum separation between same-rotation translations, default is 225
+    --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -60,7 +60,7 @@ PARALLEL_PARTS="1"
 PARALLEL_ID=""
 FTDOCK_KEEP="5"
 FTDOCK_ANGLE_STEP="9"
-MIN_SQUARED_SEP="400"
+MIN_GRID_SEP="20"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -101,8 +101,8 @@ do
 		FTDOCK_ANGLE_STEP="$OPTARG"
 		shift
 		;;
-	--min-squared-sep)
-		MIN_SQUARED_SEP="$OPTARG"
+	--min-grid-sep)
+		MIN_GRID_SEP="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -158,6 +158,14 @@ then
 		exit 1
 	fi
 fi
+
+if [ -z "$MIN_GRID_SEP" ] || [ "$MIN_GRID_SEP" -ne "$MIN_GRID_SEP" ] || [ "$MIN_GRID_SEP" -lt "0" ]
+then
+	echo >&2 "Error: invalid minimum grid separation '$MIN_GRID_SEP', must be a positive integer"
+	exit 1
+fi
+
+MIN_SQUARED_SEP="$((${MIN_GRID_SEP}*${MIN_GRID_SEP}))"
 
 if [ -z "$OUTDIR" ]
 then
