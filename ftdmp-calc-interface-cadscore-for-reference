@@ -32,18 +32,15 @@ EOF
 exit 1
 }
 
-readonly ZEROARG=$0
-
 if [ -z "$1" ]
 then
 	print_help_and_exit
 fi
 
-if [[ $ZEROARG == *"/"* ]]
+if [ -z "$FTDMPDIR" ]
 then
-	cd $(dirname $ZEROARG)
-	export PATH=$(pwd):$PATH
-	cd - &> /dev/null
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
 command -v voronota-js-fast-iface-cadscore &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-cadscore' executable not in binaries path"; exit 1; }

@@ -20,26 +20,15 @@ EOF
 exit 1
 }
 
-readonly ZEROARG=$0
-
 if [ -z "$1" ]
 then
 	print_help_and_exit
 fi
 
-if [[ $ZEROARG == *"/"* ]]
+if [ -z "$FTDMPDIR" ]
 then
-	cd $(dirname $ZEROARG)
-	export FTDMPDIR="$(pwd)"
-	export PATH="${FTDMPDIR}:${PATH}"
-	if [ -d "${FTDMPDIR}/core/3D_Dock/progs" ]
-	then
-		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${PATH}"
-	fi
-	cd - &> /dev/null
-else
-	echo >&2 "Error: required to be run using explicit path"
-	exit 1
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 OUTPUT_PATH=""

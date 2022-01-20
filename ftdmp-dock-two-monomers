@@ -37,16 +37,10 @@ then
 	print_help_and_exit
 fi
 
-if [[ $ZEROARG == *"/"* ]]
+if [ -z "$FTDMPDIR" ]
 then
-	cd $(dirname $ZEROARG)
-	FTDMPDIR="$(pwd)"
-	export PATH="${FTDMPDIR}:${PATH}"
-	if [ -d "${FTDMPDIR}/core/3D_Dock/progs" ]
-	then
-		export PATH="${FTDMPDIR}/core/3D_Dock/progs:${PATH}"
-	fi
-	cd - &> /dev/null
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
