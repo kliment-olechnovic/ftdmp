@@ -12,6 +12,7 @@ Options:
     --job-name                string     job name to use as prefix for identifiers
     --logs-output             string     logs output directory path
     --parallel                number     total number of parallel parts, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --ftdock-keep             number     ftdock keep parameter, default is 5
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
     --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
@@ -58,6 +59,7 @@ JOBNAME=""
 OUTDIR=""
 PARALLEL_PARTS="1"
 PARALLEL_ID=""
+SBATCH_PARAMETERS=""
 FTDOCK_KEEP="5"
 FTDOCK_ANGLE_STEP="9"
 MIN_GRID_SEP="20"
@@ -91,6 +93,10 @@ do
 		;;
 	--parallel-id)
 		PARALLEL_ID="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	--ftdock-keep)
@@ -159,6 +165,12 @@ then
 	fi
 fi
 
+if [ -n "$SBATCH_PARAMETERS" ]
+then
+	command -v sbatch &> /dev/null || { echo >&2 "Error: 'sbatch' executable not in binaries path"; exit 1; }
+	command -v squeue &> /dev/null || { echo >&2 "Error: 'squeue' executable not in binaries path"; exit 1; }
+fi
+
 if [ -z "$FTDOCK_KEEP" ] || [ "$FTDOCK_KEEP" -ne "$FTDOCK_KEEP" ] || [ "$FTDOCK_KEEP" -lt "1" ]
 then
 	echo >&2 "Error: invalid ftdock keep parameter '$FTDOCK_KEEP', must be a positive integer"
@@ -189,7 +201,28 @@ fi
 
 if [ -z "$PARALLEL_ID" ]
 then
-	seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id
+	if [ -n "$SBATCH_PARAMETERS" ]
+	then
+		mkdir -p "$TMPLDIR/slurm_logs"
+		
+		seq 1 "$PARALLEL_PARTS" \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id \
+		| egrep '^Submitted batch job ' \
+		| awk '{print $4}' \
+		> "$TMPLDIR/slurm_job_ids"
+		
+		sleep 1
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+		do
+			sleep 5
+			REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		done
+		
+		find "$TMPLDIR/slurm_logs/" -type f -not -empty | xargs -L 1 cat >&2
+	else
+		seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id
+	fi
 	
 	{
 	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
