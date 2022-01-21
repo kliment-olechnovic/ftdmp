@@ -290,7 +290,7 @@ EOF
 
 ################################################################################
 
-PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/static.pdb"
+PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
 
 {
 cat "$STATIC_STRUCTURE_FILE"
@@ -312,7 +312,7 @@ fi
 
 ################################################################################
 
-PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomers/mobile.pdb"
+PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
 
 {
 cat "$MOBILE_STRUCTURE_FILE"

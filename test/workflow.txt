@@ -35,11 +35,11 @@ time -p ./ftdmp                                                                \
   --openmm-forcefield       'amber99sb'                                        \
   --conda-path              "$HOME/anaconda3"                                  \
   --conda-env               'alphafold2'                                       \
-  --ftdock-keep             '1'                                                \
+  --ftdock-keep             '5'                                                \
   --ftdock-angle-step       '9'                                                \
   --min-grid-sep            '20'                                               \
-  --parallel-docking        '16'                                                \
-  --parallel-scoring        '16'                                                \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
   --sbatch-docking          ''                                                 \
   --sbatch-scoring          ''                                                 \
   --scoring-full-top        '1000'                                             \
