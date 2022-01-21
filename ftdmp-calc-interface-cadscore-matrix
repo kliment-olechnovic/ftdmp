@@ -14,6 +14,7 @@ Options:
     --monomer2                string     mobile monomer input file path
     --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
     --parallel                number     total number of parallel parts, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -50,6 +51,7 @@ MONOMERFILE1=""
 MONOMERFILE2=""
 SUBSELECT_CONTACTS="[]"
 PARALLEL_PARTS="1"
+SBATCH_PARAMETERS=""
 USE_MONOMERS="false"
 HELP_MODE="false"
 
@@ -87,6 +89,10 @@ do
 		;;
 	--parallel)
 		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -167,11 +173,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-cadscore-matrix --model-input-is-script --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS"
+	| voronota-js-fast-iface-cadscore-matrix --model-input-is-script --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-cadscore-matrix --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS" \
+	| voronota-js-fast-iface-cadscore-matrix --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
 fi
 } \

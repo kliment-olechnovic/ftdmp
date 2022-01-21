@@ -1,0 +1,104 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-check-hash' updates the hash file and deletes the dependent file if
+the stdin hash is not equal to the hash file contents
+
+Options:
+    --hash-file               string  *  hash file path
+    --dependent-file          string  *  dependent file or directory path
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    any data
+    
+Example:
+
+    echo "data related to the dependent file" | ftdmp-check-hash --hash-file hash.txt --dependent-file dependent.txt
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+HASHFILE=""
+DEPFILE=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--hash-file)
+		HASHFILE="$OPTARG"
+		shift
+		;;
+	--dependent-file)
+		DEPFILE="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$HASHFILE" ]
+then
+	echo >&2 "Error: no static monomer input file specified"
+	exit 1
+fi
+
+if [ -z "$DEPFILE" ]
+then
+	echo >&2 "Error: no mobile monomer input file specified"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat | sha256sum > "${TMPLDIR}/input_hash"
+
+NEED_TO_UPDATE="false"
+
+if [ ! -s "$HASHFILE" ]
+then
+	NEED_TO_UPDATE="true"
+else
+	if cmp --silent "${TMPLDIR}/input_hash" "$HASHFILE"
+	then
+		NEED_TO_UPDATE="false"
+	else
+		NEED_TO_UPDATE="true"
+	fi
+fi
+
+if [ "$NEED_TO_UPDATE" == "true" ]
+then
+	rm -rf "$DEPFILE"
+	
+	mkdir -p "$(dirname "$HASHFILE")"
+	mv "${TMPLDIR}/input_hash" "$HASHFILE"
+fi
+
+exit 0
+

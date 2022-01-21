@@ -15,6 +15,7 @@ Options:
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
     --blanket                            flag to use blanket
     --parallel                number     total number of parallel parts, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --colnames-prefix         string     prefix for output column names, default is 'FIV_'
     --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
@@ -51,6 +52,7 @@ INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
+SBATCH_PARAMETERS=""
 SUBSELECT_CONTACTS="[]"
 COLNAMES_PREFIX="FIV_"
 USE_MONOMERS="false"
@@ -85,6 +87,10 @@ do
 		;;
 	--parallel)
 		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	--subselect-contacts)
@@ -194,11 +200,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}"
+	| voronota-js-fast-iface-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-voromqa --input _list --processors "$PARALLEL_PARTS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}" \
+	| voronota-js-fast-iface-voromqa --input _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_VOROMQA_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
 fi
 } \

@@ -22,3 +22,31 @@ time -p (./ftdmp --input-config ./test/configs/input_capri188.bash --mode-config
 
 #cat ./test/output/mode_protein_na/capri188/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl
 
+################################################################################
+
+time -p ./ftdmp                                                                \
+  --job-name                '6v3p_redock'                                      \
+  --static-file             './test/reference_dimers/6V3P_AB.pdb'              \
+  --static-sel              '[-chain A]'                                       \
+  --mobile-file             './test/reference_dimers/6V3P_AB.pdb'              \
+  --mobile-sel              '[-chain B]'                                       \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/6V3P_AB.pdb'              \
+  --openmm-forcefield       'amber99sb'                                        \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '1'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '16'                                                \
+  --parallel-scoring        '16'                                                \
+  --sbatch-docking          ''                                                 \
+  --sbatch-scoring          ''                                                 \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_protein_protein'                     \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '50 75 100 99999'                                  \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/redocking'                          \
+
+
