@@ -1,27 +1,3 @@
-time -p (./ftdmp --input-config ./test/configs/input_6v3p_redock.bash --mode-config ./test/configs/mode_protein_protein.bash --output-dir ./test/output/mode_protein_protein)
-
-#cat ./test/output/mode_protein_protein/6v3p_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/6V3P_AB.pdb
-
-
-time -p (./ftdmp --input-config ./test/configs/input_1b7f_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
-
-#cat ./test/output/mode_protein_na/1b7f_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1B7F_AP.pdb
-
-
-time -p (./ftdmp --input-config ./test/configs/input_2bna_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
-
-#cat ./test/output/mode_protein_na/2bna_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/2BNA_AB.pdb
-
-
-time -p (./ftdmp --input-config ./test/configs/input_1x9n_redock.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
-
-#cat ./test/output/mode_protein_na/1x9n_redock/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl ./test/reference_dimers/1X9N_A_BCD.pdb
-
-
-time -p (./ftdmp --input-config ./test/configs/input_capri188.bash --mode-config ./test/configs/mode_protein_na.bash --output-dir ./test/output/mode_protein_na)
-
-#cat ./test/output/mode_protein_na/capri188/top_complexes_ordered_list.txt | xargs ~/git/voronota/expansion_gl/voronota-gl
-
 ################################################################################
 
 time -p ( \
@@ -122,4 +98,29 @@ time -p ( \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/redocking'                          \
 )
+
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                'capri188'                                         \
+  --static-file             './test/just_monomers/capri188_protein_AB.pdb'     \
+  --static-sel              '[-chain A,B]'                                     \
+  --mobile-file             './test/just_monomers/capri188_dna_EF.pdb'         \
+  --mobile-sel              '[-chain E,F]'                                     \
+  --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '8'                                                \
+  --parallel-scoring        '8'                                                \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                             \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/capri'                              \
+)
+
+################################################################################
 
