@@ -221,7 +221,7 @@ fi
 
 if [ "$SCORING_RANKS" == "standard_for_generic" ]
 then
-	SCORING_RANKS="FIVb_iface_energy_rank  FIVb_iface_energy_norm_rank  FIVb_energy_clash_tour_rank  FIVb_energy_norm_clash_tour_rank"
+	SCORING_RANKS="FIVb_iface_energy_rank  FIVb_energy_clash_tour_rank"
 fi
 
 SCORING_MODE_PROTEIN="false"

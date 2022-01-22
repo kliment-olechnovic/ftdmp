@@ -75,3 +75,51 @@ time -p ( \
   --output-dir              './test/output/redocking'                          \
 )
 
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                '2bna_redock'                                      \
+  --static-file             './test/reference_dimers/2BNA_AB.pdb'              \
+  --static-sel              '[-chain A]'                                       \
+  --mobile-file             './test/reference_dimers/2BNA_AB.pdb'              \
+  --mobile-sel              '[-chain B]'                                       \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/2BNA_AB.pdb'              \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                             \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/redocking'                          \
+)
+
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                '1x9n_redock'                                      \
+  --static-file             './test/reference_dimers/1X9N_A_BCD.pdb'           \
+  --static-sel              '[-chain A]'                                       \
+  --mobile-file             './test/reference_dimers/1X9N_A_BCD.pdb'           \
+  --mobile-sel              '[-chain B,C,D]'                                   \
+  --subselect-contacts      '[-a1 [-chain A] -a2 [-chain B,C,D]]'              \
+  --reference               './test/reference_dimers/1X9N_A_BCD.pdb'           \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                             \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/redocking'                          \
+)
+
