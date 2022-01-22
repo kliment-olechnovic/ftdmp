@@ -148,6 +148,7 @@ voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -output-file _stdout
 -top-slices $TOPSLICES
 -similarity-threshold $CLUSTERTHRESHOLD
+-use-max-value
 ");
 EOF
 } \
@@ -163,7 +164,7 @@ then
 fi
 
 {
-echo "ID $(echo $TOPSLICES)" | sed "s/\s\+/ top/g" | awk '{print $0 " rank"}' | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
+echo " $TOPSLICES" | sed "s/\s\+/ top/g" | awk '{print "ID max " $0 " rank"}' | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
 cat "${TMPLDIR}/jury_scores" | awk '{print $0 " " NR}'
 } \
 > "${TMPLDIR}/output"
