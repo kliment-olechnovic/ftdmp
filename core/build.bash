@@ -4,7 +4,7 @@ cd "$(dirname $0)"
 
 pwd
 
-cd "./fftw-2.1.3"
+cd "./fftw-2.1.5"
 ./configure
 make
 

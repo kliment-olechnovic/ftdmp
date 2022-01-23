@@ -1,0 +1,17 @@
+/Makefile
+/config.log
+/config.status
+/fftw.spec
+/libtool
+/*/Makefile
+/*/.deps
+/*/.libs
+/*/*.o
+/*/*.lo
+/*/*.la
+/tests/fftw_test
+/tests/rfftw_test
+/fftw/config.h
+/fftw/fftw.h
+/fftw/stamp-h1
+/fftw/stamp-h2
