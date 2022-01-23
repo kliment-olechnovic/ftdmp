@@ -200,7 +200,7 @@ then
 		mkdir -p "$TMPLDIR/slurm_logs"
 		
 		seq 1 "$PARALLEL_PARTS" \
-		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id \
 		| egrep '^Submitted batch job ' \
 		| awk '{print $4}' \
 		> "$TMPLDIR/slurm_job_ids"
