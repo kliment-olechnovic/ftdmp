@@ -22,7 +22,7 @@ time -p ( \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_protein_protein'                     \
   --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '10 10 100'                                        \
+  --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/redocking'                          \
 )
@@ -46,7 +46,7 @@ time -p ( \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/redocking'                          \
 )
@@ -70,7 +70,7 @@ time -p ( \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/redocking'                          \
 )
@@ -94,7 +94,7 @@ time -p ( \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/redocking'                          \
 )
@@ -117,7 +117,7 @@ time -p ( \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '10 20 30 40 50 60 70 80 90 100'                   \
+  --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/capri'                              \
 )

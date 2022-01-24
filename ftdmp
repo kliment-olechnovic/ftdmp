@@ -74,7 +74,7 @@ SCORING_SBATCH=""
 SCORING_TOP_STAGE1=1000
 SCORING_RANKS=""
 SCORING_TOP_STAGE2=100
-SCORING_RANKS_JURY_SLICES="10 10 100" 
+SCORING_RANKS_JURY_SLICES="10 50" 
 NUMBER_OF_COMPLEXES_TO_BUILD=10
 OUTPUT_PATH=""
 HELP_MODE="false"
@@ -654,6 +654,7 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --rank-columns "$SCORING_RANKS" \
   --top-slices "$SCORING_RANKS_JURY_SLICES" \
   --cluster 0.9 \
+  --several-max-values 5 \
   --colnames-prefix RJS_ \
   --adjoin \
 | ftdmp-sort-table \
