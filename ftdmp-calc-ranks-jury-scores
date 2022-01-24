@@ -141,12 +141,20 @@ then
 	exit 1
 fi
 
+EXPANDED_TOPSLICES="$(seq $TOPSLICES | tr '\n' ' ' | sed 's/\s*$//')"
+
+if [ -z "$EXPANDED_TOPSLICES" ]
+then
+	echo >&2 "Error: failed to expand top slices"
+	exit 1
+fi
+
 {
 cat << EOF
 voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -input-ranks-file '$RANKSFILE'
 -output-file _stdout
--top-slices $TOPSLICES
+-top-slices $EXPANDED_TOPSLICES
 -similarity-threshold $CLUSTERTHRESHOLD
 -use-max-value
 ");
@@ -164,7 +172,7 @@ then
 fi
 
 {
-echo " $TOPSLICES" | sed "s/\s\+/ top/g" | awk '{print "ID max " $0 " rank"}' | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
+echo " $EXPANDED_TOPSLICES" | sed "s/\s\+/ top/g" | awk '{print "ID max " $0 " rank"}' | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
 cat "${TMPLDIR}/jury_scores" | awk '{print $0 " " NR}'
 } \
 > "${TMPLDIR}/output"

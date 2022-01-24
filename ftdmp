@@ -27,7 +27,7 @@ Options:
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-    --scoring-jury-slices     string     slice sizes for ranks jury scoring, default is '10 20 30 40 50 60 70 80 90 100'
+    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 10 100'
     --build-complexes         number     number of top complexes to build, default is 10
     --output-dir              string  *  output direectory path
     --help | -h                          flag to display help message and exit
@@ -74,7 +74,7 @@ SCORING_SBATCH=""
 SCORING_TOP_STAGE1=1000
 SCORING_RANKS=""
 SCORING_TOP_STAGE2=100
-SCORING_RANKS_JURY_SLICES="10 20 30 40 50 60 70 80 90 100" 
+SCORING_RANKS_JURY_SLICES="10 10 100" 
 NUMBER_OF_COMPLEXES_TO_BUILD=10
 OUTPUT_PATH=""
 HELP_MODE="false"
