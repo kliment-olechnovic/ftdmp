@@ -8,3 +8,4 @@
 /*/*.la
 /tests/fftw_test
 /tests/rfftw_test
+/autom4te.cache/
