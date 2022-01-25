@@ -24,6 +24,7 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
+  --redundancy-threshold    '0.9'                                              \
   --output-dir              './test/output/redocking'                          \
 )
 
@@ -119,6 +120,7 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
+  --redundancy-threshold    '0.5'                                              \
   --output-dir              './test/output/capri'                              \
 )
 

@@ -28,6 +28,7 @@ Options:
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 10 100'
+    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
     --build-complexes         number     number of top complexes to build, default is 10
     --output-dir              string  *  output direectory path
     --help | -h                          flag to display help message and exit
@@ -67,15 +68,16 @@ CONDA_ENV=""
 FTDOCK_KEEP="1"
 FTDOCK_ANGLE_STEP="9"
 MIN_GRID_SEP="20"
-DOCKING_PROCESSORS=8
-SCORING_PROCESSORS=8
+DOCKING_PROCESSORS="8"
+SCORING_PROCESSORS="8"
 DOCKING_SBATCH=""
 SCORING_SBATCH=""
-SCORING_TOP_STAGE1=1000
+SCORING_TOP_STAGE1="1000"
 SCORING_RANKS=""
-SCORING_TOP_STAGE2=100
+SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="10 50" 
 NUMBER_OF_COMPLEXES_TO_BUILD=10
+REDUNDANCY_THRESHOLD="1"
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -171,6 +173,10 @@ do
 		;;
 	--build-complexes)
 		NUMBER_OF_COMPLEXES_TO_BUILD="$OPTARG"
+		shift
+		;;
+	--redundancy-threshold)
+		REDUNDANCY_THRESHOLD="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -284,6 +290,7 @@ ${BASH_SOURCE[0]} \\
 --scoring-ranks-top       '$SCORING_TOP_STAGE2' \\
 --scoring-jury-slices     '$SCORING_RANKS_JURY_SLICES' \\
 --build-complexes         '$NUMBER_OF_COMPLEXES_TO_BUILD' \\
+--redundancy-threshold    '$REDUNDANCY_THRESHOLD' \\
 --output-dir              '$OUTPUT_PATH' \\
 
 EOF
@@ -663,6 +670,10 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --similarities "$SIMILARITY_MATRIX_FILE" \
   --colnames-prefix RDDS_ \
   --adjoin \
+| ftdmp-sort-table \
+  --columns "-RJS_rank" \
+| ftdmp-filter-table \
+  "<=${REDUNDANCY_THRESHOLD}" RDDS_ordered_score \
 | ftdmp-sort-table \
   --columns "-RJS_rank" \
 | column -t \
