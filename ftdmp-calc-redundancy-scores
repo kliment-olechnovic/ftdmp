@@ -1,0 +1,151 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-calc-redundancy-scores' computes redundancy scores
+
+Options:
+    --similarities            string  *  similarities table input file path
+    --colnames-prefix         string     prefix for output column names, default is 'RDDS_'
+    --adjoin                             flag to output results joined with input
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    space-separated table of docking results
+    
+Standard output:
+    space-separated table of scoring results
+    
+Example:
+
+    cat scoring_results.txt | ftdmp-calc-redundancy-scores --similarities similarities.txt --adjoin
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+SIMILARITIESFILE=""
+COLNAMES_PREFIX="RDDS_"
+ADJOIN="false"
+HELP_MODE="false"
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--similarities)
+		SIMILARITIESFILE="$OPTARG"
+		shift
+		;;
+	--colnames-prefix)
+		COLNAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--adjoin)
+		ADJOIN="true"
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$SIMILARITIESFILE" ]
+then
+	echo >&2 "Error: no similarities input file specified"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+if [ ! -s "$SIMILARITIESFILE" ]
+then
+	echo >&2 "Error: no similarities input file '$SIMILARITIESFILE'"
+	exit 1
+fi
+
+OIDSFILE="${TMPLDIR}/ordered_ids"
+
+cat "${TMPLDIR}/input" \
+| ftdmp-extract-table-columns ID \
+| tail -n +2 \
+> "$OIDSFILE"
+
+if [ ! -s "$OIDSFILE" ]
+then
+	echo >&2 "Error: failed to extract ID column"
+	exit 1
+fi
+
+{
+cat << EOF
+voronota_redundancy_score("-input-similarities-file '$SIMILARITIESFILE'
+-input-ids-file '$OIDSFILE'
+-output-file _stdout
+");
+EOF
+} \
+| tr '\n' ' ' \
+| sed 's/$/\n/' \
+| voronota-js --no-setup-defaults \
+> "${TMPLDIR}/redundancy_scores"
+
+if [ ! -s "${TMPLDIR}/redundancy_scores" ]
+then
+	echo >&2 "Error: failed to compute jury scores"
+	exit 1
+fi
+
+{
+echo "ID ordered_score ordered_id global_score global_id" | sed "s/\s\+/ ${COLNAMES_PREFIX}/g"
+cat "${TMPLDIR}/redundancy_scores"
+} \
+> "${TMPLDIR}/output"
+
+if [ ! -s "${TMPLDIR}/output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+if [ "$ADJOIN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/input" "${TMPLDIR}/output"
+else
+	cat "${TMPLDIR}/output"
+fi
+

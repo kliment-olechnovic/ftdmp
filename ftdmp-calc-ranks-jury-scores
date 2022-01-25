@@ -4,12 +4,12 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-calc-ranks-jury-scores' computes ranks jury score
+'ftdmp-calc-ranks-jury-scores' computes ranks jury scores
 
 Options:
     --similarities            string  *  similarities table input file path
     --rank-columns            string  *  rank column names to use
-    --top-slices              string     top slices to use, default is '10 20 30 40 50'
+    --top-slices              string     top slices to use, default is '5 50'
     --cluster                 number     similarity threshold to select cluster representatives, default is 1.0
     --several-max-values      number     number of max values to use, default is 1
     --colnames-prefix         string     prefix for output column names, default is 'RJS_'
@@ -24,7 +24,7 @@ Standard output:
     
 Example:
 
-    ftdmp-calc-ranks-jury-scores --similarities similarities.txt --rank-columns "colname1 colname2 colname3" --top-slices '10 20 30 99999'
+    cat scoring_results.txt | ftdmp-calc-ranks-jury-scores --similarities similarities.txt --rank-columns "colname1 colname2 colname3" --top-slices '10 100'
 
 EOF
 exit 1
@@ -45,7 +45,7 @@ command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executab
 
 SIMILARITIESFILE=""
 RANKCOLUMNS=""
-TOPSLICES="10 20 30 40 50"
+TOPSLICES="5 50"
 CLUSTERTHRESHOLD="1"
 SEVERAL_MAX_VALUES="1"
 COLNAMES_PREFIX="RJS_"

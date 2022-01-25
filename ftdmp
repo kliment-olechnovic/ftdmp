@@ -659,6 +659,12 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --adjoin \
 | ftdmp-sort-table \
   --columns "-RJS_rank" \
+| ftdmp-calc-redundancy-scores \
+  --similarities "$SIMILARITY_MATRIX_FILE" \
+  --colnames-prefix RDDS_ \
+  --adjoin \
+| ftdmp-sort-table \
+  --columns "-RJS_rank" \
 | column -t \
 > "$NEXT_SCORING_RESULTS_FILE"
 

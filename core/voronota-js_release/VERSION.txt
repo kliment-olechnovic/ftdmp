@@ -1,1 +1,1 @@
-Voronota-JS version 1.23.3298
+Voronota-JS version 1.23.3302
