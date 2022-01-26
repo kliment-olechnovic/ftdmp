@@ -23,8 +23,8 @@ time -p ( \
   --scoring-rank-names      'standard_for_protein_protein'                     \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '1.0'                                              \
   --build-complexes         '10'                                               \
-  --redundancy-threshold    '0.9'                                              \
   --output-dir              './test/output/redocking'                          \
 )
 
@@ -119,8 +119,8 @@ time -p ( \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
-  --build-complexes         '10'                                               \
   --redundancy-threshold    '0.5'                                              \
+  --build-complexes         '10'                                               \
   --output-dir              './test/output/capri'                              \
 )
 
