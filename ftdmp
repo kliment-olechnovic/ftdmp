@@ -10,8 +10,10 @@ Options:
     --job-name                string  *  job name
     --static-file             string  *  static input file path
     --static-sel              string     query to restrict static atoms, default is '[]'
+    --static-chain            string     chain name or chain renaming rule to apply for static atoms, default is ''
     --mobile-file             string  *  mobile input file path
     --mobile-sel              string     query to restrict mobile atoms, default is '[]'
+    --mobile-chain            string     chain name or chain renaming rule to apply for mobile atoms, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --openmm-forcefield       string     forcefield name fo OpenMM-based operations, default is ''
@@ -58,8 +60,10 @@ fi
 JOB_NAME=""
 STATIC_STRUCTURE_FILE=""
 STATIC_STRUCTURE_SELECTION="[]"
+STATIC_STRUCTURE_CHAIN=""
 MOBILE_STRUCTURE_FILE=""
 MOBILE_STRUCTURE_SELECTION="[]"
+MOBILE_STRUCTURE_CHAIN=""
 INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 OPENMM_FORCEFIELD=""
@@ -99,12 +103,20 @@ do
 		STATIC_STRUCTURE_SELECTION="$OPTARG"
 		shift
 		;;
+	--static-chain)
+		STATIC_STRUCTURE_CHAIN="$OPTARG"
+		shift
+		;;
 	--mobile-file)
 		MOBILE_STRUCTURE_FILE="$OPTARG"
 		shift
 		;;
 	--mobile-sel)
 		MOBILE_STRUCTURE_SELECTION="$OPTARG"
+		shift
+		;;
+	--mobile-chain)
+		MOBILE_STRUCTURE_CHAIN="$OPTARG"
 		shift
 		;;
 	--subselect-contacts)
@@ -271,8 +283,10 @@ ${BASH_SOURCE[0]} \\
 --job-name                '$JOB_NAME' \\
 --static-file             '$STATIC_STRUCTURE_FILE' \\
 --static-sel              '$STATIC_STRUCTURE_SELECTION' \\
+--static-chain            '$STATIC_STRUCTURE_CHAIN' \\
 --mobile-file             '$MOBILE_STRUCTURE_FILE' \\
 --mobile-sel              '$MOBILE_STRUCTURE_SELECTION' \\
+--mobile-chain            '$MOBILE_STRUCTURE_CHAIN' \\
 --subselect-contacts      '$INTERFACE_SUBSELECTION' \\
 --reference               '$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON' \\
 --openmm-forcefield       '$OPENMM_FORCEFIELD' \\
@@ -302,12 +316,14 @@ PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
 {
 cat "$STATIC_STRUCTURE_FILE"
 echo "$STATIC_STRUCTURE_SELECTION"
+echo "$STATIC_STRUCTURE_CHAIN"
 echo "$OPENMM_FORCEFIELD"
 } | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_STATIC_STRUCTURE_FILE")" --dependent-file "$PREPARED_STATIC_STRUCTURE_FILE"
 
 if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
 then
-	ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" --restrict-input "$STATIC_STRUCTURE_SELECTION" \
+	ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" \
+	  --restrict-input "$STATIC_STRUCTURE_SELECTION" --rename-chain "$STATIC_STRUCTURE_CHAIN" \
 	  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
 fi
 
@@ -324,12 +340,14 @@ PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
 {
 cat "$MOBILE_STRUCTURE_FILE"
 echo "$MOBILE_STRUCTURE_SELECTION"
+echo "$MOBILE_STRUCTURE_CHAIN"
 echo "$OPENMM_FORCEFIELD"
 } | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_MOBILE_STRUCTURE_FILE")" --dependent-file "$PREPARED_MOBILE_STRUCTURE_FILE"
 
 if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
 then
-	ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" --restrict-input "$MOBILE_STRUCTURE_SELECTION" \
+	ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" \
+	  --restrict-input "$MOBILE_STRUCTURE_SELECTION" --rename-chain "$MOBILE_STRUCTURE_CHAIN" \
 	  --randomize --random-seed 2 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
 fi
 

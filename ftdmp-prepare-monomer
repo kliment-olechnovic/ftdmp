@@ -10,6 +10,7 @@ Options:
     --input                   string  *  input file path
     --output                  string  *  output file path for full monomer
     --restrict-input          string     query to restrict input atoms, default is '[]'
+    --rename-chain            string     chain name to set or chain renaming rule to apply, default is ''
     --randomize                          flag to center and pseudo-randomly spin the structure
     --random-seed             number     seed for pseudo-random spinning, default is 1, 0 means current time
     --forcefield              string     forcefield name to make structure ready for relaxation, default is ''
@@ -45,6 +46,7 @@ INFILE=""
 OUTFILE=""
 OUTFILE_FOR_FTDOCK=""
 RESTRICT_INPUT="[]"
+RENAME_CHAINS=""
 RANDOM_SEED="1"
 FORCEFIELD=""
 CONDA_PATH=""
@@ -72,6 +74,10 @@ do
 		;;
 	--restrict-input)
 		RESTRICT_INPUT="$OPTARG"
+		shift
+		;;
+	--rename-chain)
+		RENAME_CHAINS="$OPTARG"
 		shift
 		;;
 	--random-seed)
@@ -143,6 +149,7 @@ params={}
 params.input_file='$INFILE';
 params.output_file='$TMPLDIR/structure_stage1.pdb';
 params.restrict_input_atoms='$RESTRICT_INPUT';
+params.rename_chains='$RENAME_CHAINS';
 params.random_seed='$RANDOM_SEED';
 params.randomize='$RANDOMIZE';
 EOF
@@ -153,6 +160,12 @@ voronota_assert_partial_success("Failed to import file");
 
 voronota_restrict_atoms("-use", params.restrict_input_atoms);
 voronota_assert_full_success("Failed to restrict input atoms by the input query");
+
+if(params.rename_chains)
+{
+	voronota_set_chain_name('-chain-name', params.rename_chains);
+	voronota_assert_full_success("Failed to rename chains");
+}
 
 if(params.randomize==="true")
 {
