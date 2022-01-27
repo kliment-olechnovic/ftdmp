@@ -26,6 +26,7 @@ Options:
     --parallel-scoring        number     number of processes to run when scoring, default is 8
     --sbatch-docking          string     sbatch parameters to run docking in parallel, default is ''
     --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
+    --score-symmetry          string     flag to score symmetry, default is 'false'
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
@@ -76,6 +77,7 @@ DOCKING_PROCESSORS="8"
 SCORING_PROCESSORS="8"
 DOCKING_SBATCH=""
 SCORING_SBATCH=""
+SCORE_SYMMETRY="false"
 SCORING_TOP_STAGE1="1000"
 SCORING_RANKS=""
 SCORING_TOP_STAGE2="100"
@@ -165,6 +167,10 @@ do
 		;;
 	--sbatch-scoring)
 		SCORING_SBATCH="$OPTARG"
+		shift
+		;;
+	--score-symmetry)
+		SCORE_SYMMETRY="$OPTARG"
 		shift
 		;;
 	--scoring-full-top)
@@ -299,6 +305,7 @@ ${BASH_SOURCE[0]} \\
 --parallel-scoring        '$SCORING_PROCESSORS' \\
 --sbatch-docking          '$DOCKING_SBATCH' \\
 --sbatch-scoring          '$SCORING_SBATCH' \\
+--score-symmetry          '$SCORE_SYMMETRY' \\
 --scoring-full-top        '$SCORING_TOP_STAGE1' \\
 --scoring-rank-names      '$SCORING_RANKS' \\
 --scoring-ranks-top       '$SCORING_TOP_STAGE2' \\
@@ -425,6 +432,7 @@ then
 	cat "$PREPARED_STATIC_STRUCTURE_FILE"
 	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -433,6 +441,7 @@ then
 		| ftdmp-calc-interface-voromqa-scores --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix FIV_ \
 		  --adjoin \
 		| ftdmp-sort-table --columns "-FIV_iface_energy" \
@@ -454,6 +463,7 @@ then
 	cat "$PREPARED_STATIC_STRUCTURE_FILE"
 	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -463,6 +473,7 @@ then
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket \
+		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix FIVb_ \
 		  --adjoin \
 		| ftdmp-sort-table --columns "-FIVb_iface_energy" \

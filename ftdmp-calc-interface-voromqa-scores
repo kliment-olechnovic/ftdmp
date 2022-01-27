@@ -13,7 +13,8 @@ Options:
     --monomer2                string     mobile monomer input file path
     --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
-    --blanket                            flag to use blanket
+    --blanket                            flag to run in blanket mode
+    --score-symmetry          string     flag to score symmetry, default is 'false'
     --parallel                number     total number of parallel parts, default is 1
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --colnames-prefix         string     prefix for output column names, default is 'FIV_'
@@ -59,6 +60,7 @@ USE_MONOMERS="false"
 ADJOIN="false"
 REBUILD_SIDECHAINS="false"
 BLANKET="false"
+SCORE_SYMMETRY="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -109,6 +111,10 @@ do
 		;;
 	--blanket)
 		BLANKET="true"
+		;;
+	--score-symmetry)
+		SCORE_SYMMETRY="$OPTARG"
+		shift
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -174,6 +180,11 @@ fi
 if [ "$BLANKET" == "true" ]
 then
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--blanket")
+fi
+
+if [ "$SCORE_SYMMETRY" == "true" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--score-symmetry")
 fi
 
 readonly TMPLDIR=$(mktemp -d)

@@ -25,7 +25,73 @@ time -p ( \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '1.0'                                              \
   --build-complexes         '10'                                               \
-  --output-dir              './test/output/redocking'                          \
+  --output-dir              './test/output/redocking_hetero'                   \
+)
+
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                '1h0x_redock'                                      \
+  --static-file             './test/reference_dimers/1H0X_AB.pdb'              \
+  --static-sel              '[-chain A]'                                       \
+  --static-chain            'A'                                                \
+  --mobile-file             './test/reference_dimers/1H0X_AB.pdb'              \
+  --mobile-sel              '[-chain A]'                                       \
+  --mobile-chain            'B'                                                \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/1H0X_AB.pdb'              \
+  --openmm-forcefield       'amber99sb'                                        \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
+  --sbatch-docking          ''                                                 \
+  --sbatch-scoring          ''                                                 \
+  --score-symmetry          'true'                                             \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_protein_protein'                     \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '1.0'                                              \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/redocking_homo'                          \
+)
+
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                '1my7_redock'                                      \
+  --static-file             './test/reference_dimers/1MY7_AB.pdb'              \
+  --static-sel              '[-chain A]'                                       \
+  --static-chain            'A'                                                \
+  --mobile-file             './test/reference_dimers/1MY7_AB.pdb'              \
+  --mobile-sel              '[-chain A]'                                       \
+  --mobile-chain            'B'                                                \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/1MY7_AB.pdb'              \
+  --openmm-forcefield       'amber99sb'                                        \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
+  --sbatch-docking          ''                                                 \
+  --sbatch-scoring          ''                                                 \
+  --score-symmetry          'true'                                             \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_protein_protein'                     \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '1.0'                                              \
+  --build-complexes         '10'                                               \
+  --output-dir              './test/output/redocking_homo'                     \
 )
 
 ################################################################################
@@ -49,7 +115,7 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
-  --output-dir              './test/output/redocking'                          \
+  --output-dir              './test/output/redocking_hetero'                   \
 )
 
 ################################################################################
@@ -73,7 +139,7 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
-  --output-dir              './test/output/redocking'                          \
+  --output-dir              './test/output/redocking_hetero'                   \
 )
 
 ################################################################################
@@ -97,7 +163,7 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --build-complexes         '10'                                               \
-  --output-dir              './test/output/redocking'                          \
+  --output-dir              './test/output/redocking_hetero'                   \
 )
 
 ################################################################################
@@ -110,7 +176,7 @@ time -p ( \
   --mobile-file             './test/just_monomers/capri188_dna_EF.pdb'         \
   --mobile-sel              '[-chain E,F]'                                     \
   --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
-  --ftdock-keep             '5'                                                \
+  --ftdock-keep             '10'                                               \
   --ftdock-angle-step       '9'                                                \
   --min-grid-sep            '20'                                               \
   --parallel-docking        '8'                                                \
@@ -119,7 +185,7 @@ time -p ( \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
-  --redundancy-threshold    '0.5'                                              \
+  --redundancy-threshold    '0.9'                                              \
   --build-complexes         '10'                                               \
   --output-dir              './test/output/capri'                              \
 )
