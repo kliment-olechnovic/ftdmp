@@ -27,6 +27,7 @@ Options:
     --sbatch-docking          string     sbatch parameters to run docking in parallel, default is ''
     --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
+    --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
@@ -78,6 +79,7 @@ SCORING_PROCESSORS="8"
 DOCKING_SBATCH=""
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
+REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
 SCORING_RANKS=""
 SCORING_TOP_STAGE2="100"
@@ -171,6 +173,10 @@ do
 		;;
 	--score-symmetry)
 		SCORE_SYMMETRY="$OPTARG"
+		shift
+		;;
+	--remap-cadscore)
+		REMAP_CADSCORE="$OPTARG"
 		shift
 		;;
 	--scoring-full-top)
@@ -306,6 +312,7 @@ ${BASH_SOURCE[0]} \\
 --sbatch-docking          '$DOCKING_SBATCH' \\
 --sbatch-scoring          '$SCORING_SBATCH' \\
 --score-symmetry          '$SCORE_SYMMETRY' \\
+--remap-cadscore          '$REMAP_CADSCORE' \\
 --scoring-full-top        '$SCORING_TOP_STAGE1' \\
 --scoring-rank-names      '$SCORING_RANKS' \\
 --scoring-ranks-top       '$SCORING_TOP_STAGE2' \\
@@ -668,6 +675,7 @@ cat "$PREV_SCORING_RESULTS_FILE"
 cat "$PREPARED_STATIC_STRUCTURE_FILE"
 cat "$PREPARED_MOBILE_STRUCTURE_FILE"
 echo "$INTERFACE_SUBSELECTION"
+echo "$REMAP_CADSCORE"
 } | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$SIMILARITY_MATRIX_FILE")" --dependent-file "$SIMILARITY_MATRIX_FILE"
 
 if [ ! -s "$SIMILARITY_MATRIX_FILE" ]
@@ -675,6 +683,7 @@ then
 	cat "$PREV_SCORING_RESULTS_FILE" \
 	| ftdmp-calc-interface-cadscore-matrix --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 	  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+	  --remap-chains "$REMAP_CADSCORE" \
 	  --matrix-output "$SIMILARITY_MATRIX_FILE" \
 	  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 	> /dev/null

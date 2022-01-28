@@ -52,13 +52,14 @@ time -p ( \
   --sbatch-docking          ''                                                 \
   --sbatch-scoring          ''                                                 \
   --score-symmetry          'true'                                             \
+  --remap-cadscore          'true'                                             \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_protein_protein'                     \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '1.0'                                              \
   --build-complexes         '10'                                               \
-  --output-dir              './test/output/redocking_homo'                          \
+  --output-dir              './test/output/redocking_homo'                     \
 )
 
 ################################################################################
@@ -85,6 +86,7 @@ time -p ( \
   --sbatch-docking          ''                                                 \
   --sbatch-scoring          ''                                                 \
   --score-symmetry          'true'                                             \
+  --remap-cadscore          'true'                                             \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_protein_protein'                     \
   --scoring-ranks-top       '100'                                              \
@@ -181,12 +183,13 @@ time -p ( \
   --min-grid-sep            '20'                                               \
   --parallel-docking        '8'                                                \
   --parallel-scoring        '8'                                                \
+  --remap-cadscore          'true'                                             \
   --scoring-full-top        '1000'                                             \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '0.9'                                              \
-  --build-complexes         '10'                                               \
+  --build-complexes         '30'                                               \
   --output-dir              './test/output/capri'                              \
 )
 
