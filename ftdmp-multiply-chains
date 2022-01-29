@@ -103,6 +103,11 @@ then
 	exit 1
 fi
 
+if [ "$OUTFILE" == "_self" ]
+then
+	OUTFILE="$INFILE"
+fi
+
 if [ -z "$STATIC_ALIGN_SEL" ]
 then
 	echo >&2 "Error: selection of atoms in static copy to align not provided"
@@ -144,7 +149,7 @@ params.output_file='$TMPLDIR/result.pdb';
 params.static_align_sel='$STATIC_ALIGN_SEL';
 params.mobile_align_sel='$MOBILE_ALIGN_SEL';
 params.multiply_sel='$MULTIPLY_SEL';
-params.rename_chain='$RENAME_CHAINS';
+params.rename_chain='$RENAME_CHAIN';
 EOF
 
 cat << 'EOF'
@@ -154,8 +159,8 @@ voronota_assert_full_success("Failed to import file");
 voronota_copy_object("static", "mobile");
 voronota_assert_full_success("Failed to copy object");
 
-voronota_tmalign("-target", "static", -model", "mobile", "-target-sel", params.static_align_sel, "-model-sel", params.mobile_align_sel);
-voronota_assert_full_success("Failed run tmalign using provided selections");
+voronota_tmalign("-target", "static", "-model", "mobile", "-target-sel", params.static_align_sel, "-model-sel", params.mobile_align_sel);
+voronota_assert_full_success("Failed to run tmalign using provided selections");
 
 voronota_pick_objects("-names", "mobile");
 voronota_assert_full_success("Failed to pick object");
@@ -163,7 +168,7 @@ voronota_assert_full_success("Failed to pick object");
 voronota_restrict_atoms("-use", params.multiply_sel);
 voronota_assert_full_success("Failed to restrict input atoms by the input query");
 
-voronota_set_chain_name("-chain-name", params.rename_chains);
+voronota_set_chain_name("-chain-name", params.rename_chain);
 voronota_assert_full_success("Failed to rename chains");
 
 voronota_merge_objects("-names", ["static", "mobile"], "-title", "merged");
