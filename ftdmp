@@ -407,9 +407,9 @@ then
 	cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP"
 	cat "$PREPARED_STATIC_STRUCTURE_FILE"
 	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
-	echo "$FTDOCK_KEEP"
-	echo "$FTDOCK_ANGLE_STEP"
-	echo "$MIN_GRID_SEP"
+	cat "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON"
+	echo "$INTERFACE_SUBSELECTION"
+	echo "$REMAP_CADSCORE"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -418,6 +418,7 @@ then
 		| ftdmp-calc-interface-cadscore-for-reference --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --remap-chains "$REMAP_CADSCORE" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --colnames-prefix FICS_ \
 		  --adjoin \

@@ -1,0 +1,188 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-multiply-chains' multiplies chains in complex using structural alignment
+
+Options:
+    --input                   string  *  input file path
+    --output                  string  *  output file path
+    --static-align-sel        string  *  selection of atoms in static copy to align
+    --mobile-align-sel        string  *  selection of atoms in mobile copy to align
+    --multiply-sel            string  *  selection of atoms in mobile copy to keep after alignment
+    --rename-chain            string  *  chain name to set or chain renaming rule to apply
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+	ftdmp-multiply-chains --input input/complex1.pdb --output output/complex2.pdb \
+	  --static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' \
+	  --multiply-sel '[-chain C,D]' --rename-chain 'C=E,D=F'
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+INFILE=""
+OUTFILE=""
+STATIC_ALIGN_SEL=""
+MOBILE_ALIGN_SEL=""
+MULTIPLY_SEL=""
+RENAME_CHAIN=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--output)
+		OUTFILE="$OPTARG"
+		shift
+		;;
+	--static-align-sel)
+		STATIC_ALIGN_SEL="$OPTARG"
+		shift
+		;;
+	--mobile-align-sel)
+		MOBILE_ALIGN_SEL="$OPTARG"
+		shift
+		;;
+	--multiply-sel)
+		MULTIPLY_SEL="$OPTARG"
+		shift
+		;;
+	--rename-chain)
+		RENAME_CHAIN="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE" ]
+then
+	echo >&2 "Error: input file path not provided"
+	exit 1
+fi
+
+if [ -z "$OUTFILE" ]
+then
+	echo >&2 "Error: output file path not provided"
+	exit 1
+fi
+
+if [ -z "$STATIC_ALIGN_SEL" ]
+then
+	echo >&2 "Error: selection of atoms in static copy to align not provided"
+	exit 1
+fi
+
+if [ -z "$MOBILE_ALIGN_SEL" ]
+then
+	echo >&2 "Error: selection of atoms in mobile copy to align not provided"
+	exit 1
+fi
+
+if [ -z "$MULTIPLY_SEL" ]
+then
+	echo >&2 "Error: selection of atoms in static copy to keep after alignment not provided"
+	exit 1
+fi
+
+if [ -z "$RENAME_CHAIN" ]
+then
+	echo >&2 "Error: chain name to set or chain renaming rule to apply not provided"
+	exit 1
+fi
+
+if [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+{
+cat << EOF
+params={}
+params.input_file='$INFILE';
+params.output_file='$TMPLDIR/result.pdb';
+params.static_align_sel='$STATIC_ALIGN_SEL';
+params.mobile_align_sel='$MOBILE_ALIGN_SEL';
+params.multiply_sel='$MULTIPLY_SEL';
+params.rename_chain='$RENAME_CHAINS';
+EOF
+
+cat << 'EOF'
+voronota_import("-file", params.input_file, "-include-heteroatoms", "-include-hydrogens", "-title", "static");
+voronota_assert_full_success("Failed to import file");
+
+voronota_copy_object("static", "mobile");
+voronota_assert_full_success("Failed to copy object");
+
+voronota_tmalign("-target", "static", -model", "mobile", "-target-sel", params.static_align_sel, "-model-sel", params.mobile_align_sel);
+voronota_assert_full_success("Failed run tmalign using provided selections");
+
+voronota_pick_objects("-names", "mobile");
+voronota_assert_full_success("Failed to pick object");
+
+voronota_restrict_atoms("-use", params.multiply_sel);
+voronota_assert_full_success("Failed to restrict input atoms by the input query");
+
+voronota_set_chain_name("-chain-name", params.rename_chains);
+voronota_assert_full_success("Failed to rename chains");
+
+voronota_merge_objects("-names", ["static", "mobile"], "-title", "merged");
+voronota_assert_full_success("Failed to merge objects");
+
+voronota_pick_objects("-names", "merged");
+voronota_assert_full_success("Failed to pick object");
+
+voronota_export_atoms("-file", params.output_file, "-as-pdb");
+voronota_assert_full_success("Failed to export atoms");
+EOF
+} | voronota-js --no-setup-defaults
+
+if [ ! -s "$TMPLDIR/result.pdb" ]
+then
+	echo >&2 "Error: failed to generate result structure"
+	exit 1
+fi
+
+mkdir -p "$(dirname "$OUTFILE")"
+mv "$TMPLDIR/result.pdb" "${OUTFILE}"
+
