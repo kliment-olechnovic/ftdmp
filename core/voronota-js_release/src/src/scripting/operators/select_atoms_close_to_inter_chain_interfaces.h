@@ -32,6 +32,8 @@ public:
 	double probe;
 	std::string name;
 	bool mark;
+	std::string selection_expresion_for_atoms_a;
+	std::string selection_expresion_for_atoms_b;
 
 	SelectAtomsCloseToInterchainInterfaces() : probe(1.4), mark(false)
 	{
@@ -43,6 +45,8 @@ public:
 		probe=input.get_value_or_default<double>("probe", 1.4);
 		name=input.get_value_or_first_unused_unnamed_value_or_default("name", "");
 		mark=input.get_flag("mark");
+		selection_expresion_for_atoms_a=input.get_value_or_default<std::string>("atoms-first", "");
+		selection_expresion_for_atoms_b=input.get_value_or_default<std::string>("atoms-second", "");
 	}
 
 	void document(CommandDocumentation& doc) const
@@ -51,6 +55,8 @@ public:
 		doc.set_option_decription(CDOD("probe", CDOD::DATATYPE_FLOAT, "probe radius", 1.4));
 		doc.set_option_decription(CDOD("name", CDOD::DATATYPE_STRING, "atom selection name", ""));
 		doc.set_option_decription(CDOD("mark", CDOD::DATATYPE_BOOL, "flag to mark selected atoms"));
+		doc.set_option_decription(CDOD("atoms-first", CDOD::DATATYPE_STRING, "selection expression for the first group of atoms", ""));
+		doc.set_option_decription(CDOD("atoms-second", CDOD::DATATYPE_STRING, "selection expression for the second group of atoms", ""));
 	}
 
 	Result run(DataManager& data_manager) const
@@ -65,6 +71,29 @@ public:
 			throw std::runtime_error(std::string("No atoms selected."));
 		}
 
+		std::vector< std::set<std::size_t> > atom_groups;
+
+		if(!selection_expresion_for_atoms_a.empty() || !selection_expresion_for_atoms_b.empty())
+		{
+			const std::set<std::size_t> atom_ids_a=data_manager.selection_manager().select_atoms(SelectionManager::Query((selection_expresion_for_atoms_a.empty() ? std::string("[]") : selection_expresion_for_atoms_a), false));
+
+			if(atom_ids_a.empty())
+			{
+				throw std::runtime_error(std::string("No first atoms selected."));
+			}
+
+			const std::set<std::size_t> atom_ids_b=data_manager.selection_manager().select_atoms(SelectionManager::Query((selection_expresion_for_atoms_b.empty() ? std::string("[]") : selection_expresion_for_atoms_b), false));
+
+			if(atom_ids_b.empty())
+			{
+				throw std::runtime_error(std::string("No second atoms selected."));
+			}
+
+			atom_groups.reserve(2);
+			atom_groups.push_back(atom_ids_a);
+			atom_groups.push_back(atom_ids_b);
+		}
+
 		std::set<std::size_t> ids;
 
 		{
@@ -74,19 +103,61 @@ public:
 				spheres[i]=voronota::apollota::SimpleSphere(data_manager.atoms()[i].value, data_manager.atoms()[i].value.r+probe);
 			}
 
-			const apollota::BoundingSpheresHierarchy bsh(spheres, 3.5, 1);
-
-			for(std::set<std::size_t>::const_iterator it=base_ids.begin();it!=base_ids.end();++it)
+			if(atom_groups.empty())
 			{
-				const std::size_t i=(*it);
-				const std::vector<std::size_t> collisions=voronota::apollota::SearchForSphericalCollisions::find_all_collisions(bsh, spheres[i]);
-				bool passed=false;
-				for(std::size_t j=0;j<collisions.size() && !passed;j++)
+				const apollota::BoundingSpheresHierarchy bsh(spheres, 3.5, 1);
+
+				for(std::set<std::size_t>::const_iterator it=base_ids.begin();it!=base_ids.end();++it)
 				{
-					if(data_manager.atoms()[collisions[j]].crad.chainID!=data_manager.atoms()[i].crad.chainID)
+					const std::size_t i=(*it);
+					const std::vector<std::size_t> collisions=voronota::apollota::SearchForSphericalCollisions::find_all_collisions(bsh, spheres[i]);
+					bool passed=false;
+					for(std::size_t j=0;j<collisions.size() && !passed;j++)
 					{
-						ids.insert(i);
-						passed=true;
+						if(data_manager.atoms()[collisions[j]].crad.chainID!=data_manager.atoms()[i].crad.chainID)
+						{
+							ids.insert(i);
+							passed=true;
+						}
+					}
+				}
+			}
+			else
+			{
+				std::vector<bool> atom_validity(data_manager.atoms().size(), false);
+				for(std::set<std::size_t>::const_iterator it=base_ids.begin();it!=base_ids.end();++it)
+				{
+					atom_validity[*it]=true;
+				}
+
+				for(int group=0;group<2;group++)
+				{
+					bool group_validity=false;
+					for(std::set<std::size_t>::const_iterator it=atom_groups[group].begin();it!=atom_groups[group].end() && !group_validity;++it)
+					{
+						group_validity=atom_validity[*it];
+					}
+
+					if(group_validity)
+					{
+						const int antigroup=(group==0 ? 1 : 0);
+						std::vector<apollota::SimpleSphere> antigroup_spheres;
+						antigroup_spheres.reserve(atom_groups[antigroup].size());
+						for(std::set<std::size_t>::const_iterator it=atom_groups[antigroup].begin();it!=atom_groups[antigroup].end();++it)
+						{
+							const std::size_t i=(*it);
+							antigroup_spheres.push_back(voronota::apollota::SimpleSphere(data_manager.atoms()[i].value, data_manager.atoms()[i].value.r+probe));
+						}
+						const apollota::BoundingSpheresHierarchy bsh(antigroup_spheres, 3.5, 1);
+
+						for(std::set<std::size_t>::const_iterator it=atom_groups[group].begin();it!=atom_groups[group].end();++it)
+						{
+							const std::size_t i=(*it);
+							if(atom_validity[i] && !voronota::apollota::SearchForSphericalCollisions::find_any_collision(bsh, spheres[i]).empty())
+							{
+								ids.insert(i);
+							}
+						}
 					}
 				}
 			}
