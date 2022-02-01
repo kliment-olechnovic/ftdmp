@@ -132,7 +132,7 @@ then
 	exit 1
 fi
 
-if [ -n "$FORCEFIELD" ] && [ "$FORCEFIELD" != "amber99sb" ] && [ "$FORCEFIELD" != "amber14-all" ] && [ "$FORCEFIELD" != "charmm36" ]
+if [ -n "$FORCEFIELD" ] && [ "$FORCEFIELD" != "amber99sb" ] && [ "$FORCEFIELD" != "amber14-all" ] && [ "$FORCEFIELD" != "amber14-all-no-water" ] && [ "$FORCEFIELD" != "charmm36" ]
 then
 	echo >&2 "Error: invalid forcefield name '$FORCEFIELD'"
 	exit 1

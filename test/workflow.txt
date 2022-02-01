@@ -178,7 +178,10 @@ time -p ( \
   --mobile-file             './test/just_monomers/capri188_dna_EF.pdb'         \
   --mobile-sel              '[-chain E,F]'                                     \
   --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
-  --ftdock-keep             '10'                                               \
+  --openmm-forcefield       'amber14-all-no-water'                             \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '5'                                                \
   --ftdock-angle-step       '9'                                                \
   --min-grid-sep            '20'                                               \
   --parallel-docking        '8'                                                \
@@ -189,7 +192,36 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '0.9'                                              \
-  --build-complexes         '30'                                               \
+  --build-complexes         '100'                                              \
+  --output-dir              './test/output/capri'                              \
+)
+
+################################################################################
+
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                'capri188_reverse'                                 \
+  --mobile-file             './test/just_monomers/capri188_protein_AB.pdb'     \
+  --mobile-sel              '[-chain A,B]'                                     \
+  --static-file             './test/just_monomers/capri188_dna_EF.pdb'         \
+  --static-sel              '[-chain E,F]'                                     \
+  --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
+  --openmm-forcefield       'amber14-all-no-water'                             \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '8'                                                \
+  --parallel-scoring        '8'                                                \
+  --remap-cadscore          'true'                                             \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                             \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '0.9'                                              \
+  --build-complexes         '100'                                              \
   --output-dir              './test/output/capri'                              \
 )
 
