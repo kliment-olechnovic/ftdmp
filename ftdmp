@@ -787,9 +787,11 @@ then
 	exit 0
 fi
 
+mkdir -p "${OUTPUT_PATH}/relaxed"
+
 ################################################################################
 
-TOP_RELAXED_COMPLEXES_DIR="${OUTPUT_PATH}/relaxed_top_complexes"
+TOP_RELAXED_COMPLEXES_DIR="${OUTPUT_PATH}/relaxed/relaxed_top_complexes"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | tail -n +2 \
@@ -800,7 +802,7 @@ do
 	cat "$UNRELAXEDFILE"
 	echo "$OPENMM_FORCEFIELD"
 	echo "$RELAX_COMPLEXES"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/relaxed_top_complexes/$(basename "$RELAXEDFILE")" --dependent-file "$RELAXEDFILE"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/relaxed_top_complexes/$(basename "$RELAXEDFILE")" --dependent-file "$RELAXEDFILE"
 	
 	if [ ! -s "$RELAXEDFILE" ]
 	then
@@ -815,14 +817,14 @@ done
 
 if [ "$SCORING_MODE_PROTEIN" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results_FIV.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FIV.txt"
 	
 	{
 	cat "$PREV_SCORING_RESULTS_FILE"
 	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | xargs cat
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$SCORE_SYMMETRY"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
@@ -844,14 +846,14 @@ fi
 
 if [ "$SCORING_MODE_GENERIC" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results_FIVb.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FIVb.txt"
 	
 	{
 	cat "$PREV_SCORING_RESULTS_FILE"
 	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | xargs cat
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$SCORE_SYMMETRY"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
@@ -872,13 +874,13 @@ fi
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE"
 echo "$SCORING_MODE_PROTEIN"
 echo "$SCORING_MODE_GENERIC"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 
 if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 then
@@ -934,7 +936,7 @@ PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | grep -v _sr_ | sed 's/^/relaxed_/' | tr '\n' ' ')"
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_top_scoring_results_unordered.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_top_scoring_results_unordered.txt"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-filter-table \
@@ -945,13 +947,13 @@ PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################
 
-RELAXED_SIMILARITY_MATRIX_FILE="${OUTPUT_PATH}/relaxed_similarity_matrix.txt"
+RELAXED_SIMILARITY_MATRIX_FILE="${OUTPUT_PATH}/relaxed/relaxed_similarity_matrix.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE"
 echo "$INTERFACE_SUBSELECTION"
 echo "$REMAP_CADSCORE"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$RELAXED_SIMILARITY_MATRIX_FILE")" --dependent-file "$RELAXED_SIMILARITY_MATRIX_FILE"
+} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$RELAXED_SIMILARITY_MATRIX_FILE")" --dependent-file "$RELAXED_SIMILARITY_MATRIX_FILE"
 
 if [ ! -s "$RELAXED_SIMILARITY_MATRIX_FILE" ]
 then
@@ -966,13 +968,13 @@ fi
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_top_scoring_results.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_top_scoring_results.txt"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
   --similarities "$RELAXED_SIMILARITY_MATRIX_FILE" \
   --rank-columns "$RELAXED_SCORING_RANKS" \
-  --top-slices "1 10" \
+  --top-slices "$SCORING_RANKS_JURY_SLICES" \
   --cluster 0.9 \
   --several-max-values 5 \
   --colnames-prefix relaxed_RJS_ \
