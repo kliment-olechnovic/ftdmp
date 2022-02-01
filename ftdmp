@@ -932,7 +932,7 @@ PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################
 
-RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | grep -v _sr_ | tr '\n' ' ')"
+RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | grep -v _sr_ | sed 's/^/relaxed_/' | tr '\n' ' ')"
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_top_scoring_results_unordered.txt"
 
@@ -972,7 +972,7 @@ cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
   --similarities "$RELAXED_SIMILARITY_MATRIX_FILE" \
   --rank-columns "$RELAXED_SCORING_RANKS" \
-  --top-slices "$SCORING_RANKS_JURY_SLICES" \
+  --top-slices "1 10" \
   --cluster 0.9 \
   --several-max-values 5 \
   --colnames-prefix relaxed_RJS_ \
