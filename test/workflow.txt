@@ -172,37 +172,6 @@ time -p ( \
 
 time -p ( \
 ./ftdmp                                                                        \
-  --job-name                'capri188'                                         \
-  --static-file             './test/just_monomers/capri188_protein_AB.pdb'     \
-  --static-sel              '[-chain A,B]'                                     \
-  --mobile-file             './test/just_monomers/capri188_dna_EF.pdb'         \
-  --mobile-sel              '[-chain E,F]'                                     \
-  --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
-  --openmm-forcefield       'amber14-all-no-water'                             \
-  --conda-path              "$HOME/anaconda3"                                  \
-  --conda-env               'alphafold2'                                       \
-  --ftdock-keep             '5'                                                \
-  --ftdock-angle-step       '9'                                                \
-  --min-grid-sep            '20'                                               \
-  --parallel-docking        '8'                                                \
-  --parallel-scoring        '8'                                                \
-  --remap-cadscore          'true'                                             \
-  --scoring-full-top        '1000'                                             \
-  --scoring-rank-names      'standard_for_generic'                             \
-  --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '5  50'                                            \
-  --redundancy-threshold    '0.9'                                              \
-  --build-complexes         '50'                                               \
-  --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
-  --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
-  --output-dir              './test/output/capri'                              \
-)
-
-################################################################################
-
-
-time -p ( \
-./ftdmp                                                                        \
   --job-name                'capri188_reverse'                                 \
   --mobile-file             './test/just_monomers/capri188_protein_AB.pdb'     \
   --mobile-sel              '[-chain A,B]'                                     \
@@ -223,7 +192,39 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '0.9'                                              \
-  --build-complexes         '100'                                              \
+  --build-complexes         '500'                                              \
+  --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
+  --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
+  --output-dir              './test/output/capri'                              \
+)
+
+################################################################################
+
+time -p ( \
+./ftdmp                                                                        \
+  --job-name                'capri188'                                         \
+  --static-file             './test/just_monomers/capri188_protein_AB.pdb'     \
+  --static-sel              '[-chain A,B]'                                     \
+  --mobile-file             './test/just_monomers/capri188_dna_EF.pdb'         \
+  --mobile-sel              '[-chain E,F]'                                     \
+  --subselect-contacts      '[-a1 [-chain A,B] -a2 [-chain E,F]]'              \
+  --openmm-forcefield       'amber14-all-no-water'                             \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '5'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '8'                                                \
+  --parallel-scoring        '8'                                                \
+  --remap-cadscore          'true'                                             \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                             \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '0.9'                                              \
+  --build-complexes         '500'                                              \
+  --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
+  --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
   --output-dir              './test/output/capri'                              \
 )
 

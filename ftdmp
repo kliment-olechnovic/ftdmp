@@ -331,6 +331,8 @@ ${BASH_SOURCE[0]} \\
 --scoring-jury-slices     '$SCORING_RANKS_JURY_SLICES' \\
 --build-complexes         '$NUMBER_OF_COMPLEXES_TO_BUILD' \\
 --redundancy-threshold    '$REDUNDANCY_THRESHOLD' \\
+--multiply-chains         "$MULTIPLY_CHAINS" \\
+--relax-complexes         "$RELAX_COMPLEXES" \\
 --output-dir              '$OUTPUT_PATH' \\
 
 EOF
