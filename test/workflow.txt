@@ -192,7 +192,9 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '0.9'                                              \
-  --build-complexes         '100'                                              \
+  --build-complexes         '30'                                               \
+  --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
+  --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
   --output-dir              './test/output/capri'                              \
 )
 
