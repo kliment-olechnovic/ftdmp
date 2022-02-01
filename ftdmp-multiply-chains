@@ -8,7 +8,7 @@ cat >&2 << 'EOF'
 
 Options:
     --input                   string  *  input file path
-    --output                  string  *  output file path
+    --output                  string  *  output file path, setting to '_same_as_input' will overwrite input file
     --static-align-sel        string  *  selection of atoms in static copy to align
     --mobile-align-sel        string  *  selection of atoms in mobile copy to align
     --multiply-sel            string  *  selection of atoms in mobile copy to keep after alignment
@@ -103,7 +103,7 @@ then
 	exit 1
 fi
 
-if [ "$OUTFILE" == "_self" ]
+if [ "$OUTFILE" == "_same_as_input" ]
 then
 	OUTFILE="$INFILE"
 fi
