@@ -191,7 +191,7 @@ time -p ( \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
-  --redundancy-threshold    '0.9'                                              \
+  --redundancy-threshold    '0.2'                                              \
   --build-complexes         '500'                                              \
   --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
   --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
@@ -221,7 +221,7 @@ time -p ( \
   --scoring-rank-names      'standard_for_generic'                             \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
-  --redundancy-threshold    '0.9'                                              \
+  --redundancy-threshold    '0.2'                                              \
   --build-complexes         '500'                                              \
   --multiply-chains         "--static-align-sel '[-chain A]' --mobile-align-sel '[-chain B]' --multiply-sel '[-chain E,F]' --rename-chain 'E=C,F=D'" \
   --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \

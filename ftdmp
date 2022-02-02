@@ -725,16 +725,20 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --adjoin \
 | ftdmp-sort-table \
   --columns "-RJS_rank" \
-| ftdmp-filter-table \
-  "<=${REDUNDANCY_THRESHOLD}" RDDS_ordered_score \
-| ftdmp-sort-table \
-  --columns "-RJS_rank" \
 | column -t \
 > "$NEXT_SCORING_RESULTS_FILE"
 
 rm "$PREV_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+
+cat "$PREV_SCORING_RESULTS_FILE" \
+| ftdmp-filter-table \
+  "<=${REDUNDANCY_THRESHOLD}" RDDS_ordered_score \
+| ftdmp-sort-table \
+  --columns "-RJS_rank" \
+| column -t \
+> "${OUTPUT_PATH}/top_scoring_results_nonredundant.txt"
 
 ################################################################################
 
@@ -823,7 +827,7 @@ then
 	
 	{
 	cat "$PREV_SCORING_RESULTS_FILE"
-	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | xargs cat
+	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | sort | xargs cat
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
@@ -852,7 +856,7 @@ then
 	
 	{
 	cat "$PREV_SCORING_RESULTS_FILE"
-	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | xargs cat
+	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | sort | xargs cat
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
@@ -868,6 +872,62 @@ then
 		  --colnames-prefix relaxed_FIVb_ \
 		  --adjoin \
 		| ftdmp-sort-table --columns "-relaxed_FIVb_iface_energy" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FIV_sr.txt"
+	
+	{
+	cat "$PREV_SCORING_RESULTS_FILE"
+	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | sort | xargs cat
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" \
+		| ftdmp-calc-interface-voromqa-scores --input-prefix "${TOP_RELAXED_COMPLEXES_DIR}/" --input-suffix ".pdb" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --rebuild-sidechains \
+		  --colnames-prefix relaxed_FIV_sr_ \
+		  --adjoin \
+		| ftdmp-sort-table --columns "-relaxed_FIV_sr_iface_energy" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FIVb_sr.txt"
+	
+	{
+	cat "$PREV_SCORING_RESULTS_FILE"
+	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | sort | xargs cat
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" \
+		| ftdmp-calc-interface-voromqa-scores --input-prefix "${TOP_RELAXED_COMPLEXES_DIR}/" --input-suffix ".pdb" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --blanket --rebuild-sidechains \
+		  --colnames-prefix relaxed_FIVb_sr_ \
+		  --adjoin \
+		| ftdmp-sort-table --columns "-relaxed_FIVb_sr_iface_energy" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
 	
@@ -929,21 +989,50 @@ then
 			cat
 		fi
 	} \
+		| {
+		if [ "$$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "-relaxed_FIV_sr_iface_energy" \
+			  --add-rank-column "relaxed_FIV_sr_iface_energy_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIV_sr_iface_energy_norm" \
+			  --add-rank-column "relaxed_FIV_sr_iface_energy_norm_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIV_sr_iface_energy -relaxed_FIV_sr_iface_clash_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "relaxed_FIV_sr_energy_clash_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIV_sr_iface_energy -relaxed_FIV_sr_iface_energy_norm -relaxed_FIV_sr_iface_clash_score" \
+			  --tolerances "0 0 0.01" \
+			  --add-rank-column "relaxed_FIV_sr_energy_norm_clash_tour_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "-relaxed_FIVb_sr_iface_energy" \
+			  --add-rank-column "relaxed_FIVb_sr_iface_energy_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIVb_sr_iface_energy_norm" \
+			  --add-rank-column "relaxed_FIVb_sr_iface_energy_norm_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIVb_sr_iface_energy -relaxed_FIVb_sr_iface_clash_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "relaxed_FIVb_sr_energy_clash_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "-relaxed_FIVb_sr_iface_energy -relaxed_FIVb_sr_iface_energy_norm -relaxed_FIVb_sr_iface_clash_score" \
+			  --tolerances "0 0 0.01" \
+			  --add-rank-column "relaxed_FIVb_sr_energy_norm_clash_tour_rank"
+		else
+			cat
+		fi
+	} \
 	> "$NEXT_SCORING_RESULTS_FILE"
 fi
-
-PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-
-################################################################################
-
-RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | grep -v _sr_ | sed 's/^/relaxed_/' | tr '\n' ' ')"
-
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_top_scoring_results_unordered.txt"
-
-cat "$PREV_SCORING_RESULTS_FILE" \
-| ftdmp-filter-table \
-  "<=${SCORING_TOP_STAGE2}" $RELAXED_SCORING_RANKS \
-> "$NEXT_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
@@ -972,10 +1061,12 @@ fi
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_top_scoring_results.txt"
 
+RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^/relaxed_/' | tr '\n' ' ')"
+
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
   --similarities "$RELAXED_SIMILARITY_MATRIX_FILE" \
-  --rank-columns "$RELAXED_SCORING_RANKS" \
+  --rank-columns "$SCORING_RANKS $RELAXED_SCORING_RANKS" \
   --top-slices "$SCORING_RANKS_JURY_SLICES" \
   --cluster 0.9 \
   --several-max-values 5 \
@@ -989,16 +1080,18 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --adjoin \
 | ftdmp-sort-table \
   --columns "-relaxed_RJS_rank" \
+| column -t \
+> "$NEXT_SCORING_RESULTS_FILE"
+
+PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+
+cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-filter-table \
   "<=${REDUNDANCY_THRESHOLD}" relaxed_RDDS_ordered_score \
 | ftdmp-sort-table \
   --columns "-relaxed_RJS_rank" \
 | column -t \
-> "$NEXT_SCORING_RESULTS_FILE"
-
-rm "$PREV_SCORING_RESULTS_FILE"
-
-PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+> "${OUTPUT_PATH}/relaxed/relaxed_top_scoring_results_nonredundant.txt"
 
 ################################################################################
 
