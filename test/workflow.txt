@@ -24,7 +24,8 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '1.0'                                              \
-  --build-complexes         '10'                                               \
+  --build-complexes         '500'                                              \
+  --relax-complexes         "--max-iterations 0 --force-cuda --focus whole_interface" \
   --output-dir              './test/output/redocking_hetero'                   \
 )
 
@@ -58,7 +59,8 @@ time -p ( \
   --scoring-ranks-top       '100'                                              \
   --scoring-jury-slices     '5  50'                                            \
   --redundancy-threshold    '1.0'                                              \
-  --build-complexes         '10'                                               \
+  --build-complexes         '500'                                              \
+  --relax-complexes         "--max-iterations 0 --force-cuda --focus whole_interface" \
   --output-dir              './test/output/redocking_homo'                     \
 )
 

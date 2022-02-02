@@ -147,7 +147,7 @@ then
 	exit 1
 fi
 
-EXPANDED_TOPSLICES="$(seq $TOPSLICES | tr '\n' ' ' | sed 's/\s*$//')"
+EXPANDED_TOPSLICES="$(seq $TOPSLICES | tr '\n' ' ' | sed 's/\s*$/ 999999/')"
 
 if [ -z "$EXPANDED_TOPSLICES" ]
 then

@@ -989,8 +989,8 @@ then
 			cat
 		fi
 	} \
-		| {
-		if [ "$$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+	| {
+		if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 		then
 			ftdmp-sort-table \
 			  --columns "-relaxed_FIV_sr_iface_energy" \
@@ -1011,7 +1011,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+		if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 		then
 			ftdmp-sort-table \
 			  --columns "-relaxed_FIVb_sr_iface_energy" \
