@@ -775,9 +775,9 @@ then
 			
 			cat "$NEXT_SCORING_RESULTS_FILE" \
 			| tail -n +2 \
-			| awk -v inputprefix="${TOP_COMPLEXES_RAW_DIR}/" -v outputprefix="${TOP_COMPLEXES_DIR}/" -v suffix=".pdb" -v multiplyoptions="$MULTIPLY_CHAINS" \
-			  '{print "ftdmp-multiply-chains " multiplyoptions " --input " inputprefix $1 suffix " --output " outputprefix $1 suffix}' \
-			| bash
+			| awk -v inputprefix="${TOP_COMPLEXES_RAW_DIR}/" -v outputprefix="${TOP_COMPLEXES_DIR}/" -v suffix=".pdb" \
+			  '{print inputprefix $1 suffix " " outputprefix $1 suffix}' \
+			| xargs -L 1 -P "$SCORING_PROCESSORS" bash -c "ftdmp-multiply-chains $MULTIPLY_CHAINS --input \$0 --output \$1"
 			
 			rm -rf "$TOP_COMPLEXES_RAW_DIR"
 		fi
@@ -1097,7 +1097,7 @@ RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^/re
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
   --similarities "$RELAXED_SIMILARITY_MATRIX_FILE" \
-  --rank-columns "RJS_rank $RELAXED_SCORING_RANKS" \
+  --rank-columns "$SCORING_RANKS $RELAXED_SCORING_RANKS" \
   --top-slices "$SCORING_RANKS_JURY_SLICES" \
   --cluster 0.9 \
   --several-max-values 5 \
