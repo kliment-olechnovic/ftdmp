@@ -821,6 +821,37 @@ done
 
 ################################################################################
 
+if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FICS.txt"
+	
+	{
+	cat "$PREV_SCORING_RESULTS_FILE"
+	find "$TOP_RELAXED_COMPLEXES_DIR" -type f | sort | xargs cat
+	cat "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON"
+	echo "$INTERFACE_SUBSELECTION"
+	echo "$REMAP_CADSCORE"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/relaxed/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" \
+		| ftdmp-calc-interface-cadscore-for-reference --input-prefix "${TOP_RELAXED_COMPLEXES_DIR}/" --input-suffix ".pdb" \
+		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --remap-chains "$REMAP_CADSCORE" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --colnames-prefix relaxed_FICS_ \
+		  --adjoin \
+		| ftdmp-sort-table --columns "relaxed_FICS_iface_cadscore" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+fi
+
+################################################################################
+
 if [ "$SCORING_MODE_PROTEIN" == "true" ]
 then
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed/relaxed_scoring_results_FIV.txt"
@@ -1066,7 +1097,7 @@ RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^/re
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
   --similarities "$RELAXED_SIMILARITY_MATRIX_FILE" \
-  --rank-columns "$SCORING_RANKS $RELAXED_SCORING_RANKS" \
+  --rank-columns "RJS_rank $RELAXED_SCORING_RANKS" \
   --top-slices "$SCORING_RANKS_JURY_SLICES" \
   --cluster 0.9 \
   --several-max-values 5 \
