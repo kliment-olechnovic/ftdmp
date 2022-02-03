@@ -7,21 +7,27 @@ cat >&2 << 'EOF'
 'ftdmp-form-capri-answer' forms CAPRI answer from ordered list of files
 
 Options:
-    --input-brk               string  *  input .brk file path
+    --input-prefix            string     input file path prefix, default is ''
+    --input-suffix            string     input file path suffix, default is ''
+    --brk                     string  *  input .brk file path
     --output                  string  *  output file path
     --authors                 string  *  authors string
+    --force-top-picks         string     space-separated listo of picks to put in front
     --align-sel               string     selection of atoms copy to align
     --rename-chains           string     chain renaming rule to apply
     --help | -h                          flag to display help message and exit
 
 Standard input:
-    list of structure files
+    list of structure files or IDs
+
+Standard output:
+    list of used structure files
     
 Examples:
 
 	(echo file1.pdb ; echo file2.pdb) \
 	| ftdmp-form-capri-answer \
-	  --input-brk input/capri.brk --output output/answer.pdb \
+	  --brk input/capri.brk --output output/answer.pdb \
 	  --align-sel '[-chain A]' --rename-chains 'C=E,D=F'
 
 EOF
@@ -41,9 +47,12 @@ fi
 
 command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
+INPUT_PREFIX=""
+INPUT_SUFFIX=""
 BRKFILE=""
 OUTFILE=""
 AUTHORS=""
+FORCE_TOP_PICKS=""
 ALIGN_SEL=""
 RENAME_CHAINS=""
 HELP_MODE="false"
@@ -54,7 +63,15 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	--input-brk)
+	--input-prefix)
+		INPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	--input-suffix)
+		INPUT_SUFFIX="$OPTARG"
+		shift
+		;;
+	--brk)
 		BRKFILE="$OPTARG"
 		shift
 		;;
@@ -64,6 +81,10 @@ do
 		;;
 	--authors)
 		AUTHORS="$OPTARG"
+		shift
+		;;
+	--force-top-picks)
+		FORCE_TOP_PICKS="$OPTARG"
 		shift
 		;;
 	--align-sel)
@@ -116,13 +137,35 @@ fi
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
-cat > "${TMPLDIR}/input"
+cat \
+| awk '{if($1!="ID"){print $1}}' \
+| egrep . \
+| uniq \
+> "${TMPLDIR}/input_raw"
 
-if [ ! -s "${TMPLDIR}/input" ]
+if [ ! -s "${TMPLDIR}/input_raw" ]
 then
 	echo >&2 "Error: no input data in stdin"
 	exit 1
 fi
+
+if [ -n "$FORCE_TOP_PICKS" ]
+then
+	echo "$FORCE_TOP_PICKS" | sed 's/\s\+/\n/g' > "${TMPLDIR}/force_top_picks"
+	
+	{
+		cat "${TMPLDIR}/force_top_picks"
+		cat "${TMPLDIR}/input_raw" | grep -v -x -F -f "${TMPLDIR}/force_top_picks"
+	} \
+	| uniq \
+	> "${TMPLDIR}/input_raw_forced"
+	
+	mv "${TMPLDIR}/input_raw_forced" "${TMPLDIR}/input_raw"
+fi
+
+cat "${TMPLDIR}/input_raw" \
+| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{print prefix $1 suffix}' \
+> "${TMPLDIR}/input"
 
 while read -r INFILE
 do
@@ -203,4 +246,6 @@ done
 echo "END"
 } \
 > "$OUTFILE"
+
+cat "${TMPLDIR}/input"
 

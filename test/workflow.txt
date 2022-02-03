@@ -200,6 +200,17 @@ time -p ( \
   --output-dir              './test/output/capri'                              \
 )
 
+cat "./test/output/capri/capri188_reverse/relaxed/relaxed_top_scoring_results_nonredundant.txt" \
+| head -11 \
+| ./ftdmp-form-capri-answer.bash \
+  --input-prefix './test/output/capri/capri188_reverse/relaxed/relaxed_top_complexes/' \
+  --input-suffix '.pdb' \
+  --brk './test/output/capri/answer_capri188/capri_53_188.brk' \
+  --output './test/output/capri/capri188_reverse/relaxed/capri_answer.pdb' \
+  --authors 'J.DAPKUNAS, K.OLECHNOVIC, C.VENCLOVAS' \
+  --align-sel '[-chain A]' \
+  --rename-chains 'E=R,F=S,C=T,D=U'
+
 ################################################################################
 
 time -p ( \
@@ -229,6 +240,17 @@ time -p ( \
   --relax-complexes         " --max-iterations 0 --force-cuda --focus whole_interface --focus-base '[-protein]' --focus-first-sel '[-chain A,B]' --focus-second-sel '[-chain C,D,E,F]'" \
   --output-dir              './test/output/capri'                              \
 )
+
+cat "./test/output/capri/capri188/relaxed/relaxed_top_scoring_results_nonredundant.txt" \
+| head -11 \
+| ./ftdmp-form-capri-answer.bash \
+  --input-prefix './test/output/capri/capri188/relaxed/relaxed_top_complexes/' \
+  --input-suffix '.pdb' \
+  --brk './test/output/capri/answer_capri188/capri_53_188.brk' \
+  --output './test/output/capri/capri188/relaxed/capri_answer.pdb' \
+  --authors 'J.DAPKUNAS, K.OLECHNOVIC, C.VENCLOVAS' \
+  --force-top-picks 'capri188_71341' \
+  --rename-chains 'E=R,F=S,C=T,D=U'
 
 ################################################################################
 
