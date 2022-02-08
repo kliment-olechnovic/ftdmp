@@ -1,0 +1,96 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-split-pdb' splits a PDB file to separate models
+
+Options:
+    --input                   string  *  input file path
+    --output-prefix           string  *  output file prefix
+    --output-suffix           string     output file suffix, default is '.pdb'
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    list of generated files
+
+Examples:
+
+    ftdmp-split-pdb --input input/models.pdb --output-prefix output/model
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+INFILE=""
+OUTPUT_PREFIX=""
+OUTPUT_SUFFIX=".pdb"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--output-prefix)
+		OUTPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	--output-suffix)
+		OUTPUT_SUFFIX="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE" ]
+then
+	echo >&2 "Error: input file path not provided"
+	exit 1
+fi
+
+if [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+mkdir -p "$(dirname "${OUTPUT_PREFIX}file")"
+
+{
+	echo "voronota_split_pdb_file('-input-file', '$INFILE', '-output-file', '_stdout', '-prefix', '$OUTPUT_PREFIX', '-postfix', '$OUTPUT_SUFFIX');"
+	echo "voronota_assert_full_success('Failed to split pdb file');"
+} \
+| voronota-js --no-setup-defaults
+
