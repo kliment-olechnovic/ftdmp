@@ -7,6 +7,8 @@ cat >&2 << 'EOF'
 'ftdmp-all-score' scores and ranks complex structures of proteins or nucleic acids
 
 Options:
+    --from-dir                string     directory path to search for input files, default is ''
+    --from-pdb                string     multi-model PDB file path to extract input files, default is ''
     --input-prefix            string     input file path prefix, default is ''
     --input-suffix            string     input file path suffix, default is '.pdb'
     --monomer1                string     static monomer input file path, default is ''
@@ -78,6 +80,8 @@ then
 	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
+FROM_DIR=""
+FROM_PDB=""
 INPUT_PREFIX=""
 INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
@@ -105,6 +109,14 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
+	--from-dir)
+		FROM_DIR="$OPTARG"
+		shift
+		;;
+	--from-pdb)
+		FROM_PDB="$OPTARG"
+		shift
+		;;
 	--input-prefix)
 		INPUT_PREFIX="$OPTARG"
 		shift
@@ -192,13 +204,67 @@ fi
 
 if [ -n "$MONOMERFILE1" ] && [ -z "$MONOMERFILE2" ]
 then
-	echo >&2 "Error: only static monomers specified"
+	echo >&2 "Error: only static monomer specified"
 	exit 1
 fi
 
 if [ -z "$MONOMERFILE1" ] && [ -n "$MONOMERFILE2" ]
 then
-	echo >&2 "Error: only mobile monomers specified"
+	echo >&2 "Error: only mobile monomer specified"
+	exit 1
+fi
+
+if [ -n "$FROM_DIR" ] && [ -n "$FROM_PDB" ]
+then
+	echo >&2 "Error: input directory specified together with input PDB file"
+	exit 1
+fi
+
+if [ -n "$FROM_DIR" ] && [ -n "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: input directory specified together with monomers"
+	exit 1
+fi
+
+if [ -n "$FROM_DIR" ] && [ -n "$INPUT_PREFIX" ]
+then
+	echo >&2 "Error: input directory specified together with input prefix"
+	exit 1
+fi
+
+if [ -n "$FROM_PDB" ] && [ -n "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: input PDB file specified together with monomers"
+	exit 1
+fi
+
+if [ -n "$FROM_PDB" ] && [ -n "$INPUT_PREFIX" ]
+then
+	echo >&2 "Error: input PDB file specified together with input prefix"
+	exit 1
+fi
+
+if [ -n "$MONOMERFILE1" ] && [ -n "$INPUT_PREFIX" ]
+then
+	echo >&2 "Error: monomers specified together with input prefix"
+	exit 1
+fi
+
+if [ -n "$FROM_DIR" ] && [ ! -d "$FROM_DIR" ]
+then
+	echo >&2 "Error: input directory '$FROM_DIR' does not exist"
+	exit 1
+fi
+
+if [ -n "$FROM_DIR" ] && [ "$(ls "$FROM_DIR" | wc -l)" -lt "1" ]
+then
+	echo >&2 "Error: input directory '$FROM_DIR' has no files"
+	exit 1
+fi
+
+if [ -n "$FROM_PDB" ] && [ ! -s "$FROM_PDB" ]
+then
+	echo >&2 "Error: input PDB file '$FROM_PDB' does not exist or is empty"
 	exit 1
 fi
 
@@ -259,22 +325,38 @@ mkdir -p "$OUTPUT_PATH"
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/docking_results_to_score.txt"
 
-cat > "$NEXT_SCORING_RESULTS_FILE"
-
-if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+if [ -n "$FROM_PDB" ]
 then
-	echo >&2 "Error: no input data in stdin"
-	exit 1
+	ftdmp-split-pdb --input "$FROM_PDB" --output-prefix "${OUTPUT_PATH}/models/model" --output-suffix ".pdb" > /dev/null
+	FROM_DIR="${OUTPUT_PATH}/models"
 fi
 
-if [ "$(cat "$NEXT_SCORING_RESULTS_FILE" | head -1 | awk '{print $1}')" != "ID" ]
+if [ -n "$FROM_DIR" ]
 then
+	INPUT_PREFIX="${FROM_DIR}/"
+	INPUT_SUFFIX=""
 	{
-	echo "ID"
-	cat "$NEXT_SCORING_RESULTS_FILE" | awk '{print $1}'
-	} > "${OUTPUT_PATH}/prepared_docking_results_to_score.txt"
+	echo ID
+	ls "$FROM_DIR"
+	} > "$NEXT_SCORING_RESULTS_FILE"
+else
+	cat > "$NEXT_SCORING_RESULTS_FILE"
 	
-	mv "${OUTPUT_PATH}/prepared_docking_results_to_score.txt" "$NEXT_SCORING_RESULTS_FILE"
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no input data in stdin"
+		exit 1
+	fi
+	
+	if [ "$(cat "$NEXT_SCORING_RESULTS_FILE" | head -1 | awk '{print $1}')" != "ID" ]
+	then
+		{
+		echo "ID"
+		cat "$NEXT_SCORING_RESULTS_FILE" | awk '{print $1}'
+		} > "${OUTPUT_PATH}/prepared_docking_results_to_score.txt"
+		
+		mv "${OUTPUT_PATH}/prepared_docking_results_to_score.txt" "$NEXT_SCORING_RESULTS_FILE"
+	fi
 fi
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"

@@ -32,3 +32,16 @@ find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head
   --output-dir              './test/output/scoring_only/6v3p_redock/scored2'   \
 )
 
+time -p ( \
+./ftdmp-all-score                                                              \
+  --from-pdb                './test/output/scoring_only/Target188.pdb'         \
+  --score-name-prefix       ''                                                 \
+  --subselect-contacts      '[-a1 [-protein] -a2 [-nucleic]]'                  \
+  --parallel-scoring        '16'                                               \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_generic'                     \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '0.95'                                             \
+  --output-dir              './test/output/scoring_only/capri188/scored1'      \
+)
