@@ -4,7 +4,7 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp' docks, scores and ranks two structures of proteins or nucleic acids
+'ftdmp' docks, scores and ranks complex structures of proteins or nucleic acids
 
 Options:
     --job-name                string  *  job name
@@ -31,7 +31,7 @@ Options:
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 10 100'
+    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
     --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
     --build-complexes         number     number of top complexes to build, default is 10
     --multiply-chains         string     options to multiply chains, default is ''

@@ -1,0 +1,17 @@
+time -p ( \
+cat ./test/output/scoring_only/6v3p_redock/ids.txt                             \
+| ./ftdmp-all-score                                                            \
+  --input-prefix            './test/output/scoring_only/6v3p_redock/top_complexes/' \
+  --input-suffix            '.pdb'                                             \
+  --score-name-prefix       'raw_'                                             \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/6V3P_AB.pdb'              \
+  --parallel-scoring        '16'                                               \
+  --scoring-full-top        '1000'                                             \
+  --scoring-rank-names      'standard_for_protein_protein'                     \
+  --scoring-ranks-top       '100'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '0.95'                                              \
+  --output-dir              './test/output/scoring_only/6v3p_redock/scored'    \
+)
+

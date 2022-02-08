@@ -122,6 +122,11 @@ then
 	exit 1
 fi
 
+if [ -z "$MONOMERFILE1" ] && [ -z "$MONOMERFILE2" ]
+then
+	USE_MONOMERS="false"
+fi
+
 if [ "$USE_MONOMERS" == "true" ]
 then
 	if [ -z "$MONOMERFILE1" ]
