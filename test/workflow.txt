@@ -1,7 +1,7 @@
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                    \
   --job-name                '6v3p_redock'                                      \
   --static-file             './test/reference_dimers/6V3P_AB.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -32,7 +32,7 @@ time -p ( \
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                '1h0x_redock'                                      \
   --static-file             './test/reference_dimers/1H0X_AB.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -67,7 +67,7 @@ time -p ( \
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                '1my7_redock'                                      \
   --static-file             './test/reference_dimers/1MY7_AB.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -101,7 +101,7 @@ time -p ( \
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                '1b7f_redock'                                      \
   --static-file             './test/reference_dimers/1B7F_AP.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -125,7 +125,7 @@ time -p ( \
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                '2bna_redock'                                      \
   --static-file             './test/reference_dimers/2BNA_AB.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -149,7 +149,7 @@ time -p ( \
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                '1x9n_redock'                                      \
   --static-file             './test/reference_dimers/1X9N_A_BCD.pdb'           \
   --static-sel              '[-chain A]'                                       \
@@ -172,8 +172,12 @@ time -p ( \
 
 ################################################################################
 
+exit 0
+
+################################################################################
+
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                'capri188_reverse'                                 \
   --mobile-file             './test/just_monomers/capri188_protein_AB.pdb'     \
   --mobile-sel              '[-chain A,B]'                                     \
@@ -214,7 +218,7 @@ cat "./test/output/capri/capri188_reverse/relaxed/relaxed_top_scoring_results_no
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                'capri188'                                         \
   --static-file             './test/just_monomers/capri188_protein_AB.pdb'     \
   --static-sel              '[-chain A,B]'                                     \
@@ -255,7 +259,7 @@ cat "./test/output/capri/capri188/relaxed/relaxed_top_scoring_results_nonredunda
 ################################################################################
 
 time -p ( \
-./ftdmp                                                                        \
+./ftdmp-all                                                                        \
   --job-name                'capri188_more'                                         \
   --static-file             './test/just_monomers/capri188_protein_AB.pdb'     \
   --static-sel              '[-chain A,B]'                                     \

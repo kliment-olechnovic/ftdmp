@@ -17,7 +17,10 @@ Options:
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --scoring-modes           string  *  scoring modes
+    --mode-protein            string     flag to score in protein mode
+    --mode-protein-sr         string     flag to score in protein side chain-rebuilding mode
+    --mode-generic            string     flag to score in generic mode
+    --mode-generic-sr         string     flag to score in generic side chain-rebuilding mode
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
@@ -30,7 +33,7 @@ Options:
 Examples:
 
     cat docking_results.txt | ftdmp-score --structure-prefix './complexes/'
-      --scoring-modes 'standard_for_protein_protein' --output-dir './results'
+      --mode-protein 'true' --mode-generic 'true' --output-dir './results'
 
 EOF
 exit 1
@@ -92,7 +95,10 @@ SCORE_SYMMETRY="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
 CLASH_TOUR_TOLERANCE="0.05"
-SCORING_MODES=""
+SCORING_MODE_PROTEIN="false"
+SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
+SCORING_MODE_GENERIC="false"
+SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -166,8 +172,20 @@ do
 		CLASH_TOUR_TOLERANCE="$OPTARG"
 		shift
 		;;
-	--scoring-modes)
-		SCORING_MODES="$OPTARG"
+	--mode-protein)
+		SCORING_MODE_PROTEIN="$OPTARG"
+		shift
+		;;
+	--mode-protein-sr)
+		SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="$OPTARG"
+		shift
+		;;
+	--mode-generic)
+		SCORING_MODE_GENERIC="$OPTARG"
+		shift
+		;;
+	--mode-generic-sr)
+		SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -288,54 +306,15 @@ then
 	exit 1
 fi
 
-[ -n "$INTERFACE_SUBSELECTION" ] || { echo >&2 "Error: contacts subselection not defined"; exit 1; }
-
-[ -n "$SCORING_MODES" ] || { echo >&2 "Error: scoring modes not provided"; exit 1;}
-
-[ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
-
-################################################################################
-
-SCORING_MODE_PROTEIN="false"
-SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
-SCORING_MODE_GENERIC="false"
-SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
-
-if [ "$SCORING_MODES" == "all" ]
-then
-	SCORING_MODE_PROTEIN="true"
-	SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
-	SCORING_MODE_GENERIC="true"
-	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
-fi
-
-if [[ "$SCORING_MODES" == *"[protein]"* ]]
-then
-	SCORING_MODE_PROTEIN="true"
-fi
-
-if [[ "$SCORING_MODES" == *"[protein_sr]"* ]]
-then
-	SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
-fi
-
-if [[ "$SCORING_MODES" == *"[generic]"* ]]
-then
-	SCORING_MODE_GENERIC="true"
-fi
-
-if [[ "$SCORING_MODES" == *"[generic_sr]"* ]]
-then
-	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
-fi
-
-################################################################################
-
 if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
 then
 	echo >&2 "Error: no scoring actions specified"
 	exit 1
 fi
+
+[ -n "$INTERFACE_SUBSELECTION" ] || { echo >&2 "Error: contacts subselection not defined"; exit 1; }
+
+[ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
 
 ################################################################################
 

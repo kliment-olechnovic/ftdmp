@@ -28,7 +28,10 @@ find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head
   --parallel                '16' \
   --keep-top                '1000' \
   --clash-tour-tolerance    '0.05' \
-  --scoring-modes           'all' \
+  --mode-protein            'true' \
+  --mode-protein-sr         'true' \
+  --mode-generic            'true' \
+  --mode-generic-sr         'true' \
   --output-dir              './test/output/scoring_only/6v3p_redock/scored2' \
 )
 
