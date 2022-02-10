@@ -18,20 +18,33 @@ cat ./test/output/scoring_only/6v3p_redock/ids.txt                             \
 ################################################################################
 
 time -p ( \
-find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head -50 | xargs -L 1 basename             \
-| ./ftdmp-all-score                                                            \
-  --input-prefix            './test/output/scoring_only/6v3p_redock/top_complexes/' \
-  --input-suffix            ''                                                 \
-  --score-name-prefix       'raw_'                                             \
-  --subselect-contacts      '[]'                                               \
-  --reference               './test/reference_dimers/6V3P_AB.pdb'              \
-  --parallel-scoring        '16'                                               \
-  --scoring-full-top        '1000'                                             \
-  --scoring-rank-names      'standard_for_protein_protein'                     \
-  --scoring-ranks-top       '100'                                              \
-  --scoring-jury-slices     '5  50'                                            \
-  --redundancy-threshold    '0.95'                                             \
-  --output-dir              './test/output/scoring_only/6v3p_redock/scored2'   \
+find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head -50 | xargs -L 1 basename \
+| ./ftdmp-all-score \
+  --structure-prefix        './test/output/scoring_only/6v3p_redock/top_complexes/' \
+  --structure-suffix        '' \
+  --output-names-prefix     'raw_' \
+  --subselect-contacts      '[]' \
+  --reference               './test/reference_dimers/6V3P_AB.pdb' \
+  --parallel                '16' \
+  --keep-top                '1000' \
+  --scoring-modes           'all' \
+  --output-dir              './test/output/scoring_only/6v3p_redock/scored2' \
+)
+
+time -p ( \
+./ftdmp-all-jury \
+  --input-scoring-table     './test/output/scoring_only/6v3p_redock/scored2/raw_scoring_results.txt' \
+  --structure-prefix        './test/output/scoring_only/6v3p_redock/top_complexes/' \
+  --structure-suffix        '' \
+  --rank-names              'raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank
+                             raw_FIV_sr_iface_energy_rank  raw_FIV_sr_energy_clash_tour_rank
+                             raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank
+                             raw_FIVb_sr_iface_energy_rank  raw_FIVb_sr_energy_clash_tour_rank' \
+  --output-names-prefix     'v1_' \
+  --subselect-contacts      '[]' \
+  --ranks-top               '100' \
+  --jury-slices             '5  50' \
+  --redundancy-threshold     '0.95' \
 )
 
 ################################################################################

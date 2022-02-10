@@ -4,37 +4,32 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp-all-score' scores and ranks complex structures of proteins or nucleic acids
+'ftdmp-all-score' scores complex structures of proteins or nucleic acids
 
 Options:
-    --from-dir                string     directory path to search for input files, default is ''
-    --from-pdb                string     multi-model PDB file path to extract input files, default is ''
-    --input-prefix            string     input file path prefix, default is ''
-    --input-suffix            string     input file path suffix, default is '.pdb'
-    --monomer1                string     static monomer input file path, default is ''
-    --monomer2                string     mobile monomer input file path, default is ''
-    --score-name-prefix       string     score name prefixm, default is ''
+    --input-from-table        string     input table file path, default is '_stdin' to read from standard input
+    --input-from-dir          string     directory path to search for input files, default is ''
+    --input-from-pdb          string     multi-model PDB file path to extract input files, default is ''
+    --structure-prefix        string     input structure file path prefix, default is ''
+    --structure-suffix        string     input structure file path suffix, default is ''
+    --structure-monomer1      string     static monomer structure input file path, default is ''
+    --structure-monomer2      string     mobile monomer structure input file path, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
-    --parallel-scoring        number     number of processes to run when scoring, default is 8
-    --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
-    --score-symmetry          string     flag to score symmetry, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
-    --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
-    --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
-    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
+    --scoring-modes           string  *  scoring modes
+    --score-symmetry          string     flag to score symmetry, default is 'false'
+    --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
+    --parallel                number     number of processes to run when scoring, default is 8
+    --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
+    --output-names-prefix     string     output names prefix, default is ''
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
-Standard input:
-    space-separated table of docking results
-
 Examples:
 
-    cat docking_results.txt | ftdmp-score --input-prefix './complexes/'
-      --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+    cat docking_results.txt | ftdmp-score --structure-prefix './complexes/'
+      --scoring-modes 'standard_for_protein_protein' --output-dir './results'
 
 EOF
 exit 1
@@ -80,14 +75,14 @@ then
 	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
+FROM_TABLE="_stdin"
 FROM_DIR=""
 FROM_PDB=""
 INPUT_PREFIX=""
-INPUT_SUFFIX=".pdb"
+INPUT_SUFFIX=""
 MONOMERFILE1=""
 MONOMERFILE2=""
 SCORENAME_PREFIX=""
-USE_MONOMERS="false"
 INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
@@ -95,11 +90,7 @@ SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
-SCORING_RANKS=""
-SCORING_TOP_STAGE2="100"
-SCORING_RANKS_JURY_SLICES="10 50" 
-NUMBER_OF_COMPLEXES_TO_BUILD=10
-REDUNDANCY_THRESHOLD="1"
+SCORING_MODES=""
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -109,33 +100,35 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	--from-dir)
+	--input-from-table)
+		FROM_TABLE="$OPTARG"
+		shift
+		;;
+	--input-from-dir)
 		FROM_DIR="$OPTARG"
 		shift
 		;;
-	--from-pdb)
+	--input-from-pdb)
 		FROM_PDB="$OPTARG"
 		shift
 		;;
-	--input-prefix)
+	--structure-prefix)
 		INPUT_PREFIX="$OPTARG"
 		shift
 		;;
-	--input-suffix)
+	--structure-suffix)
 		INPUT_SUFFIX="$OPTARG"
 		shift
 		;;
-	--monomer1)
+	--structure-monomer1)
 		MONOMERFILE1="$OPTARG"
-		USE_MONOMERS="true"
 		shift
 		;;
-	--monomer2)
+	--structure-monomer2)
 		MONOMERFILE2="$OPTARG"
-		USE_MONOMERS="true"
 		shift
 		;;
-	--score-name-prefix)
+	--output-names-prefix)
 		SCORENAME_PREFIX="$OPTARG"
 		shift
 		;;		
@@ -147,11 +140,11 @@ do
 		REFERENCE_STRUCTURE_FILE_FOR_COMPARISON="$OPTARG"
 		shift
 		;;
-	--parallel-scoring)
+	--parallel)
 		SCORING_PROCESSORS="$OPTARG"
 		shift
 		;;
-	--sbatch-scoring)
+	--sbatch)
 		SCORING_SBATCH="$OPTARG"
 		shift
 		;;
@@ -163,24 +156,12 @@ do
 		REMAP_CADSCORE="$OPTARG"
 		shift
 		;;
-	--scoring-full-top)
+	--keep-top)
 		SCORING_TOP_STAGE1="$OPTARG"
 		shift
 		;;
-	--scoring-rank-names)
-		SCORING_RANKS="$OPTARG"
-		shift
-		;;
-	--scoring-ranks-top)
-		SCORING_TOP_STAGE2="$OPTARG"
-		shift
-		;;
-	--scoring-jury-slices)
-		SCORING_RANKS_JURY_SLICES="$OPTARG"
-		shift
-		;;
-	--redundancy-threshold)
-		REDUNDANCY_THRESHOLD="$OPTARG"
+	--scoring-modes)
+		SCORING_MODES="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -202,6 +183,87 @@ then
 	print_help_and_exit
 fi
 
+if [ -n "$FROM_TABLE" ]
+then
+	if [ -n "$FROM_DIR" ] || [ -n "$FROM_PDB" ]
+	then
+		echo >&2 "Error: more than one input source specified"
+		exit 1
+	fi
+	
+	if [ "$FROM_TABLE" != "_stdin" ] && [ ! -s "$FROM_TABLE" ]
+	then
+		echo >&2 "Error: input PDB file '$FROM_TABLE' does not exist or is empty"
+		exit 1
+	fi
+fi
+
+if [ -n "$FROM_DIR" ]
+then
+	if [ -n "$FROM_TABLE" ] || [ -n "$FROM_PDB" ]
+	then
+		echo >&2 "Error: more than one input source specified"
+		exit 1
+	fi
+	
+	if [ -n "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: input directory specified together with monomers"
+		exit 1
+	fi
+	
+	if [ -n "$INPUT_PREFIX" ]
+	then
+		echo >&2 "Error: input directory specified together with input prefix"
+		exit 1
+	fi
+	
+	if [ ! -d "$FROM_DIR" ]
+	then
+		echo >&2 "Error: input directory '$FROM_DIR' does not exist"
+		exit 1
+	fi
+	
+	if [ "$(ls "$FROM_DIR" | wc -l)" -lt "1" ]
+	then
+		echo >&2 "Error: input directory '$FROM_DIR' has no files"
+		exit 1
+	fi
+fi
+
+if [ -n "$FROM_PDB" ]
+then
+	if [ -n "$FROM_TABLE" ] || [ -n "$FROM_DIR" ]
+	then
+		echo >&2 "Error: more than one input source specified"
+		exit 1
+	fi
+	
+	if [ -n "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: input PDB file specified together with monomers"
+		exit 1
+	fi
+	
+	if [ -n "$INPUT_PREFIX" ]
+	then
+		echo >&2 "Error: input PDB file specified together with input prefix"
+		exit 1
+	fi
+	
+	if [ ! -s "$FROM_PDB" ]
+	then
+		echo >&2 "Error: input PDB file '$FROM_PDB' does not exist or is empty"
+		exit 1
+	fi
+fi
+
+if [ -n "${MONOMERFILE1}${MONOMERFILE2}" ] && [ -n "$INPUT_PREFIX" ]
+then
+	echo >&2 "Error: monomers specified together with input prefix"
+	exit 1
+fi
+
 if [ -n "$MONOMERFILE1" ] && [ -z "$MONOMERFILE2" ]
 then
 	echo >&2 "Error: only static monomer specified"
@@ -214,108 +276,58 @@ then
 	exit 1
 fi
 
-if [ -n "$FROM_DIR" ] && [ -n "$FROM_PDB" ]
+if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ ! -s "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
 then
-	echo >&2 "Error: input directory specified together with input PDB file"
-	exit 1
-fi
-
-if [ -n "$FROM_DIR" ] && [ -n "$MONOMERFILE1" ]
-then
-	echo >&2 "Error: input directory specified together with monomers"
-	exit 1
-fi
-
-if [ -n "$FROM_DIR" ] && [ -n "$INPUT_PREFIX" ]
-then
-	echo >&2 "Error: input directory specified together with input prefix"
-	exit 1
-fi
-
-if [ -n "$FROM_PDB" ] && [ -n "$MONOMERFILE1" ]
-then
-	echo >&2 "Error: input PDB file specified together with monomers"
-	exit 1
-fi
-
-if [ -n "$FROM_PDB" ] && [ -n "$INPUT_PREFIX" ]
-then
-	echo >&2 "Error: input PDB file specified together with input prefix"
-	exit 1
-fi
-
-if [ -n "$MONOMERFILE1" ] && [ -n "$INPUT_PREFIX" ]
-then
-	echo >&2 "Error: monomers specified together with input prefix"
-	exit 1
-fi
-
-if [ -n "$FROM_DIR" ] && [ ! -d "$FROM_DIR" ]
-then
-	echo >&2 "Error: input directory '$FROM_DIR' does not exist"
-	exit 1
-fi
-
-if [ -n "$FROM_DIR" ] && [ "$(ls "$FROM_DIR" | wc -l)" -lt "1" ]
-then
-	echo >&2 "Error: input directory '$FROM_DIR' has no files"
-	exit 1
-fi
-
-if [ -n "$FROM_PDB" ] && [ ! -s "$FROM_PDB" ]
-then
-	echo >&2 "Error: input PDB file '$FROM_PDB' does not exist or is empty"
+	echo >&2 "Error: input structure file for comparison '$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON' does not exist or is empty"
 	exit 1
 fi
 
 [ -n "$INTERFACE_SUBSELECTION" ] || { echo >&2 "Error: contacts subselection not defined"; exit 1; }
 
-[ -n "$SCORING_RANKS" ] || { echo >&2 "Error: scoring rank names not provided"; exit 1;}
-
-[ -n "$SCORING_RANKS_JURY_SLICES" ] || { echo >&2 "Error: scoring ranks jury slices not defined"; exit 1;}
+[ -n "$SCORING_MODES" ] || { echo >&2 "Error: scoring modes not provided"; exit 1;}
 
 [ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
 
 ################################################################################
-
-if [ "$SCORING_RANKS" == "standard_for_protein_protein" ]
-then
-	SCORING_RANKS="${SCORENAME_PREFIX}FIV_iface_energy_rank  ${SCORENAME_PREFIX}FIV_energy_clash_tour_rank  ${SCORENAME_PREFIX}FIV_sr_iface_energy_rank  ${SCORENAME_PREFIX}FIV_sr_energy_clash_tour_rank  ${SCORENAME_PREFIX}FIVb_iface_energy_rank  ${SCORENAME_PREFIX}FIVb_energy_clash_tour_rank  ${SCORENAME_PREFIX}FIVb_sr_iface_energy_rank  ${SCORENAME_PREFIX}FIVb_sr_energy_clash_tour_rank"
-fi
-
-if [ "$SCORING_RANKS" == "standard_for_generic" ]
-then
-	SCORING_RANKS="${SCORENAME_PREFIX}FIVb_iface_energy_rank  ${SCORENAME_PREFIX}FIVb_energy_clash_tour_rank"
-fi
 
 SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_GENERIC="false"
 SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 
-if [[ "$SCORING_RANKS" == *"FIV_"* ]]
+if [ "$SCORING_MODES" == "all" ]
+then
+	SCORING_MODE_PROTEIN="true"
+	SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
+	SCORING_MODE_GENERIC="true"
+	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
+fi
+
+if [[ "$SCORING_MODES" == *"[protein]"* ]]
 then
 	SCORING_MODE_PROTEIN="true"
 fi
 
-if [[ "$SCORING_RANKS" == *"FIV_sr_"* ]]
+if [[ "$SCORING_MODES" == *"[protein_sr]"* ]]
 then
 	SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
 fi
 
-if [[ "$SCORING_RANKS" == *"FIVb_"* ]]
+if [[ "$SCORING_MODES" == *"[generic]"* ]]
 then
 	SCORING_MODE_GENERIC="true"
 fi
 
-if [[ "$SCORING_RANKS" == *"FIVb_sr_"* ]]
+if [[ "$SCORING_MODES" == *"[generic_sr]"* ]]
 then
 	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
 fi
 
-if [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
+################################################################################
+
+if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
 then
-	echo >&2 "Error: no scoring mode compatible with the provided rank names"
+	echo >&2 "Error: no scoring actions specified"
 	exit 1
 fi
 
@@ -323,40 +335,55 @@ fi
 
 mkdir -p "$OUTPUT_PATH"
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/docking_results_to_score.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_input.txt"
 
-if [ -n "$FROM_PDB" ]
+if [ -n "$FROM_TABLE" ]
 then
-	ftdmp-split-pdb --input "$FROM_PDB" --output-prefix "${OUTPUT_PATH}/models/model" --output-suffix ".pdb" > /dev/null
-	FROM_DIR="${OUTPUT_PATH}/models"
+	if [ "$FROM_TABLE" == "_stdin" ]
+	then
+		cat > "$NEXT_SCORING_RESULTS_FILE"
+	else
+		if [ "$(dirname "$FROM_TABLE")" == "$(dirname "$NEXT_SCORING_RESULTS_FILE")" ]
+		then
+			NEXT_SCORING_RESULTS_FILE="$FROM_TABLE"
+		else
+			cat "$FROM_TABLE" > "$NEXT_SCORING_RESULTS_FILE"
+		fi
+	fi
+else
+	if [ -n "$FROM_PDB" ]
+	then
+		ftdmp-split-pdb --input "$FROM_PDB" --output-prefix "${OUTPUT_PATH}/models/model" --output-suffix ".pdb" > /dev/null
+		FROM_DIR="${OUTPUT_PATH}/models"
+	fi
+	
+	if [ -n "$FROM_DIR" ]
+	then
+		INPUT_PREFIX="${FROM_DIR}/"
+		INPUT_SUFFIX=""
+		{
+		echo ID
+		ls "$FROM_DIR"
+		} > "$NEXT_SCORING_RESULTS_FILE"
+	fi
 fi
 
-if [ -n "$FROM_DIR" ]
+if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 then
-	INPUT_PREFIX="${FROM_DIR}/"
-	INPUT_SUFFIX=""
+	echo >&2 "Error: no input data"
+	exit 1
+fi
+
+if [ "$(cat "$NEXT_SCORING_RESULTS_FILE" | head -1 | awk '{print $1}')" != "ID" ]
+then
+	TMP_NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_input_prepared.txt"
+	
 	{
-	echo ID
-	ls "$FROM_DIR"
-	} > "$NEXT_SCORING_RESULTS_FILE"
-else
-	cat > "$NEXT_SCORING_RESULTS_FILE"
+	echo "ID"
+	cat "$NEXT_SCORING_RESULTS_FILE" | awk '{print $1}'
+	} > "$TMP_NEXT_SCORING_RESULTS_FILE"
 	
-	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
-	then
-		echo >&2 "Error: no input data in stdin"
-		exit 1
-	fi
-	
-	if [ "$(cat "$NEXT_SCORING_RESULTS_FILE" | head -1 | awk '{print $1}')" != "ID" ]
-	then
-		{
-		echo "ID"
-		cat "$NEXT_SCORING_RESULTS_FILE" | awk '{print $1}'
-		} > "${OUTPUT_PATH}/prepared_docking_results_to_score.txt"
-		
-		mv "${OUTPUT_PATH}/prepared_docking_results_to_score.txt" "$NEXT_SCORING_RESULTS_FILE"
-	fi
+	mv "$TMP_NEXT_SCORING_RESULTS_FILE" "$NEXT_SCORING_RESULTS_FILE"
 fi
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
@@ -367,7 +394,7 @@ HEAD_LINES_TO_KEEP=9999999
 
 if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results_FICS.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FICS.txt"
 	
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
@@ -399,7 +426,7 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results_FIV.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV.txt"
 	
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
@@ -430,7 +457,7 @@ fi
 
 if [ "$SCORING_MODE_GENERIC" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results_FIVb.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb.txt"
 	
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
@@ -462,7 +489,7 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results_FIV_sr.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV_sr.txt"
 	
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
@@ -492,7 +519,7 @@ fi
 
 if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results_FIVb_sr.txt"
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb_sr.txt"
 
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
@@ -520,7 +547,7 @@ fi
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/scoring_results.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE"
@@ -544,11 +571,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy -${SCORENAME_PREFIX}FIV_iface_clash_score" \
-			  --tolerances "0 0.01" \
+			  --tolerances "0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy -${SCORENAME_PREFIX}FIV_iface_energy_norm -${SCORENAME_PREFIX}FIV_iface_clash_score" \
-			  --tolerances "0 0 0.01" \
+			  --tolerances "0 0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -565,11 +592,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_iface_energy -${SCORENAME_PREFIX}FIVb_iface_clash_score" \
-			  --tolerances "0 0.01" \
+			  --tolerances "0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_iface_energy -${SCORENAME_PREFIX}FIVb_iface_energy_norm -${SCORENAME_PREFIX}FIVb_iface_clash_score" \
-			  --tolerances "0 0 0.01" \
+			  --tolerances "0 0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -586,11 +613,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy -${SCORENAME_PREFIX}FIV_sr_iface_clash_score" \
-			  --tolerances "0 0.01" \
+			  --tolerances "0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy -${SCORENAME_PREFIX}FIV_sr_iface_energy_norm -${SCORENAME_PREFIX}FIV_sr_iface_clash_score" \
-			  --tolerances "0 0 0.01" \
+			  --tolerances "0 0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -607,11 +634,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy -${SCORENAME_PREFIX}FIVb_sr_iface_clash_score" \
-			  --tolerances "0 0.01" \
+			  --tolerances "0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy -${SCORENAME_PREFIX}FIVb_sr_iface_energy_norm -${SCORENAME_PREFIX}FIVb_sr_iface_clash_score" \
-			  --tolerances "0 0 0.01" \
+			  --tolerances "0 0 0.05" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -619,80 +646,6 @@ then
 	} \
 	> "$NEXT_SCORING_RESULTS_FILE"
 fi
-
-PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-
-################################################################################
-
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_raw.txt"
-
-cat "$PREV_SCORING_RESULTS_FILE" \
-| ftdmp-filter-table \
-  "<=${SCORING_TOP_STAGE2}" $SCORING_RANKS \
-| ftdmp-sort-table \
-  --columns "-$(echo "$SCORING_RANKS" | sed 's/^\s*\(\S\+\)\s*.*$/\1/')" \
-> "$NEXT_SCORING_RESULTS_FILE"
-
-PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-
-################################################################################
-
-SIMILARITY_MATRIX_FILE="${OUTPUT_PATH}/similarity_matrix.txt"
-
-{
-compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
-echo "$INTERFACE_SUBSELECTION"
-echo "$REMAP_CADSCORE"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$SIMILARITY_MATRIX_FILE")" --dependent-file "$SIMILARITY_MATRIX_FILE"
-
-if [ ! -s "$SIMILARITY_MATRIX_FILE" ]
-then
-	cat "$PREV_SCORING_RESULTS_FILE" \
-	| ftdmp-calc-interface-cadscore-matrix \
-	  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
-	  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
-	  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-	  --remap-chains "$REMAP_CADSCORE" \
-	  --matrix-output "$SIMILARITY_MATRIX_FILE" \
-	  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
-	> /dev/null
-fi
-
-################################################################################
-
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_RJS.txt"
-
-cat "$PREV_SCORING_RESULTS_FILE" \
-| ftdmp-calc-ranks-jury-scores \
-  --similarities "$SIMILARITY_MATRIX_FILE" \
-  --rank-columns "$SCORING_RANKS" \
-  --top-slices "$SCORING_RANKS_JURY_SLICES" \
-  --cluster 0.9 \
-  --several-max-values 5 \
-  --colnames-prefix "${SCORENAME_PREFIX}RJS_" \
-  --adjoin \
-| ftdmp-sort-table \
-  --columns "-${SCORENAME_PREFIX}RJS_rank" \
-| ftdmp-calc-redundancy-scores \
-  --similarities "$SIMILARITY_MATRIX_FILE" \
-  --colnames-prefix "${SCORENAME_PREFIX}RDDS_" \
-  --adjoin \
-| ftdmp-sort-table \
-  --columns "-${SCORENAME_PREFIX}RJS_rank" \
-| column -t \
-> "$NEXT_SCORING_RESULTS_FILE"
-
-PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_RJS_nonredundant.txt"
-
-cat "$PREV_SCORING_RESULTS_FILE" \
-| ftdmp-filter-table \
-  "<=${REDUNDANCY_THRESHOLD}" "${SCORENAME_PREFIX}RDDS_ordered_score" \
-| ftdmp-sort-table \
-  --columns "-${SCORENAME_PREFIX}RJS_rank" \
-| column -t \
-> "$NEXT_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 

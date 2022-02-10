@@ -165,6 +165,7 @@ voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -use-max-value
 -several-max-values $SEVERAL_MAX_VALUES
 ");
+voronota_assert_full_success("Failed to compute ranks jury score");
 EOF
 } \
 | tr '\n' ' ' \
