@@ -624,11 +624,13 @@ PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_unordered.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_raw.txt"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-filter-table \
   "<=${SCORING_TOP_STAGE2}" $SCORING_RANKS \
+| ftdmp-sort-table \
+  --columns "-$(echo "$SCORING_RANKS" | sed 's/^\s*\(\S\+\)\s*.*$/\1/')" \
 > "$NEXT_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
@@ -658,7 +660,7 @@ fi
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_RJS.txt"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-calc-ranks-jury-scores \
@@ -680,9 +682,9 @@ cat "$PREV_SCORING_RESULTS_FILE" \
 | column -t \
 > "$NEXT_SCORING_RESULTS_FILE"
 
-rm "$PREV_SCORING_RESULTS_FILE"
-
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/top_scoring_results_RJS_nonredundant.txt"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-filter-table \
@@ -690,6 +692,8 @@ cat "$PREV_SCORING_RESULTS_FILE" \
 | ftdmp-sort-table \
   --columns "-${SCORENAME_PREFIX}RJS_rank" \
 | column -t \
-> "${OUTPUT_PATH}/top_scoring_results_nonredundant.txt"
+> "$NEXT_SCORING_RESULTS_FILE"
+
+PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################

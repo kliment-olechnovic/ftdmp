@@ -15,6 +15,8 @@ cat ./test/output/scoring_only/6v3p_redock/ids.txt                             \
   --output-dir              './test/output/scoring_only/6v3p_redock/scored1'   \
 )
 
+################################################################################
+
 time -p ( \
 find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head -50 | xargs -L 1 basename             \
 | ./ftdmp-all-score                                                            \
@@ -32,6 +34,8 @@ find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head
   --output-dir              './test/output/scoring_only/6v3p_redock/scored2'   \
 )
 
+################################################################################
+
 time -p ( \
 ./ftdmp-all-score                                                              \
   --from-pdb                './test/output/scoring_only/Target188.pdb'         \
@@ -45,3 +49,20 @@ time -p ( \
   --redundancy-threshold    '0.95'                                             \
   --output-dir              './test/output/scoring_only/capri188/scored1'      \
 )
+
+################################################################################
+
+time -p ( \
+./ftdmp-all-score                                                              \
+  --from-pdb                './test/output/scoring_only/Target188.pdb'         \
+  --score-name-prefix       ''                                                 \
+  --subselect-contacts      '[]'                                               \
+  --parallel-scoring        '16'                                               \
+  --scoring-full-top        '2000'                                             \
+  --scoring-rank-names      'standard_for_generic'                     \
+  --scoring-ranks-top       '200'                                              \
+  --scoring-jury-slices     '5  50'                                            \
+  --redundancy-threshold    '0.7'                                             \
+  --output-dir              './test/output/scoring_only/capri188/scored2'      \
+)
+
