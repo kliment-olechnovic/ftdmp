@@ -20,6 +20,7 @@ Options:
     --scoring-modes           string  *  scoring modes
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
+    --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
     --parallel                number     number of processes to run when scoring, default is 8
     --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
     --output-names-prefix     string     output names prefix, default is ''
@@ -90,6 +91,7 @@ SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
+CLASH_TOUR_TOLERANCE="0.05"
 SCORING_MODES=""
 OUTPUT_PATH=""
 HELP_MODE="false"
@@ -158,6 +160,10 @@ do
 		;;
 	--keep-top)
 		SCORING_TOP_STAGE1="$OPTARG"
+		shift
+		;;
+	--clash-tour-tolerance)
+		CLASH_TOUR_TOLERANCE="$OPTARG"
 		shift
 		;;
 	--scoring-modes)
@@ -555,6 +561,7 @@ echo "$SCORING_MODE_PROTEIN"
 echo "$SCORING_MODE_GENERIC"
 echo "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT"
 echo "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT"
+echo "$CLASH_TOUR_TOLERANCE"
 } | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 
 if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -584,11 +591,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy -${SCORENAME_PREFIX}FIV_iface_clash_score" \
-			  --tolerances "0 0.05" \
+			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy -${SCORENAME_PREFIX}FIV_iface_energy_norm -${SCORENAME_PREFIX}FIV_iface_clash_score" \
-			  --tolerances "0 0 0.05" \
+			  --tolerances "0 0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -605,11 +612,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_iface_energy -${SCORENAME_PREFIX}FIVb_iface_clash_score" \
-			  --tolerances "0 0.05" \
+			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_iface_energy -${SCORENAME_PREFIX}FIVb_iface_energy_norm -${SCORENAME_PREFIX}FIVb_iface_clash_score" \
-			  --tolerances "0 0 0.05" \
+			  --tolerances "0 0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -626,11 +633,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy -${SCORENAME_PREFIX}FIV_sr_iface_clash_score" \
-			  --tolerances "0 0.05" \
+			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy -${SCORENAME_PREFIX}FIV_sr_iface_energy_norm -${SCORENAME_PREFIX}FIV_sr_iface_clash_score" \
-			  --tolerances "0 0 0.05" \
+			  --tolerances "0 0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_energy_norm_clash_tour_rank"
 		else
 			cat
@@ -647,11 +654,11 @@ then
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_iface_energy_norm_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy -${SCORENAME_PREFIX}FIVb_sr_iface_clash_score" \
-			  --tolerances "0 0.05" \
+			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_energy_clash_tour_rank" \
 			| ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy -${SCORENAME_PREFIX}FIVb_sr_iface_energy_norm -${SCORENAME_PREFIX}FIVb_sr_iface_clash_score" \
-			  --tolerances "0 0 0.05" \
+			  --tolerances "0 0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_energy_norm_clash_tour_rank"
 		else
 			cat

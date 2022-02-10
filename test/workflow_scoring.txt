@@ -27,6 +27,7 @@ find ./test/output/scoring_only/6v3p_redock/top_complexes/ -type f | sort | head
   --reference               './test/reference_dimers/6V3P_AB.pdb' \
   --parallel                '16' \
   --keep-top                '1000' \
+  --clash-tour-tolerance    '0.05' \
   --scoring-modes           'all' \
   --output-dir              './test/output/scoring_only/6v3p_redock/scored2' \
 )
