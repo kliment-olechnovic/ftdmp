@@ -561,6 +561,19 @@ if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 then
 	cat "$PREV_SCORING_RESULTS_FILE" \
 	| {
+	if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+	then
+		ftdmp-sort-table \
+		  --columns "${SCORENAME_PREFIX}FICS_iface_cadscore" \
+		  --add-rank-column "${SCORENAME_PREFIX}FICS_iface_cadscore_rank" \
+		| ftdmp-sort-table \
+		  --columns "${SCORENAME_PREFIX}FICS_iface_site_based_cadscore" \
+		  --add-rank-column "${SCORENAME_PREFIX}FICS_iface_site_based_cadscore_rank"
+	else
+		cat
+	fi
+	} \
+	| {
 		if [ "$SCORING_MODE_PROTEIN" == "true" ]
 		then
 			ftdmp-sort-table \

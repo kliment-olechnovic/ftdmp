@@ -47,6 +47,20 @@ time -p ( \
   --redundancy-threshold     '0.95' \
 )
 
+time -p ( \
+./ftdmp-all-jury \
+  --input-scoring-table     './test/output/scoring_only/6v3p_redock/scored2/v1_top_scoring_results_RJS.txt' \
+  --structure-prefix        './test/output/scoring_only/6v3p_redock/top_complexes/' \
+  --structure-suffix        '' \
+  --rank-names              'raw_FIV_iface_energy_rank
+                             raw_FIVb_iface_energy_rank' \
+  --output-names-prefix     'v2_' \
+  --subselect-contacts      '[]' \
+  --ranks-top               '100' \
+  --jury-slices             '5  50' \
+  --redundancy-threshold     '0.95' \
+)
+
 ################################################################################
 
 time -p ( \
