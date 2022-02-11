@@ -114,10 +114,12 @@ do
 		;;
 	--input-from-dir)
 		FROM_DIR="$OPTARG"
+		FROM_TABLE="$(echo $FROM_TABLE | sed 's/_stdin//')"
 		shift
 		;;
 	--input-from-pdb)
 		FROM_PDB="$OPTARG"
+		FROM_TABLE="$(echo $FROM_TABLE | sed 's/_stdin//')"
 		shift
 		;;
 	--structure-prefix)
