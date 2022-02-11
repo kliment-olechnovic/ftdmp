@@ -206,7 +206,7 @@ time -p ( \
 
 cat "./test/output/capri/capri188_reverse/relaxed/relaxed_top_scoring_results_nonredundant.txt" \
 | head -11 \
-| ./ftdmp-form-capri-answer.bash \
+| ./ftdmp-form-capri-answer \
   --input-prefix './test/output/capri/capri188_reverse/relaxed/relaxed_top_complexes/' \
   --input-suffix '.pdb' \
   --brk './test/output/capri/answer_capri188/capri_53_188.brk' \
@@ -247,7 +247,7 @@ time -p ( \
 
 cat "./test/output/capri/capri188/relaxed/relaxed_top_scoring_results_nonredundant.txt" \
 | head -11 \
-| ./ftdmp-form-capri-answer.bash \
+| ./ftdmp-form-capri-answer \
   --input-prefix './test/output/capri/capri188/relaxed/relaxed_top_complexes/' \
   --input-suffix '.pdb' \
   --brk './test/output/capri/answer_capri188/capri_53_188.brk' \
@@ -288,7 +288,7 @@ time -p ( \
 
 cat "./test/output/capri/capri188_more/relaxed/relaxed_top_scoring_results_nonredundant.txt" \
 | head -11 \
-| ./ftdmp-form-capri-answer.bash \
+| ./ftdmp-form-capri-answer \
   --input-prefix './test/output/capri/capri188_more/relaxed/relaxed_top_complexes/' \
   --input-suffix '.pdb' \
   --brk './test/output/capri/answer_capri188/capri_53_188.brk' \

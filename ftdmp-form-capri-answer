@@ -15,6 +15,7 @@ Options:
     --force-top-picks         string     space-separated listo of picks to put in front
     --align-sel               string     selection of atoms copy to align
     --rename-chains           string     chain renaming rule to apply
+    --scoring-set              string     scoring set file path to produce scoring answer, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -55,6 +56,7 @@ AUTHORS=""
 FORCE_TOP_PICKS=""
 ALIGN_SEL=""
 RENAME_CHAINS=""
+SCORING_SET_FILE=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -95,6 +97,10 @@ do
 		RENAME_CHAINS="$OPTARG"
 		shift
 		;;
+	--scoring-set)
+		SCORING_SET_FILE="$OPTARG"
+		shift
+		;;
 	-h|--help)
 		HELP_MODE="true"
 		;;
@@ -110,9 +116,9 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$BRKFILE" ]
+if [ -z "$SCORING_SET_FILE" ] && [ -z "$BRKFILE" ]
 then
-	echo >&2 "Error: input .brk file path not provided"
+	echo >&2 "Error: neither input .brk file path nor scoring set file path provided"
 	exit 1
 fi
 
@@ -128,9 +134,15 @@ then
 	exit 1
 fi
 
-if [ ! -s "$BRKFILE" ]
+if [ -z "$SCORING_SET_FILE" ] && [ ! -s "$BRKFILE" ]
 then
 	echo >&2 "Error: input .brk file '$BRKFILE' does not exist"
+	exit 1
+fi
+
+if [ -n "$SCORING_SET_FILE" ] && [ ! -s "$SCORING_SET_FILE" ]
+then
+	echo >&2 "Error: input scoring set file '$SCORING_SET_FILE' does not exist"
 	exit 1
 fi
 
@@ -227,25 +239,62 @@ fi
 
 mkdir -p "$(dirname "$OUTFILE")"
 
-{
-cat "$BRKFILE" | egrep '^HEADER|^COMPND'
+if [ -z "$SCORING_SET_FILE" ]
+then
+	{
+		cat "$BRKFILE" | egrep '^HEADER|^COMPND'
+		
+		echo "AUTHOR    $AUTHORS"
+		
+		cat "$BRKFILE" | egrep '^REMARK|^SEQRES'
+		
+		seq 1 "$NUMBER_OF_MODELS" \
+		| while read MODELNUM
+		do
+			echo "   $MODELNUM" | sed 's/.*\(....\)$/MODEL \1/'
+			echo "PARENT     N/A"
+			cat "${TMPLDIR}/model${MODELNUM}"
+			echo "ENDMDL"
+		done
+		
+		echo "END"
+	} \
+	> "$OUTFILE"
+fi
 
-echo "AUTHOR    $AUTHORS"
-
-cat "$BRKFILE" | egrep '^REMARK|^SEQRES'
-
-seq 1 "$NUMBER_OF_MODELS" \
-| while read MODELNUM
-do
-	echo "   $MODELNUM" | sed 's/.*\(....\)$/MODEL \1/'
-	echo "PARENT     N/A"
-	cat "${TMPLDIR}/model${MODELNUM}"
-	echo "ENDMDL"
-done
-
-echo "END"
-} \
-> "$OUTFILE"
+if [ -n "$SCORING_SET_FILE" ]
+then
+	cat "${TMPLDIR}/input" | xargs -L 1 basename | sed 's/[^0-9]\+/ /g' | awk '{print $NF}' > "${TMPLDIR}/selected_model_numbers"
+	
+	cat "$SCORING_SET_FILE" | egrep '^REMARK ' | egrep '^REMARK .* MODEL .* MD5 ' > "${TMPLDIR}/md5_codes"
+	
+	{
+		if [ -n "$BRKFILE" ]
+		then
+			cat "$BRKFILE" | egrep '^HEADER|^COMPND'
+		else
+			cat "$SCORING_SET_FILE" | egrep '^HEADER|^COMPND'
+		fi
+				
+		echo "AUTHOR    $AUTHORS"
+		
+		cat "${TMPLDIR}/selected_model_numbers" | while read MODELNUM
+		do
+			cat "${TMPLDIR}/md5_codes" | grep " ${MODELNUM} MD5 "
+		done
+		
+		seq 1 "$NUMBER_OF_MODELS" \
+		| while read MODELNUM
+		do
+			echo "   $MODELNUM" | sed 's/.*\(....\)$/MODEL \1/'
+			cat "${TMPLDIR}/model${MODELNUM}"
+			echo "ENDMDL"
+		done
+		
+		echo "END"
+	} \
+	> "$OUTFILE"
+fi
 
 cat "${TMPLDIR}/input"
 
