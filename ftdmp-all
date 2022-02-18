@@ -4,7 +4,7 @@ function print_help_and_exit
 {
 cat >&2 << 'EOF'
 
-'ftdmp' docks, scores and ranks complex structures of proteins or nucleic acids
+'ftdmp-all' docks, scores and ranks complex structures of proteins or nucleic acids
 
 Options:
     --job-name                string  *  job name
@@ -41,7 +41,7 @@ Options:
 
 Examples:
 
-    ftdmp --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
+    ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
       --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
 
 EOF
@@ -299,116 +299,37 @@ fi
 
 ################################################################################
 
+ftdmp-all-dock \
+  --job-name                "$JOB_NAME" \
+  --static-file             "$STATIC_STRUCTURE_FILE" \
+  --static-sel              "$STATIC_STRUCTURE_SELECTION" \
+  --static-chain            "$STATIC_STRUCTURE_CHAIN" \
+  --mobile-file             "$MOBILE_STRUCTURE_FILE" \
+  --mobile-sel              "$MOBILE_STRUCTURE_SELECTION" \
+  --mobile-chain            "$MOBILE_STRUCTURE_CHAIN" \
+  --openmm-forcefield       "$OPENMM_FORCEFIELD" \
+  --conda-path              "$CONDA_PATH" \
+  --conda-env               "$CONDA_ENV" \
+  --ftdock-keep             "$FTDOCK_KEEP" \
+  --ftdock-angle-step       "$FTDOCK_ANGLE_STEP" \
+  --min-grid-sep            "$MIN_GRID_SEP" \
+  --parallel                "$DOCKING_PROCESSORS" \
+  --sbatch                  "$DOCKING_SBATCH" \
+  --output-dir              "$OUTPUT_PATH"
+
 OUTPUT_PATH="${OUTPUT_PATH}/${JOB_NAME}"
-mkdir -p "$OUTPUT_PATH"
-
-cat > "${OUTPUT_PATH}/job_parameters.txt" << EOF
-${BASH_SOURCE[0]} \\
---job-name                '$JOB_NAME' \\
---static-file             '$STATIC_STRUCTURE_FILE' \\
---static-sel              '$STATIC_STRUCTURE_SELECTION' \\
---static-chain            '$STATIC_STRUCTURE_CHAIN' \\
---mobile-file             '$MOBILE_STRUCTURE_FILE' \\
---mobile-sel              '$MOBILE_STRUCTURE_SELECTION' \\
---mobile-chain            '$MOBILE_STRUCTURE_CHAIN' \\
---subselect-contacts      '$INTERFACE_SUBSELECTION' \\
---reference               '$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON' \\
---openmm-forcefield       '$OPENMM_FORCEFIELD' \\
---conda-path              '$CONDA_PATH' \\
---conda-env               '$CONDA_ENV' \\
---ftdock-keep             '$FTDOCK_KEEP' \\
---ftdock-angle-step       '$FTDOCK_ANGLE_STEP' \\
---min-grid-sep            '$MIN_GRID_SEP' \\
---parallel-docking        '$DOCKING_PROCESSORS' \\
---parallel-scoring        '$SCORING_PROCESSORS' \\
---sbatch-docking          '$DOCKING_SBATCH' \\
---sbatch-scoring          '$SCORING_SBATCH' \\
---score-symmetry          '$SCORE_SYMMETRY' \\
---remap-cadscore          '$REMAP_CADSCORE' \\
---scoring-full-top        '$SCORING_TOP_STAGE1' \\
---scoring-rank-names      '$SCORING_RANKS' \\
---scoring-ranks-top       '$SCORING_TOP_STAGE2' \\
---scoring-jury-slices     '$SCORING_RANKS_JURY_SLICES' \\
---build-complexes         '$NUMBER_OF_COMPLEXES_TO_BUILD' \\
---redundancy-threshold    '$REDUNDANCY_THRESHOLD' \\
---multiply-chains         "$MULTIPLY_CHAINS" \\
---relax-complexes         "$RELAX_COMPLEXES" \\
---output-dir              '$OUTPUT_PATH' \\
-
-EOF
-
-################################################################################
 
 PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
 
-{
-cat "$STATIC_STRUCTURE_FILE"
-echo "$STATIC_STRUCTURE_SELECTION"
-echo "$STATIC_STRUCTURE_CHAIN"
-echo "$OPENMM_FORCEFIELD"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_STATIC_STRUCTURE_FILE")" --dependent-file "$PREPARED_STATIC_STRUCTURE_FILE"
-
-if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
-then
-	ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" \
-	  --restrict-input "$STATIC_STRUCTURE_SELECTION" --rename-chain "$STATIC_STRUCTURE_CHAIN" \
-	  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
-fi
-
-if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
-then
-	echo >&2 "Error: failed to prepare static monomer structure"
-	exit 1
-fi
-
-################################################################################
-
 PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
 
-{
-cat "$MOBILE_STRUCTURE_FILE"
-echo "$MOBILE_STRUCTURE_SELECTION"
-echo "$MOBILE_STRUCTURE_CHAIN"
-echo "$OPENMM_FORCEFIELD"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_MOBILE_STRUCTURE_FILE")" --dependent-file "$PREPARED_MOBILE_STRUCTURE_FILE"
+PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
 
-if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 then
-	ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" \
-	  --restrict-input "$MOBILE_STRUCTURE_SELECTION" --rename-chain "$MOBILE_STRUCTURE_CHAIN" \
-	  --randomize --random-seed 2 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
-fi
-
-if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
-then
-	echo >&2 "Error: failed to prepare mobile monomer structure"
+	echo >&2 "Error: no docking results"
 	exit 1
 fi
-
-################################################################################
-
-DOCKING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
-
-{
-cat "$PREPARED_STATIC_STRUCTURE_FILE"
-cat "$PREPARED_MOBILE_STRUCTURE_FILE"
-echo "$FTDOCK_KEEP"
-echo "$FTDOCK_ANGLE_STEP"
-echo "$MIN_GRID_SEP"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_RESULTS_FILE")" --dependent-file "$DOCKING_RESULTS_FILE"
-
-if [ ! -s "$DOCKING_RESULTS_FILE" ]
-then
-	ftdmp-dock-two-monomers --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-	  --job-name "${JOB_NAME}_" \
-	  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
-	  --ftdock-keep "$FTDOCK_KEEP" \
-	  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
-	  --min-grid-sep "$MIN_GRID_SEP" \
-	> "$DOCKING_RESULTS_FILE"
-fi
-
-PREV_SCORING_RESULTS_FILE="$DOCKING_RESULTS_FILE"
 
 ################################################################################
 
@@ -433,6 +354,12 @@ ftdmp-all-score \
 
 PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results.txt"
 
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: no raw scoring results"
+	exit 1
+fi
+
 ################################################################################
 
 ftdmp-all-jury \
@@ -452,6 +379,12 @@ ftdmp-all-jury \
   --output-names-prefix     "raw_"
 
 PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_scoring_results_RJS.txt"
+
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: no raw jury results"
+	exit 1
+fi
 
 ################################################################################
 
@@ -553,6 +486,12 @@ ftdmp-all-score \
 
 PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results.txt"
 
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: no relaxed scoring results"
+	exit 1
+fi
+
 ################################################################################
 
 RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^raw_/relaxed_/' | tr '\n' ' ')"
@@ -575,4 +514,11 @@ ftdmp-all-jury \
 
 PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_top_scoring_results.txt"
 
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: no relaxed jury results"
+	exit 1
+fi
+
 ################################################################################
+
