@@ -19,7 +19,7 @@ Standard output:
     space-separated table
     
 Examples:    
-    cat scoring_results_table.txt | ftdmp-sort-table -columns "-iface_energy +scscore" -tolerances "0.0 0.0"
+    cat scoring_results_table.txt | ftdmp-sort-table --columns "-iface_energy +scscore" --tolerances "0.0 0.0"
 
 EOF
 exit 1
@@ -36,7 +36,7 @@ then
 	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
-command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-voromqa' executable not in binaries path"; exit 1; }
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
 COLUMNS=""
 TOLERANCES=""

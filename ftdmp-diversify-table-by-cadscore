@@ -1,0 +1,131 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-diversify-table-by-cadscore' selects a diverse set of models from a table with CAD-score values
+
+Options:
+    --cadscore-column         string  *  name of a column with CAD-score values
+    --site-cadscore-column    string  *  name of a column with site-based CAD-score values
+    --cadscore-step           number     step size for CAD-score values, default is 0.1
+    --site-cadscore-step      number     step size for site-based CAD-score values, default is 0.1
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    space-separated table
+
+Standard output:
+    space-separated table
+    
+Examples:    
+    cat scoring_results_table.txt | ftdmp-diversify-table-by-cadscore \
+      --cadscore-column 'cadscore' --site-cadscore-column 'site_based_cadscore'
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+CADSCORE_COLUMN=""
+SITE_CADSCORE_COLUMN=""
+CADSCORE_STEP="0.1"
+SITE_CADSCORE_STEP="0.1"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--cadscore-column)
+		CADSCORE_COLUMN="$OPTARG"
+		shift
+		;;
+	--site-cadscore-column)
+		SITE_CADSCORE_COLUMN="$OPTARG"
+		shift
+		;;
+	--cadscore-step)
+		CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	--site-cadscore-step)
+		SITE_CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$CADSCORE_COLUMN" ]
+then
+	echo >&2 "Error: CAD-score column not specified"
+	exit 1
+fi
+
+if [ -z "$SITE_CADSCORE_COLUMN" ]
+then
+	echo >&2 "Error: site-based CAD-score column not specified"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+{
+	cat "${TMPLDIR}/input" \
+	| ftdmp-filter-table '>0' "$CADSCORE_COLUMN" \
+	| ftdmp-sort-table --columns "$CADSCORE_COLUMN" \
+	| awk -v colname="$CADSCORE_COLUMN" -v stepsize="$CADSCORE_STEP" \
+	  'NR==1 { prevval=2.0 ; for(i=1;i<=NF;i++){f[$i]=i} } { if($(f[colname])<=(prevval-stepsize)){ prevval=$(f[colname]) ; print $0 }}'
+	
+	cat "${TMPLDIR}/input" \
+	| ftdmp-filter-table '==0' "$CADSCORE_COLUMN" \
+	| ftdmp-filter-table '>0' "$SITE_CADSCORE_COLUMN" \
+	| ftdmp-sort-table --columns "$SITE_CADSCORE_COLUMN" \
+	| awk -v colname="$SITE_CADSCORE_COLUMN" -v stepsize="$SITE_CADSCORE_STEP" \
+	  'NR==1 { prevval=2.0 ; for(i=1;i<=NF;i++){f[$i]=i} } { if($(f[colname])<=(prevval-stepsize)){ prevval=$(f[colname]) ; print $0 }}'
+} \
+> "${TMPLDIR}/output"
+
+if [ ! -s "${TMPLDIR}/output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+head -1 "${TMPLDIR}/input"
+cat "${TMPLDIR}/output"
+
