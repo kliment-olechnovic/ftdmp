@@ -16,7 +16,7 @@ Options:
     --mobile-chain            string     chain name or chain renaming rule to apply for mobile atoms, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
-    --openmm-forcefield       string     forcefield name fo OpenMM-based operations, default is ''
+    --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
     --ftdock-keep             number     ftdock keep parameter, default is 1

@@ -297,3 +297,29 @@ cat "./test/output/capri/capri188_more/relaxed/relaxed_top_scoring_results_nonre
   --rename-chains 'E=R,F=S,C=T,D=U'
 
 ################################################################################
+
+time -p ( \
+./ftdmp-all-dock-cadscore-diversify                                            \
+  --job-name                '6v3p_models'                                      \
+  --static-file             './test/reference_dimers/6V3P_AB.pdb'              \
+  --static-sel              '[-chain A]'                                       \
+  --mobile-file             './test/reference_dimers/6V3P_AB.pdb'              \
+  --mobile-sel              '[-chain B]'                                       \
+  --subselect-contacts      '[]'                                               \
+  --reference               './test/reference_dimers/6V3P_AB.pdb'              \
+  --openmm-forcefield       'amber99sb'                                        \
+  --conda-path              "$HOME/anaconda3"                                  \
+  --conda-env               'alphafold2'                                       \
+  --ftdock-keep             '1'                                                \
+  --ftdock-angle-step       '9'                                                \
+  --min-grid-sep            '20'                                               \
+  --parallel-docking        '8'                                                \
+  --parallel-scoring        '8'                                                \
+  --build-complexes         '500'                                              \
+  --cadscore-step           0.08                                               \
+  --site-cadscore-step      0.06                                               \
+  --output-dir              './test/output/diverse_redocking_hetero'           \
+)
+
+################################################################################
+
