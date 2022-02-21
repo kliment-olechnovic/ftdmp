@@ -117,6 +117,12 @@ fi
 	| ftdmp-sort-table --columns "$SITE_CADSCORE_COLUMN" \
 	| awk -v colname="$SITE_CADSCORE_COLUMN" -v stepsize="$SITE_CADSCORE_STEP" \
 	  'NR==1 { prevval=2.0 ; for(i=1;i<=NF;i++){f[$i]=i} } { if($(f[colname])<=(prevval-stepsize)){ prevval=$(f[colname]) ; print $0 }}'
+	
+	cat "${TMPLDIR}/input" \
+	| ftdmp-filter-table '==0' "$CADSCORE_COLUMN" \
+	| ftdmp-filter-table '==0' "$SITE_CADSCORE_COLUMN" \
+	| head -2 \
+	| tail -1
 } \
 > "${TMPLDIR}/output"
 

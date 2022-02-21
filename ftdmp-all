@@ -36,6 +36,7 @@ Options:
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
+    --only-dock-and-score     string     flag to only dock, score and quit after scoring
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -90,6 +91,7 @@ NUMBER_OF_COMPLEXES_TO_BUILD="0"
 REDUNDANCY_THRESHOLD="1"
 MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
+ONLY_DOCK_AND_SCORE="false"
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -215,6 +217,10 @@ do
 		RELAX_COMPLEXES="$OPTARG"
 		shift
 		;;
+	--only-dock-and-score)
+		ONLY_DOCK_AND_SCORE="$OPTARG"
+		shift
+		;;
 	--output-dir)
 		OUTPUT_PATH="$OPTARG"
 		shift
@@ -255,6 +261,11 @@ fi
 [ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
 
 ################################################################################
+
+if [ "$SCORING_RANKS" == "simple_for_protein_protein" ]
+then
+	SCORING_RANKS="raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank"
+fi
 
 if [ "$SCORING_RANKS" == "standard_for_protein_protein" ]
 then
@@ -358,6 +369,13 @@ if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 then
 	echo >&2 "Error: no raw scoring results"
 	exit 1
+fi
+
+################################################################################
+
+if [ "$ONLY_DOCK_AND_SCORE" == "true" ]
+then
+	exit 0
 fi
 
 ################################################################################

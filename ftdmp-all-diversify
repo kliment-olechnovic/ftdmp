@@ -1,0 +1,175 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-all-diversify' selects a diverse set of models based on reference-based CAD-scores
+
+Options:
+    --input-scoring-table     string  *  input scoring table file path
+    --names-prefix            string     names prefix, default is ''
+    --cadscore-step           number     step size for CAD-score values, default is 0.1
+    --site-cadscore-step      number     step size for site-based CAD-score values, default is 0.1
+    --build-complexes         number     number of top complexes to build, default is 0
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+    ftdmp-all-diversify --input-scoring-table ./scoring_results.txt --names-prefix 'raw_' \
+      --cadscore-step 0.05 --site-cadscore-step 0.05
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+FROM_TABLE=""
+NAMES_PREFIX=""
+CADSCORE_STEP="0.1"
+SITE_CADSCORE_STEP="0.1"
+NUMBER_OF_COMPLEXES_TO_BUILD="0"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input-scoring-table)
+		FROM_TABLE="$OPTARG"
+		shift
+		;;
+	--names-prefix)
+		NAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--cadscore-step)
+		CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	--site-cadscore-step)
+		SITE_CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	--build-complexes)
+		NUMBER_OF_COMPLEXES_TO_BUILD="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FROM_TABLE" ]
+then
+	echo >&2 "Error: input scoring table file not specified"
+	exit 1
+fi
+
+if [ ! -s "$FROM_TABLE" ]
+then
+	echo >&2 "Error: input scoring table file '$FROM_TABLE' does not exist or is empty"
+	exit 1
+fi
+
+################################################################################
+
+OUTPUT_PATH="$(dirname "$FROM_TABLE")"
+
+PREV_SCORING_RESULTS_FILE="$FROM_TABLE"
+
+################################################################################
+
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${NAMES_PREFIX}diverse_scoring_results.txt"
+
+{
+cat "$PREV_SCORING_RESULTS_FILE"
+echo "$CADSCORE_STEP"
+echo "$SITE_CADSCORE_STEP"
+} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+
+if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+then
+	cat "$PREV_SCORING_RESULTS_FILE" \
+	| ftdmp-diversify-table-by-cadscore \
+	  --cadscore-column "${NAMES_PREFIX}FICS_iface_cadscore" \
+	  --site-cadscore-column "${NAMES_PREFIX}FICS_iface_site_based_cadscore" \
+	  --cadscore-step "$CADSCORE_STEP" \
+	  --site-cadscore-step "$SITE_CADSCORE_STEP" \
+	| column -t \
+	> "$NEXT_SCORING_RESULTS_FILE"
+fi
+
+PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: failed to diversify scoring results"
+	exit 1
+fi
+
+################################################################################
+
+if [ "$NUMBER_OF_COMPLEXES_TO_BUILD" -gt "0" ]
+then
+	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
+	
+	PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
+	
+	if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ] || [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
+	then
+		echo >&2 "Error: required monomers not present in '$OUTPUT_PATH'"
+		exit 1
+	fi
+
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${NAMES_PREFIX}diverse_built_results.txt"
+	
+	TOP_COMPLEXES_DIR="${OUTPUT_PATH}/${NAMES_PREFIX}diverse_complexes"
+	
+	{
+	cat "$PREV_SCORING_RESULTS_FILE"
+	cat "$PREPARED_STATIC_STRUCTURE_FILE"
+	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
+	echo "$NUMBER_OF_COMPLEXES_TO_BUILD"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		rm -rf "$TOP_COMPLEXES_DIR"
+		
+		cat "$PREV_SCORING_RESULTS_FILE" \
+		| head -n "$((NUMBER_OF_COMPLEXES_TO_BUILD+1))" \
+		| ftdmp-build-complex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --output-prefix "${TOP_COMPLEXES_DIR}/" \
+		  --output-suffix ".pdb" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+fi
+
+################################################################################

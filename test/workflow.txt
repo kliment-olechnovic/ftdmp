@@ -299,7 +299,7 @@ cat "./test/output/capri/capri188_more/relaxed/relaxed_top_scoring_results_nonre
 ################################################################################
 
 time -p ( \
-./ftdmp-all-dock-cadscore-diversify                                            \
+./ftdmp-all                                                                    \
   --job-name                '6v3p_models'                                      \
   --static-file             './test/reference_dimers/6V3P_AB.pdb'              \
   --static-sel              '[-chain A]'                                       \
@@ -313,12 +313,21 @@ time -p ( \
   --ftdock-keep             '1'                                                \
   --ftdock-angle-step       '9'                                                \
   --min-grid-sep            '20'                                               \
-  --parallel-docking        '8'                                                \
-  --parallel-scoring        '8'                                                \
-  --build-complexes         '500'                                              \
-  --cadscore-step           0.08                                               \
-  --site-cadscore-step      0.06                                               \
+  --parallel-docking        '16'                                               \
+  --parallel-scoring        '16'                                               \
+  --scoring-rank-names      'simple_for_protein_protein'                       \
+  --scoring-full-top        '1000'                                             \
+  --only-dock-and-score     'true'                                             \
   --output-dir              './test/output/diverse_redocking_hetero'           \
+)
+
+time -p ( \
+./ftdmp-all-diversify \
+    --input-scoring-table   './test/output/diverse_redocking_hetero/6v3p_models/raw_scoring_results.txt' \
+    --names-prefix          'raw_' \
+    --cadscore-step         '0.05' \
+    --site-cadscore-step    '0.05' \
+    --build-complexes       '500' \
 )
 
 ################################################################################
