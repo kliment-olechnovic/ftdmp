@@ -317,17 +317,9 @@ time -p ( \
   --parallel-scoring        '16'                                               \
   --scoring-rank-names      'simple_for_protein_protein'                       \
   --scoring-full-top        '1000'                                             \
-  --only-dock-and-score     'true'                                             \
+  --build-complexes         '500'                                              \
+  --diversify               '0.1'                                              \
   --output-dir              './test/output/diverse_redocking_hetero'           \
-)
-
-time -p ( \
-./ftdmp-all-diversify \
-    --input-scoring-table   './test/output/diverse_redocking_hetero/6v3p_models/raw_scoring_results.txt' \
-    --names-prefix          'raw_' \
-    --cadscore-step         '0.05' \
-    --site-cadscore-step    '0.05' \
-    --build-complexes       '500' \
 )
 
 ################################################################################

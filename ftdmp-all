@@ -37,6 +37,7 @@ Options:
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
     --only-dock-and-score     string     flag to only dock, score and quit after scoring
+    --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -92,6 +93,7 @@ REDUNDANCY_THRESHOLD="1"
 MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
 ONLY_DOCK_AND_SCORE="false"
+DIVERSIFY=''
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -219,6 +221,10 @@ do
 		;;
 	--only-dock-and-score)
 		ONLY_DOCK_AND_SCORE="$OPTARG"
+		shift
+		;;
+	--diversify)
+		DIVERSIFY="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -375,6 +381,20 @@ fi
 
 if [ "$ONLY_DOCK_AND_SCORE" == "true" ]
 then
+	exit 0
+fi
+
+################################################################################
+
+if [ -n "$DIVERSIFY" ]
+then
+	ftdmp-all-diversify \
+	  --input-scoring-table   "$PREV_SCORING_RESULTS_FILE" \
+	  --names-prefix          "raw_" \
+	  --cadscore-step         "$DIVERSIFY" \
+	  --site-cadscore-step    "$DIVERSIFY" \
+	  --build-complexes       "$NUMBER_OF_COMPLEXES_TO_BUILD"
+	
 	exit 0
 fi
 
