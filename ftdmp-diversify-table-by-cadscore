@@ -121,8 +121,7 @@ fi
 	cat "${TMPLDIR}/input" \
 	| ftdmp-filter-table '==0' "$CADSCORE_COLUMN" \
 	| ftdmp-filter-table '==0' "$SITE_CADSCORE_COLUMN" \
-	| head -2 \
-	| tail -1
+	| awk '{if(NR==2){print $0}}'
 } \
 > "${TMPLDIR}/output"
 
