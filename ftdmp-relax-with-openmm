@@ -26,6 +26,7 @@ Options:
     --trim-output                        flag to restrict output to atoms of proteins and nucleic acids
     --no-preparation                     flag to not run any preparation of input structure before simulations
     --limit-preparation                  flag to only add solvent if needed in the preparation stage
+    --full-preparation                   flag to turn off all preparation disabling flags
     --no-simulation                      flag to not run any simulations
     --help | -h                          flag to display help message and exit
 
@@ -153,6 +154,10 @@ do
 		;;
 	--limit-preparation)
 		LIMIT_PREPARATION="true"
+		;;
+	--full-preparation)
+		NO_PREPARATION="false"
+		LIMIT_PREPARATION="false"
 		;;
 	--no-simulation)
 		NO_SIMULATION="true"
