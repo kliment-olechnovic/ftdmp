@@ -13,7 +13,7 @@ Options:
     --structure-monomer1      string     static monomer structure input file path, default is ''
     --structure-monomer2      string     mobile monomer structure input file path, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
-    --rank-names              string  *  rank names to use, or name of a standard set of rank names
+    --rank-names              string  *  rank names to use
     --ranks-top               number     number of top complexes to consider for each ranking, default is 100
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --jury-slices             string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
