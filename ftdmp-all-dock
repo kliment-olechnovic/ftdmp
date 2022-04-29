@@ -14,9 +14,11 @@ Options:
     --mobile-file             string  *  mobile input file path
     --mobile-sel              string     query to restrict mobile atoms, default is '[]'
     --mobile-chain            string     chain name or chain renaming rule to apply for mobile atoms, default is ''
+    --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
     --openmm-forcefield       string     forcefield name fo OpenMM-based operations, default is ''
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
+    --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
     --ftdock-keep             number     ftdock keep parameter, default is 1
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
     --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
@@ -54,9 +56,11 @@ STATIC_STRUCTURE_CHAIN=""
 MOBILE_STRUCTURE_FILE=""
 MOBILE_STRUCTURE_SELECTION="[]"
 MOBILE_STRUCTURE_CHAIN=""
+SYMMETRY_DOCKING=""
 OPENMM_FORCEFIELD=""
 CONDA_PATH=""
 CONDA_ENV=""
+SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
 FTDOCK_KEEP="1"
 FTDOCK_ANGLE_STEP="9"
 MIN_GRID_SEP="20"
@@ -99,6 +103,10 @@ do
 		MOBILE_STRUCTURE_CHAIN="$OPTARG"
 		shift
 		;;
+	--symmetry-docking)
+		SYMMETRY_DOCKING="$OPTARG"
+		shift
+		;;
 	--openmm-forcefield)
 		OPENMM_FORCEFIELD="$OPTARG"
 		shift
@@ -109,6 +117,10 @@ do
 		;;
 	--conda-env)
 		CONDA_ENV="$OPTARG"
+		shift
+		;;
+	--sam-parameters)
+		SAM_PARAMETERS="$OPTARG"
 		shift
 		;;
 	--ftdock-keep)
@@ -152,15 +164,28 @@ fi
 
 [ -n "$JOB_NAME" ] || { echo >&2 "Error: job name not provided"; exit 1;}
 
-[ -n "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: static structure file not provided"; exit 1;}
-[ -s "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: static structure file non-existing or empty"; exit 1;}
+DOCKING_REGIME=""
 
-[ -n "$STATIC_STRUCTURE_SELECTION" ] || { echo >&2 "Error: static structure selection not defined"; exit 1; }
-
-[ -n "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file not provided"; exit 1;}
-[ -s "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file non-existing or empty"; exit 1;}
-
-[ -n "$MOBILE_STRUCTURE_SELECTION" ] || { echo >&2 "Error: mobile structure selection not defined"; exit 1; }
+if [ -n "$SYMMETRY_DOCKING" ]
+then
+	[ -z "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: static structure file provided in homo docking mode"; exit 1;}
+	
+	[ -n "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file not provided in homo docking mode"; exit 1;}
+	[ -s "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file non-existing or empty in homo docking mode"; exit 1;}
+	[ -n "$MOBILE_STRUCTURE_SELECTION" ] || { echo >&2 "Error: mobile structure selection not defined in homo docking mode"; exit 1;}
+	
+	DOCKING_REGIME="homo"
+else
+	[ -n "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: static structure file not provided in hetero docking mode"; exit 1;}
+	[ -s "$STATIC_STRUCTURE_FILE" ] || { echo >&2 "Error: static structure file non-existing or empty in hetero docking mode"; exit 1;}
+	[ -n "$STATIC_STRUCTURE_SELECTION" ] || { echo >&2 "Error: static structure selection not defined in hetero docking mode"; exit 1;}
+	
+	[ -n "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file not provided in hetero docking mode"; exit 1;}
+	[ -s "$MOBILE_STRUCTURE_FILE" ] || { echo >&2 "Error: mobile structure file non-existing or empty in hetero docking mode"; exit 1;}
+	[ -n "$MOBILE_STRUCTURE_SELECTION" ] || { echo >&2 "Error: mobile structure selection not defined in hetero docking mode"; exit 1;}
+	
+	DOCKING_REGIME="hetero"
+fi
 
 [ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
 
@@ -169,28 +194,34 @@ fi
 OUTPUT_PATH="${OUTPUT_PATH}/${JOB_NAME}"
 mkdir -p "$OUTPUT_PATH"
 
+PREPARED_STATIC_STRUCTURE_FILE=""
+PREPARED_MOBILE_STRUCTURE_FILE=""
+
 ################################################################################
 
-PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
-
-{
-cat "$STATIC_STRUCTURE_FILE"
-echo "$STATIC_STRUCTURE_SELECTION"
-echo "$STATIC_STRUCTURE_CHAIN"
-echo "$OPENMM_FORCEFIELD"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_STATIC_STRUCTURE_FILE")" --dependent-file "$PREPARED_STATIC_STRUCTURE_FILE"
-
-if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
+if [ "$DOCKING_REGIME" == "hetero" ]
 then
-	ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" \
-	  --restrict-input "$STATIC_STRUCTURE_SELECTION" --rename-chain "$STATIC_STRUCTURE_CHAIN" \
-	  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
-fi
-
-if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
-then
-	echo >&2 "Error: failed to prepare static monomer structure"
-	exit 1
+	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
+	
+	{
+	cat "$STATIC_STRUCTURE_FILE"
+	echo "$STATIC_STRUCTURE_SELECTION"
+	echo "$STATIC_STRUCTURE_CHAIN"
+	echo "$OPENMM_FORCEFIELD"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$PREPARED_STATIC_STRUCTURE_FILE")" --dependent-file "$PREPARED_STATIC_STRUCTURE_FILE"
+	
+	if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
+	then
+		ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" \
+		  --restrict-input "$STATIC_STRUCTURE_SELECTION" --rename-chain "$STATIC_STRUCTURE_CHAIN" \
+		  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+	fi
+	
+	if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
+	then
+		echo >&2 "Error: failed to prepare static monomer structure"
+		exit 1
+	fi
 fi
 
 ################################################################################
@@ -221,23 +252,45 @@ fi
 
 DOCKING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
 
-{
-cat "$PREPARED_STATIC_STRUCTURE_FILE"
-cat "$PREPARED_MOBILE_STRUCTURE_FILE"
-echo "$FTDOCK_KEEP"
-echo "$FTDOCK_ANGLE_STEP"
-echo "$MIN_GRID_SEP"
-} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_RESULTS_FILE")" --dependent-file "$DOCKING_RESULTS_FILE"
-
-if [ ! -s "$DOCKING_RESULTS_FILE" ]
+if [ "$DOCKING_REGIME" == "hetero" ]
 then
-	ftdmp-dock-two-monomers --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-	  --job-name "${JOB_NAME}_" \
-	  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
-	  --ftdock-keep "$FTDOCK_KEEP" \
-	  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
-	  --min-grid-sep "$MIN_GRID_SEP" \
-	> "$DOCKING_RESULTS_FILE"
+	{
+	cat "$PREPARED_STATIC_STRUCTURE_FILE"
+	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
+	echo "$FTDOCK_KEEP"
+	echo "$FTDOCK_ANGLE_STEP"
+	echo "$MIN_GRID_SEP"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_RESULTS_FILE")" --dependent-file "$DOCKING_RESULTS_FILE"
+	
+	if [ ! -s "$DOCKING_RESULTS_FILE" ]
+	then
+		ftdmp-dock-two-monomers --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --job-name "${JOB_NAME}_" \
+		  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
+		  --ftdock-keep "$FTDOCK_KEEP" \
+		  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
+		  --min-grid-sep "$MIN_GRID_SEP" \
+		> "$DOCKING_RESULTS_FILE"
+	fi
+fi
+
+if [ "$DOCKING_REGIME" == "homo" ]
+then
+	{
+	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
+	echo "$SYMMETRY_DOCKING"
+	echo "$SAM_PARAMETERS" | sed 's/\s\+/ /g'
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_RESULTS_FILE")" --dependent-file "$DOCKING_RESULTS_FILE"
+	
+	if [ ! -s "$DOCKING_RESULTS_FILE" ]
+	then
+		ftdmp-dock-symmetric --monomer "$PREPARED_MOBILE_STRUCTURE_FILE" \
+		  --job-name "${JOB_NAME}" \
+		  --symmetry "$SYMMETRY_DOCKING" \
+		  --sam-parameters "$SAM_PARAMETERS" \
+		  --output-dir "${OUTPUT_PATH}/homo_complexes" \
+		> "$DOCKING_RESULTS_FILE"
+	fi
 fi
 
 PREV_SCORING_RESULTS_FILE="$DOCKING_RESULTS_FILE"

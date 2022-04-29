@@ -15,7 +15,7 @@ Options:
     --help | -h                          flag to display help message and exit
 
 Standard output:
-    list of basenames of generated files
+    space-separated table of docking results
     
 Example:
 
@@ -132,7 +132,7 @@ fi
 
 cd "$TMPLDIR"
 
-sam2.0.4.x64 "./${JOBNAME}.pdb" $SYMMETRYCLASS -top=8000 -show=2000 -clusters=2000 > stdout.txt
+sam2.0.4.x64 "./${JOBNAME}.pdb" $SYMMETRYCLASS $SAM_PARAMETERS > stdout.txt
 
 cd - &> /dev/null
 
@@ -151,5 +151,8 @@ mkdir -p "$OUTDIR"
 
 cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs mv -t "$OUTDIR"
 
+{
+echo "ID"
 cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs basename -s .pdb | sort
+}
 

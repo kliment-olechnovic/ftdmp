@@ -370,8 +370,6 @@ fi
 
 ################################################################################
 
-OUTPUT_PATH="${OUTPUT_PATH}/${JOB_NAME}"
-
 PREPARED_STATIC_STRUCTURE_FILE=""
 PREPARED_MOBILE_STRUCTURE_FILE=""
 INPUT_COMPLEX_PREFIX=""
@@ -398,19 +396,29 @@ then
 	  --output-dir              "$OUTPUT_PATH"
 
 	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
-	
 	PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
 fi
 
 if [ "$DOCKING_REGIME" == "homo" ]
 then
-	echo >&2 "Error: homo docking not enabled right now"
-	exit 1
+	ftdmp-all-dock \
+	  --job-name                "$JOB_NAME" \
+	  --mobile-file             "$MOBILE_STRUCTURE_FILE" \
+	  --mobile-sel              "$MOBILE_STRUCTURE_SELECTION" \
+	  --mobile-chain            "$MOBILE_STRUCTURE_CHAIN" \
+	  --symmetry-docking        "$SYMMETRY_DOCKING" \
+	  --openmm-forcefield       "$OPENMM_FORCEFIELD" \
+	  --conda-path              "$CONDA_PATH" \
+	  --conda-env               "$CONDA_ENV" \
+	  --output-dir              "$OUTPUT_PATH"
+	
+	INPUT_COMPLEX_PREFIX="${OUTPUT_PATH}/${JOB_NAME}/homo_complexes/"
+	INPUT_COMPLEX_SUFFIX=".pdb"
 fi
 
 if [ "$DOCKING_REGIME" == "pre-docked" ]
 then
-	mkdir -p "$OUTPUT_PATH"
+	mkdir -p "${OUTPUT_PATH}/${JOB_NAME}"
 	
 	{
 		echo "ID"
@@ -418,11 +426,13 @@ then
 		| sed "s|^${PRE_DOCKED_INPUT_DIR}||" \
 		| sed 's|\.pdb$||'
 	} \
-	> "${OUTPUT_PATH}/docking_results.txt"
+	> "${OUTPUT_PATH}/${JOB_NAME}/docking_results.txt"
 	
 	INPUT_COMPLEX_PREFIX="${PRE_DOCKED_INPUT_DIR}"
 	INPUT_COMPLEX_SUFFIX=".pdb"
 fi
+
+OUTPUT_PATH="${OUTPUT_PATH}/${JOB_NAME}"
 
 PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
 
@@ -559,7 +569,7 @@ then
 		fi
 	fi
 	
-	if [ "$DOCKING_REGIME" == "hetero" ] || [ "$DOCKING_REGIME" == "pre-docked" ]
+	if [ "$DOCKING_REGIME" == "homo" ] || [ "$DOCKING_REGIME" == "pre-docked" ]
 	then
 		{
 		cat "$PREV_SCORING_RESULTS_FILE"
@@ -626,9 +636,9 @@ do
 	fi
 done
 
-if [ "$(find $TOP_RELAXED_COMPLEXES_DIR -type f -name '*.pdb' -not -empty | wc -l)" -ne "$NUMBER_OF_COMPLEXES_TO_BUILD" ]
+if [ "$(find $TOP_RELAXED_COMPLEXES_DIR -type f -name '*.pdb' -not -empty | wc -l)" -lt "2" ]
 then
-	echo >&2 "Error: failed to relax all top complexes"
+	echo >&2 "Error: failed to relax top complexes"
 	exit 1
 fi
 
