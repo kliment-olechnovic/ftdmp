@@ -1,0 +1,155 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-dock-symmetric' produces many complex structures by performing symmetry docking with a single monomeric structure
+
+Options:
+    --monomer                 string  *  mobile monomer input file path
+    --symmetry                string  *  symmetry class for SAM
+    --output-dir              string  *  output directory path
+    --job-name                string     job name to use as prefix for identifiers, default is 'sym'
+    --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    list of basenames of generated files
+    
+Example:
+
+    ftdmp-dock-two-monomers --monomer monomer.pdb --symmetry '-c2' --output-dir output
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
+command -v sam2.0.4.x64 &> /dev/null || { echo >&2 "Error: 'sam2.0.4.x64' executable not in binaries path"; exit 1; }
+
+MONOMERFILE=""
+SYMMETRYCLASS=""
+OUTDIR=""
+JOBNAME="sym"
+SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--monomer)
+		MONOMERFILE="$OPTARG"
+		shift
+		;;
+	--symmetry)
+		SYMMETRYCLASS="$OPTARG"
+		shift
+		;;
+	--output-dir)
+		OUTDIR="$OPTARG"
+		shift
+		;;
+	--job-name)
+		JOBNAME="$OPTARG"
+		shift
+		;;
+	--sam-parameters)
+		SAM_PARAMETERS="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$MONOMERFILE" ]
+then
+	echo >&2 "Error: no monomer input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE" ]
+then
+	echo >&2 "Error: no monomer input file '$MONOMERFILE'"
+	exit 1
+fi
+
+if [ -z "$SYMMETRYCLASS" ]
+then
+	echo >&2 "Error: no symmetry specified"
+	exit 1
+fi
+
+if [ -z "$OUTDIR" ]
+then
+	echo >&2 "Error: no output directory specified"
+	exit 1
+fi
+
+if [ -z "$JOBNAME" ]
+then
+	JOBNAME="sym"
+fi
+
+SYMMETRYCLASS="$(echo $SYMMETRYCLASS | sed 's/^\(..\)\(.\+\)/\1 \2/')"
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+ftdmp-prepare-monomer --input "$MONOMERFILE" --output-for-ftdock "${TMPLDIR}/${JOBNAME}.pdb"
+
+if [ ! -s "${TMPLDIR}/${JOBNAME}.pdb" ]
+then
+	echo >&2 "Error: failed to prepare monomer"
+	exit 1
+fi
+
+cd "$TMPLDIR"
+
+sam2.0.4.x64 "./${JOBNAME}.pdb" $SYMMETRYCLASS -top=8000 -show=2000 -clusters=2000 > stdout.txt
+
+cd - &> /dev/null
+
+find "${TMPLDIR}/" -type f -name '*.pdb' -not -empty \
+| egrep -v "${TMPLDIR}/${JOBNAME}\.pdb" \
+> "$TMPLDIR/list_of_generated_complexes.txt"
+
+if [ "$(cat $TMPLDIR/list_of_generated_complexes.txt | wc -l)" -lt "2" ]
+then
+	echo >&2 "Error: failed to generate complexes"
+	exit 1
+fi
+
+OUTDIR="${OUTDIR}"
+mkdir -p "$OUTDIR"
+
+cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs mv -t "$OUTDIR"
+
+cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs basename -s .pdb | sort
+
