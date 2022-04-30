@@ -20,7 +20,9 @@ Options:
     --reference               string     input structure file to compute CAD-score with, default is ''
     --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
     --conda-path              string     conda installation path, default is ''
-    --conda-env               string     conda environment name, default is ''
+    --conda-env               string     conda main environment name, default is ''
+    --conda-env-for-gnn       string     conda GNN environment name, equals the main environment name if not set
+    --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
     --ftdock-keep             number     ftdock keep parameter, default is 1
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
     --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
@@ -67,7 +69,7 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 JOB_NAME=""
@@ -84,6 +86,8 @@ REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 OPENMM_FORCEFIELD=""
 CONDA_PATH=""
 CONDA_ENV=""
+CONDA_ENV_FOR_GNN=""
+SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
 FTDOCK_KEEP="1"
 FTDOCK_ANGLE_STEP="9"
 MIN_GRID_SEP="20"
@@ -168,6 +172,15 @@ do
 		;;
 	--conda-env)
 		CONDA_ENV="$OPTARG"
+		CONDA_ENV_FOR_GNN="$OPTARG"
+		shift
+		;;
+	--conda-env-for-gnn)
+		CONDA_ENV_FOR_GNN="$OPTARG"
+		shift
+		;;
+	--sam-parameters)
+		SAM_PARAMETERS="$OPTARG"
 		shift
 		;;
 	--ftdock-keep)
@@ -332,15 +345,33 @@ then
 	SCORING_RANKS="raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank  raw_FIV_sr_iface_energy_rank  raw_FIV_sr_energy_clash_tour_rank  raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank  raw_FIVb_sr_iface_energy_rank  raw_FIVb_sr_energy_clash_tour_rank"
 fi
 
+if [ "$SCORING_RANKS" == "standard_for_protein_protein_no_sr" ]
+then
+	SCORING_RANKS="raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank  raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank"
+fi
+
 if [ "$SCORING_RANKS" == "standard_for_generic" ]
 then
 	SCORING_RANKS="raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank"
+fi
+
+if [ "$SCORING_RANKS" == "extended_for_protein_protein" ]
+then
+	SCORING_RANKS="raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank  raw_FIV_sr_iface_energy_rank  raw_FIV_sr_energy_clash_tour_rank  raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank  raw_FIVb_sr_iface_energy_rank  raw_FIVb_sr_energy_clash_tour_rank  raw_FIGNN_sum_of_gnn_scores_rank  raw_FIGNN_average_gnn_score_rank  raw_FIGNN_weighted_average_pcadscore_rank  raw_FIGNN_sr_sum_of_gnn_scores_rank  raw_FIGNN_sr_average_gnn_score_rank  raw_FIGNN_sr_weighted_average_pcadscore_rank  raw_FIV_and_FGV_light_tour_rank  raw_FIV_and_FGV_dark_tour_rank  raw_FIGNN_and_FGV_light_tour_rank  raw_FIGNN_and_FGV_dark_tour_rank"
+fi
+
+if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_sr" ]
+then
+	SCORING_RANKS="raw_FIV_iface_energy_rank  raw_FIV_energy_clash_tour_rank  raw_FIVb_iface_energy_rank  raw_FIVb_energy_clash_tour_rank  raw_FIGNN_sum_of_gnn_scores_rank  raw_FIGNN_average_gnn_score_rank  raw_FIGNN_weighted_average_pcadscore_rank  raw_FIV_and_FGV_light_tour_rank  raw_FIV_and_FGV_dark_tour_rank  raw_FIGNN_and_FGV_light_tour_rank  raw_FIGNN_and_FGV_dark_tour_rank"
 fi
 
 SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_GENERIC="false"
 SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GNN="false"
+SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GLOBAL="false"
 
 if [[ "$SCORING_RANKS" == *"_FIV_"* ]]
 then
@@ -362,7 +393,22 @@ then
 	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
 fi
 
-if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
+if [[ "$SCORING_RANKS" == *"_FIGNN_"* ]]
+then
+	SCORING_MODE_PROTEIN_GNN="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIGNN_sr_"* ]]
+then
+	SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FGV_"* ]]
+then
+	SCORING_MODE_PROTEIN_GLOBAL="true"
+fi
+
+if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ]
 then
 	echo >&2 "Error: no scoring action enabled"
 	exit 1
@@ -410,6 +456,7 @@ then
 	  --openmm-forcefield       "$OPENMM_FORCEFIELD" \
 	  --conda-path              "$CONDA_PATH" \
 	  --conda-env               "$CONDA_ENV" \
+	  --sam-parameters          "$SAM_PARAMETERS" \
 	  --output-dir              "$OUTPUT_PATH"
 	
 	INPUT_COMPLEX_PREFIX="${OUTPUT_PATH}/${JOB_NAME}/homo_complexes/"
@@ -456,7 +503,12 @@ ftdmp-all-score \
   --mode-protein            "$SCORING_MODE_PROTEIN" \
   --mode-protein-sr         "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" \
   --mode-generic            "$SCORING_MODE_GENERIC" \
-  --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT"  \
+  --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" \
+  --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
+  --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
+  --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --conda-path              "$CONDA_PATH" \
+  --conda-env               "$CONDA_ENV_FOR_GNN" \
   --score-symmetry          "$SCORE_SYMMETRY" \
   --keep-top                "$SCORING_TOP_STAGE1" \
   --clash-tour-tolerance    "0.05" \
@@ -655,6 +707,11 @@ ftdmp-all-score \
   --mode-protein-sr         "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" \
   --mode-generic            "$SCORING_MODE_GENERIC" \
   --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT"  \
+  --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
+  --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
+  --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --conda-path              "$CONDA_PATH" \
+  --conda-env               "$CONDA_ENV_FOR_GNN" \
   --score-symmetry          "$SCORE_SYMMETRY" \
   --keep-top                "$SCORING_TOP_STAGE1" \
   --clash-tour-tolerance    "0.01" \

@@ -14,6 +14,8 @@ Options:
     --structure-suffix        string     input structure file path suffix, default is ''
     --structure-monomer1      string     static monomer structure input file path, default is ''
     --structure-monomer2      string     mobile monomer structure input file path, default is ''
+    --conda-path              string     conda installation path, default is ''
+    --conda-env               string     conda environment name, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
@@ -21,6 +23,9 @@ Options:
     --mode-protein-sr         string     flag to score in protein side chain-rebuilding mode
     --mode-generic            string     flag to score in generic mode
     --mode-generic-sr         string     flag to score in generic side chain-rebuilding mode
+    --mode-protein-gnn        string     flag to score using GNN in protein mode
+    --mode-protein-gnn-sr     string     flag to score using GNN in protein side chain-rebuilding mode
+    --mode-protein-global     string     flag to score full protein structures
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
@@ -76,7 +81,7 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
 FROM_TABLE="_stdin"
@@ -87,6 +92,8 @@ INPUT_SUFFIX=""
 MONOMERFILE1=""
 MONOMERFILE2=""
 SCORENAME_PREFIX=""
+CONDA_PATH=""
+CONDA_ENV=""
 INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
@@ -99,6 +106,9 @@ SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_GENERIC="false"
 SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GNN="false"
+SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GLOBAL="false"
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -141,7 +151,15 @@ do
 	--output-names-prefix)
 		SCORENAME_PREFIX="$OPTARG"
 		shift
-		;;		
+		;;
+	--conda-path)
+		CONDA_PATH="$OPTARG"
+		shift
+		;;
+	--conda-env)
+		CONDA_ENV="$OPTARG"
+		shift
+		;;
 	--subselect-contacts)
 		INTERFACE_SUBSELECTION="$OPTARG"
 		shift
@@ -188,6 +206,18 @@ do
 		;;
 	--mode-generic-sr)
 		SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="$OPTARG"
+		shift
+		;;
+	--mode-protein-gnn)
+		SCORING_MODE_PROTEIN_GNN="$OPTARG"
+		shift
+		;;
+	--mode-protein-gnn-sr)
+		SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="$OPTARG"
+		shift
+		;;
+	--mode-protein-global)
+		SCORING_MODE_PROTEIN_GLOBAL="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -308,7 +338,7 @@ then
 	exit 1
 fi
 
-if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ]
+if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ]
 then
 	echo >&2 "Error: no scoring actions specified"
 	exit 1
@@ -534,14 +564,106 @@ fi
 
 ################################################################################
 
+if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		| ftdmp-calc-interface-gnn-scores \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
+		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
+		  --adjoin \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN_sr.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		| ftdmp-calc-interface-gnn-scores \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
+		  --rebuild-sidechains \
+		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_sr_" \
+		  --adjoin \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FGV.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		| ftdmp-calc-global-voromqa-scores \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --colnames-prefix "${SCORENAME_PREFIX}FGV_" \
+		  --adjoin \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP"
 echo "$SCORING_MODE_PROTEIN"
 echo "$SCORING_MODE_GENERIC"
+echo "$SCORING_MODE_PROTEIN_GNN"
 echo "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT"
 echo "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT"
+echo "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT"
+echo "$SCORING_MODE_PROTEIN_GLOBAL"
 echo "$CLASH_TOUR_TOLERANCE"
 } | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 
@@ -604,6 +726,25 @@ then
 		fi
 	} \
 	| {
+		if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_average_gnn_score_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_average_pcadscore" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_average_pcadscore_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore_rank"
+		else
+			cat
+		fi
+	} \
+	| {
 		if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 		then
 			ftdmp-sort-table \
@@ -641,6 +782,68 @@ then
 			  --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy -${SCORENAME_PREFIX}FIVb_sr_iface_energy_norm -${SCORENAME_PREFIX}FIVb_sr_iface_clash_score" \
 			  --tolerances "0 0 $CLASH_TOUR_TOLERANCE" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIVb_sr_energy_norm_clash_tour_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_pcadscore" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_average_pcadscore_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
+			  --add-rank-column "${SCORENAME_PREFIX}FGV_full_dark_score_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FGV_full_light_score" \
+			  --add-rank-column "${SCORENAME_PREFIX}FGV_full_light_score_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy ${SCORENAME_PREFIX}FGV_full_light_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIV_and_FGV_light_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy ${SCORENAME_PREFIX}FGV_full_dark_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIV_and_FGV_dark_tour_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_light_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_and_FGV_light_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_dark_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_and_FGV_dark_tour_rank"
 		else
 			cat
 		fi
