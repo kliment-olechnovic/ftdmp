@@ -1,0 +1,199 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-calc-global-voromqa-scores' evaluates docking results produced by 'ftdmp-dock'
+
+Options:
+    --input-prefix            string     input file path prefix
+    --input-suffix            string     input file path suffix, default is '.pdb'
+    --monomer1                string     static monomer input file path
+    --monomer2                string     mobile monomer input file path
+    --parallel                number     total number of parallel parts, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+    --colnames-prefix         string     prefix for output column names, default is 'FGV_'
+    --adjoin                             flag to output results joined with input
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    space-separated table of docking results
+
+Standard output:
+    space-separated table of scoring results
+    
+Example:
+
+    cat docking_results_table.txt | ftdmp-calc-global-voromqa-scores -m1 monomer1.pdb -m2 monomer2.pdb --parallel 16
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-voromqa' executable not in binaries path"; exit 1; }
+
+INPUT_PREFIX=""
+INPUT_SUFFIX=".pdb"
+MONOMERFILE1=""
+MONOMERFILE2=""
+PARALLEL_PARTS="1"
+SBATCH_PARAMETERS=""
+COLNAMES_PREFIX="FGV_"
+USE_MONOMERS="false"
+ADJOIN="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input-prefix)
+		INPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	--input-suffix)
+		INPUT_SUFFIX="$OPTARG"
+		shift
+		;;
+	--monomer1)
+		MONOMERFILE1="$OPTARG"
+		USE_MONOMERS="true"
+		shift
+		;;
+	--monomer2)
+		MONOMERFILE2="$OPTARG"
+		USE_MONOMERS="true"
+		shift
+		;;
+	--parallel)
+		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--colnames-prefix)
+		COLNAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--adjoin)
+		ADJOIN="true"
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$MONOMERFILE1" ] && [ -z "$MONOMERFILE2" ]
+then
+	USE_MONOMERS="false"
+fi
+
+if [ "$USE_MONOMERS" == "true" ]
+then
+	if [ -z "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: no static input file specified"
+		exit 1
+	fi
+	
+	if [ ! -s "$MONOMERFILE1" ]
+	then
+		echo >&2 "Error: no static input file '$MONOMERFILE1'"
+		exit 1
+	fi
+	
+	if [ -z "$MONOMERFILE2" ]
+	then
+		echo >&2 "Error: no mobile input file specified"
+		exit 1
+	fi
+	
+	if [ ! -s "$MONOMERFILE2" ]
+	then
+		echo >&2 "Error: no mobile input file '$MONOMERFILE2'"
+		exit 1
+	fi
+fi
+
+if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
+then
+	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat > "${TMPLDIR}/input"
+
+if [ ! -s "${TMPLDIR}/input" ]
+then
+	echo >&2 "Error: no input data in stdin"
+	exit 1
+fi
+
+{
+if [ "$USE_MONOMERS" == "true" ]
+then
+	mkdir -p "${TMPLDIR}/docklines"
+	
+	cd "${TMPLDIR}/docklines"
+	
+	cat ../input \
+	| awk -v m1="$MONOMERFILE1" -v m2="$MONOMERFILE2" '{if($1!="ID"){print "import-docking-result -static-file \"" m1 "\" -mobile-file \"" m2 "\" -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 > $1}}'
+	
+	cd - &> /dev/null
+	
+	find "${TMPLDIR}/docklines" -type f -not -empty \
+	| voronota-js-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS"
+else
+	cat "${TMPLDIR}/input" \
+	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
+	| voronota-js-voromqa --input _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" \
+	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
+fi
+} \
+| sed '1 s/^\(\S\+\) /ID /' \
+| sed "1 s/\s\+/ ${COLNAMES_PREFIX}/g" \
+| awk '{print $1 " " $2 " " $3}' \
+> "${TMPLDIR}/output"
+
+if [ ! -s "${TMPLDIR}/output" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+if [ "$ADJOIN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/input" "${TMPLDIR}/output"
+else
+	cat "${TMPLDIR}/output"
+fi
+

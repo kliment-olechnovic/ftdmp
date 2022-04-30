@@ -55,6 +55,10 @@ public:
 			output.value("raw_differences_sum")=cadd.raw_differences_sum;
 			output.value("constrained_differences_sum")=cadd.constrained_differences_sum;
 			output.value("model_target_area_sum")=cadd.model_target_area_sum;
+			output.value("score_F1")=cadd.score_F1();
+			output.value("confusion_TP")=cadd.confusion_TP;
+			output.value("confusion_FP")=cadd.confusion_FP;
+			output.value("confusion_FN")=cadd.confusion_FN;
 		}
 	};
 
@@ -82,8 +86,10 @@ public:
 		{
 			params.target_adjunct_atom_scores=input.get_value_or_default<std::string>("t-adj-atom", "");
 			params.target_adjunct_inter_atom_scores=input.get_value_or_default<std::string>("t-adj-inter-atom", "");
+			params.target_adjunct_inter_atom_relevant_areas=input.get_value_or_default<std::string>("t-adj-inter-atom-relevant-areas", "");
 			params.target_adjunct_residue_scores=input.get_value_or_default<std::string>("t-adj-residue", "");
 			params.target_adjunct_inter_residue_scores=input.get_value_or_default<std::string>("t-adj-inter-residue", "");
+			params.target_adjunct_inter_residue_relevant_areas=input.get_value_or_default<std::string>("t-adj-inter-residue-relevant-areas", "");
 		}
 		params.model_adjunct_atom_scores=input.get_value_or_default<std::string>("m-adj-atom", "");
 		params.model_adjunct_inter_atom_scores=input.get_value_or_default<std::string>("m-adj-inter-atom", "");
