@@ -56,13 +56,13 @@ function compute_hash_of_input_structures
 	TABLE_MONOMERFILE2="$6"
 	
 	{
-		cat "$TABLE_FILE" | head -n "$TABLE_HEAD_LINES_TO_KEEP"
+		cat "$TABLE_FILE" | awk '{print $1}' | head -n "$TABLE_HEAD_LINES_TO_KEEP" | sort
 		if [ -n "$TABLE_MONOMERFILE1" ]
 		then
 			cat "$TABLE_MONOMERFILE1"
 			cat "$TABLE_MONOMERFILE2"
 		else
-			cat "$TABLE_FILE" \
+			cat "$TABLE_FILE" | awk '{print $1}' | head -n "$TABLE_HEAD_LINES_TO_KEEP" | sort \
 			| awk -v prefix="$TABLE_INPUT_PREFIX" -v suffix="$TABLE_INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
 			| sort \
 			| xargs -L 1000 cat
@@ -403,9 +403,16 @@ then
 	mv "$TMP_NEXT_SCORING_RESULTS_FILE" "$NEXT_SCORING_RESULTS_FILE"
 fi
 
+INITIAL_SCORING_INPUT_FILE="$NEXT_SCORING_RESULTS_FILE"
+
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 HEAD_LINES_TO_KEEP=9999999
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
 
 ################################################################################
 
@@ -422,7 +429,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-cadscore-for-reference \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -431,7 +440,6 @@ then
 		  --remap-chains "$REMAP_CADSCORE" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FICS_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FICS_iface_cadscore" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -453,7 +461,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-voromqa-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -461,7 +471,6 @@ then
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIV_iface_energy" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -484,7 +493,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-voromqa-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -493,7 +504,6 @@ then
 		  --blanket \
 		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIVb_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIVb_iface_energy" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -515,7 +525,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-gnn-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -523,7 +535,6 @@ then
 		  --parallel "$SCORING_PROCESSORS" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -545,13 +556,14 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-global-voromqa-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FGV_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -573,7 +585,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-voromqa-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -581,7 +595,6 @@ then
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_sr_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -603,7 +616,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-voromqa-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -611,7 +626,6 @@ then
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIVb_sr_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIVb_sr_iface_energy" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -633,7 +647,9 @@ then
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
 	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
 		| ftdmp-calc-interface-gnn-scores \
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
@@ -642,7 +658,6 @@ then
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_sr_" \
-		  --adjoin \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores" \
 		> "$NEXT_SCORING_RESULTS_FILE"
 	fi
@@ -650,6 +665,66 @@ then
 	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
 fi
+
+################################################################################
+
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_without_ranks.txt"
+
+cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+
+ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" > "${TMPLDIR}/current_ids_with_scores.txt"
+
+if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FICS.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_PROTEIN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_GENERIC" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FGV.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV_sr.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb_sr.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN_sr.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+mv "${TMPLDIR}/current_ids_with_scores.txt" "$NEXT_SCORING_RESULTS_FILE"
+
+PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################
 
