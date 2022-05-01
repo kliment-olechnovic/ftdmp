@@ -32,6 +32,7 @@ Options:
     --parallel                number     number of processes to run when scoring, default is 8
     --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
     --output-names-prefix     string     output names prefix, default is ''
+    --last-output-suffix      string     suffix for last output table file, default is ''
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -109,6 +110,7 @@ SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GNN="false"
 SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GLOBAL="false"
+LAST_OUTPUT_SUFFIX=""
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -218,6 +220,10 @@ do
 		;;
 	--mode-protein-global)
 		SCORING_MODE_PROTEIN_GLOBAL="$OPTARG"
+		shift
+		;;
+	--last-output-suffix)
+		LAST_OUTPUT_SUFFIX="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -653,7 +659,7 @@ fi
 
 ################################################################################
 
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_with_ranks${LAST_OUTPUT_SUFFIX}.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP"
@@ -819,7 +825,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN" == "true" ]
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
 		then
 			ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy ${SCORENAME_PREFIX}FGV_full_light_score" \

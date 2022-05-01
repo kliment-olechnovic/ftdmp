@@ -491,38 +491,81 @@ fi
 
 ################################################################################
 
-ftdmp-all-score \
-  --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
-  --structure-monomer1      "$PREPARED_STATIC_STRUCTURE_FILE" \
-  --structure-monomer2      "$PREPARED_MOBILE_STRUCTURE_FILE" \
-  --structure-prefix        "$INPUT_COMPLEX_PREFIX" \
-  --structure-suffix        "$INPUT_COMPLEX_SUFFIX" \
-  --subselect-contacts      "$INTERFACE_SUBSELECTION" \
-  --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
-  --remap-cadscore          "$REMAP_CADSCORE" \
-  --mode-protein            "$SCORING_MODE_PROTEIN" \
-  --mode-protein-sr         "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" \
-  --mode-generic            "$SCORING_MODE_GENERIC" \
-  --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" \
-  --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
-  --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
-  --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
-  --conda-path              "$CONDA_PATH" \
-  --conda-env               "$CONDA_ENV_FOR_GNN" \
-  --score-symmetry          "$SCORE_SYMMETRY" \
-  --keep-top                "$SCORING_TOP_STAGE1" \
-  --clash-tour-tolerance    "0.05" \
-  --parallel                "$SCORING_PROCESSORS" \
-  --sbatch                  "$SCORING_SBATCH" \
-  --output-names-prefix     "raw_" \
-  --output-dir              "$OUTPUT_PATH"
-
-PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results.txt"
-
-if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+if [ "$SCORING_MODE_PROTEIN" == "true" ] || [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ] || [ "$SCORING_MODE_GENERIC" == "true" ] || [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 then
-	echo >&2 "Error: no raw scoring results"
-	exit 1
+	ftdmp-all-score \
+	  --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
+	  --structure-monomer1      "$PREPARED_STATIC_STRUCTURE_FILE" \
+	  --structure-monomer2      "$PREPARED_MOBILE_STRUCTURE_FILE" \
+	  --structure-prefix        "$INPUT_COMPLEX_PREFIX" \
+	  --structure-suffix        "$INPUT_COMPLEX_SUFFIX" \
+	  --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+	  --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+	  --remap-cadscore          "$REMAP_CADSCORE" \
+	  --mode-protein            "$SCORING_MODE_PROTEIN" \
+	  --mode-protein-sr         "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" \
+	  --mode-generic            "$SCORING_MODE_GENERIC" \
+	  --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" \
+	  --score-symmetry          "$SCORE_SYMMETRY" \
+	  --keep-top                "$SCORING_TOP_STAGE1" \
+	  --clash-tour-tolerance    "0.05" \
+	  --parallel                "$SCORING_PROCESSORS" \
+	  --sbatch                  "$SCORING_SBATCH" \
+	  --output-names-prefix     "raw_" \
+	  --last-output-suffix      "_faster" \
+	  --output-dir              "$OUTPUT_PATH"
+	
+	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results_with_ranks_faster.txt"
+	
+	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no raw scoring results after faster scoring"
+		exit 1
+	fi
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] || [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ] || [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results_with_ranks_faster_shortened.txt"
+	
+	ONLY_FASTER_SCORING_RANKS="$(echo $SCORING_RANKS | sed 's/\s\+/\n/g' | grep -v '_FIGNN_' | grep -v '_FGV_' | tr '\n' ' ')"
+	
+	cat "$PREV_SCORING_RESULTS_FILE" \
+	| ftdmp-filter-table \
+	  "<=${SCORING_TOP_STAGE2}" $ONLY_FASTER_SCORING_RANKS \
+	> "$NEXT_SCORING_RESULTS_FILE"
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	
+	ftdmp-all-score \
+	  --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
+	  --structure-monomer1      "$PREPARED_STATIC_STRUCTURE_FILE" \
+	  --structure-monomer2      "$PREPARED_MOBILE_STRUCTURE_FILE" \
+	  --structure-prefix        "$INPUT_COMPLEX_PREFIX" \
+	  --structure-suffix        "$INPUT_COMPLEX_SUFFIX" \
+	  --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+	  --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
+	  --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
+	  --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+	  --conda-path              "$CONDA_PATH" \
+	  --conda-env               "$CONDA_ENV_FOR_GNN" \
+	  --keep-top                "$SCORING_TOP_STAGE1" \
+	  --clash-tour-tolerance    "0.05" \
+	  --parallel                "$SCORING_PROCESSORS" \
+	  --sbatch                  "$SCORING_SBATCH" \
+	  --output-names-prefix     "raw_" \
+	  --last-output-suffix      "_slower" \
+	  --output-dir              "$OUTPUT_PATH"
+	
+	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results_with_ranks_slower.txt"
+	
+	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no raw scoring results after slower scoring"
+		exit 1
+	fi
 fi
 
 ################################################################################
@@ -720,7 +763,7 @@ ftdmp-all-score \
   --output-names-prefix     "relaxed_" \
   --output-dir              "$OUTPUT_PATH"
 
-PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results.txt"
+PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/relaxed_scoring_results_with_ranks.txt"
 
 if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 then
