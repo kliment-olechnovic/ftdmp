@@ -278,7 +278,6 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --adjoin \
 | ftdmp-sort-table \
   --columns "-${SCORENAME_PREFIX}RJS_rank" \
-| column -t \
 > "$NEXT_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"

@@ -825,7 +825,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ -s "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV.txt" ]
 		then
 			ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy ${SCORENAME_PREFIX}FGV_full_light_score" \
@@ -840,7 +840,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ -s "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt" ]
 		then
 			ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_light_score" \
