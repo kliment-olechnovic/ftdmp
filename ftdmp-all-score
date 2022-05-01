@@ -32,7 +32,6 @@ Options:
     --parallel                number     number of processes to run when scoring, default is 8
     --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
     --output-names-prefix     string     output names prefix, default is ''
-    --last-output-suffix      string     suffix for last output table file, default is ''
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -110,7 +109,6 @@ SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GNN="false"
 SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GLOBAL="false"
-LAST_OUTPUT_SUFFIX=""
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -220,10 +218,6 @@ do
 		;;
 	--mode-protein-global)
 		SCORING_MODE_PROTEIN_GLOBAL="$OPTARG"
-		shift
-		;;
-	--last-output-suffix)
-		LAST_OUTPUT_SUFFIX="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -510,6 +504,64 @@ fi
 
 ################################################################################
 
+if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		| ftdmp-calc-interface-gnn-scores \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --parallel "$SCORING_PROCESSORS" \
+		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
+		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
+		  --adjoin \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
+if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+then
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FGV.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	echo "$INTERFACE_SUBSELECTION"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
+		| ftdmp-calc-global-voromqa-scores \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --colnames-prefix "${SCORENAME_PREFIX}FGV_" \
+		  --adjoin \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
 if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 then
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV_sr.txt"
@@ -570,36 +622,6 @@ fi
 
 ################################################################################
 
-if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
-then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt"
-	
-	{
-	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
-	echo "$INTERFACE_SUBSELECTION"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
-	
-	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
-	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
-		| ftdmp-calc-interface-gnn-scores \
-		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
-		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
-		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
-		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
-		  --adjoin \
-		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
-		> "$NEXT_SCORING_RESULTS_FILE"
-	fi
-	
-	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
-fi
-
-################################################################################
-
 if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
 then
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN_sr.txt"
@@ -631,35 +653,7 @@ fi
 
 ################################################################################
 
-if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
-then
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FGV.txt"
-	
-	{
-	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
-	echo "$INTERFACE_SUBSELECTION"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
-	
-	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
-	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" \
-		| ftdmp-calc-global-voromqa-scores \
-		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
-		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
-		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
-		  --colnames-prefix "${SCORENAME_PREFIX}FGV_" \
-		  --adjoin \
-		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
-		> "$NEXT_SCORING_RESULTS_FILE"
-	fi
-	
-	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
-fi
-
-################################################################################
-
-NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_with_ranks${LAST_OUTPUT_SUFFIX}.txt"
+NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_with_ranks.txt"
 
 {
 cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP"
@@ -825,7 +819,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ -s "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV.txt" ]
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN" == "true" ]
 		then
 			ftdmp-sort-table \
 			  --columns "-${SCORENAME_PREFIX}FIV_iface_energy ${SCORENAME_PREFIX}FGV_full_light_score" \
@@ -840,7 +834,7 @@ then
 		fi
 	} \
 	| {
-		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ -s "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt" ]
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
 		then
 			ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_light_score" \
