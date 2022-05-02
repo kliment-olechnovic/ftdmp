@@ -1,0 +1,162 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-form-casp15-qa-answer' generates an answer for CASP15 QA from a scoring table
+
+Options:
+    --input-scoring-table     string  *  input scoring table file path
+    --prefix-for-gnn-scores   string     input column names prefix, default is 'FIGNN' \
+    --prefix-for-jury-scores  string     input column names prefix, default is 'RJS' \
+    --target-name             string     TARGET line value, default is '_THETARGET_'
+    --author-id               string     AUTHOR line value, default is '_THEAUTHOR_'
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    CASP15 QA answer file
+
+Example:
+    ftdmp-all-jury --input-scoring-table ./scores/scoring_results.txt --names-prefix 'raw_' --target-name 'T1999' --author-id '1234-5678-9000'
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+FROM_TABLE=""
+PREFIX_FOR_GNN_SCORES="FIGNN_"
+PREFIX_FOR_JURY_SCORES="RJS_"
+TARGET_NAME="_THETARGET_"
+AUTHOR_ID="_THEAUTHOR_"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input-scoring-table)
+		FROM_TABLE="$OPTARG"
+		shift
+		;;
+	--prefix-for-gnn-scores)
+		PREFIX_FOR_GNN_SCORES="$OPTARG"
+		shift
+		;;
+	--prefix-for-jury-scores)
+		PREFIX_FOR_JURY_SCORES="$OPTARG"
+		shift
+		;;
+	--target-name)
+		TARGET_NAME="$OPTARG"
+		shift
+		;;
+	--author-id)
+		AUTHOR_ID="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FROM_TABLE" ]
+then
+	echo >&2 "Error: input scoring table file not specified"
+	exit 1
+fi
+
+if [ ! -s "$FROM_TABLE" ]
+then
+	echo >&2 "Error: invalid input scoring table file '$FROM_TABLE'"
+	exit 1
+fi
+
+command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cp "$FROM_TABLE" "$TMPLDIR/input.txt"
+
+cd "$TMPLDIR"
+
+R --vanilla --args "$PREFIX_FOR_GNN_SCORES" "$PREFIX_FOR_JURY_SCORES" > /dev/null << 'EOF'
+args=commandArgs(TRUE);
+prefix_for_gnn=args[1];
+prefix_for_jury=args[2];
+
+gnn_sum_of_gnn_scores=paste0(prefix_for_gnn, "_sum_of_gnn_scores");
+gnn_sum_of_areas=paste0(prefix_for_gnn, "_sum_of_areas");
+gnn_average_gnn_score=paste0(prefix_for_gnn, "_average_gnn_score");
+gnn_voromqa_energy=paste0(prefix_for_gnn, "_voromqa_energy");
+gnn_mock_voromqa_energy=paste0(prefix_for_gnn, "_mock_voromqa_energy");
+gnn_num_of_residues=paste0(prefix_for_gnn, "_num_of_residues");
+gnn_average_pcadscore=paste0(prefix_for_gnn, "_average_pcadscore");
+gnn_weighted_average_pcadscore=paste0(prefix_for_gnn, "_weighted_average_pcadscore");
+gnn_local_column=paste0(prefix_for_gnn, "_local_column");
+
+jury_max=paste0(prefix_for_jury, "_max");
+
+dt=read.table("input.txt", header=TRUE, stringsAsFactors=FALSE);
+
+areas=dt[, gnn_sum_of_areas];
+adjusted_mean_area=mean(areas);
+if(sd(areas)>0)
+{
+	areas_z=(areas-mean(areas))/sd(areas);
+	sel=which(areas_z>(0-2) & areas_z<2);
+	if(length(sel)>0)
+	{
+		adjusted_mean_area=mean(areas[sel]);
+	}
+}
+
+gnn_qa_scores=pnorm(dt[, gnn_sum_of_gnn_scores]/adjusted_mean_area-1);
+
+jury_qa_scores=dt[, jury_max];
+jury_qa_scores=(jury_qa_scores/max(jury_qa_scores))*max(dt[, gnn_average_pcadscore]);
+
+dt$gnn_qa_score=round(gnn_qa_scores, digits=3);
+dt$jury_qa_score=round(jury_qa_scores, digits=3);
+
+result=dt[, c("ID", "jury_qa_score", "gnn_qa_score", gnn_local_column)];
+write.table(result, file="output.txt", quote=FALSE, col.names=FALSE, row.names=FALSE, sep=" ");
+EOF
+
+if [ ! -s "${TMPLDIR}/output.txt" ]
+then
+	echo >&2 "Error: no output produced"
+	exit 1
+fi
+
+echo "PFRMAT QA"
+echo "TARGET ${TARGET_NAME}"
+echo "AUTHOR ${AUTHOR_ID}"
+echo "METHOD VoroifaGNN"
+echo "MODEL 1"
+echo "QMODE 2"
+cat "${TMPLDIR}/output.txt" | tr ',' ' '
+echo "END"
+

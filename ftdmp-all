@@ -654,12 +654,6 @@ then
 				cp "${INPUT_COMPLEX_PREFIX}${IDTOCOPY}${INPUT_COMPLEX_SUFFIX}" "${TOP_COMPLEXES_DIR}/${IDTOCOPY}.pdb"
 			done
 			
-			if [ "$(find $TOP_COMPLEXES_DIR -type f -name '*.pdb' -not -empty | wc -l)" -ne "$NUMBER_OF_COMPLEXES_TO_BUILD" ]
-			then
-				echo >&2 "Error: failed to copy all top complexes"
-				exit 1
-			fi
-			
 			cat "$PREV_SCORING_RESULTS_FILE" \
 			| head -n "$((NUMBER_OF_COMPLEXES_TO_BUILD+1))" \
 			> "$NEXT_SCORING_RESULTS_FILE"
