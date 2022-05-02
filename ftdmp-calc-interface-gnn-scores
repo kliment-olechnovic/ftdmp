@@ -15,6 +15,7 @@ Options:
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
+    --local-column            string     flag to add per-residue scores to the global output table
     --parallel                number     total number of parallel parts, default is 1
     --colnames-prefix         string     prefix for output column names, default is 'FIGNN_'
     --adjoin                             flag to output results joined with input
@@ -60,6 +61,7 @@ COLNAMES_PREFIX="FIGNN_"
 USE_MONOMERS="false"
 ADJOIN="false"
 REBUILD_SIDECHAINS="false"
+LOCAL_COLUMN="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -111,6 +113,10 @@ do
 		;;
 	--rebuild-sidechains)
 		REBUILD_SIDECHAINS="true"
+		;;
+	--local-column)
+		LOCAL_COLUMN="$OPTARG"
+		shift
 		;;
 	-h|--help)
 		HELP_MODE="true"
@@ -197,6 +203,8 @@ MORE_IFACE_GNN_PARAMETERS+=("--processors")
 MORE_IFACE_GNN_PARAMETERS+=("$PARALLEL_PARTS")
 MORE_IFACE_GNN_PARAMETERS+=("--subselect-contacts")
 MORE_IFACE_GNN_PARAMETERS+=("$SUBSELECT_CONTACTS")
+MORE_IFACE_GNN_PARAMETERS+=("--local-column")
+MORE_IFACE_GNN_PARAMETERS+=("$LOCAL_COLUMN")
 
 if [ "$REBUILD_SIDECHAINS" == "true" ]
 then

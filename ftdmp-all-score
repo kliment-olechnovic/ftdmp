@@ -27,6 +27,7 @@ Options:
     --mode-protein-gnn-sr     string     flag to score using GNN in protein side chain-rebuilding mode
     --mode-protein-global     string     flag to score full protein structures
     --score-symmetry          string     flag to score symmetry, default is 'false'
+    --local-columns           string     flag to add per-residue scores to the global output table
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
     --parallel                number     number of processes to run when scoring, default is 8
@@ -99,6 +100,7 @@ REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
+LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
 CLASH_TOUR_TOLERANCE="0.05"
@@ -178,6 +180,10 @@ do
 		;;
 	--score-symmetry)
 		SCORE_SYMMETRY="$OPTARG"
+		shift
+		;;
+	--local-columns)
+		LOCAL_COLUMNS="$OPTARG"
 		shift
 		;;
 	--remap-cadscore)
@@ -596,6 +602,7 @@ then
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 		  --parallel "$SCORING_PROCESSORS" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
+		  --local-column "$LOCAL_COLUMNS" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores" \
 		> "$NEXT_SCORING_RESULTS_FILE"
@@ -628,6 +635,7 @@ then
 		  --parallel "$SCORING_PROCESSORS" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --rebuild-sidechains \
+		  --local-column "$LOCAL_COLUMNS" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_sr_" \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores" \
 		> "$NEXT_SCORING_RESULTS_FILE"

@@ -19,6 +19,8 @@ Options:
     --faspr-path              string     path to FASPR binary, default is ''
     --run-faspr               string     flag to rebuild sidechains using FASPR, default is 'false'
     --processors              number     maximum number of processors to run in parallel, default is 1
+    --local-column            string     flag to add per-residue scores to the global output table
+    --cache-dir               string     cache directory path to store results of past calls
     --output-dir              string     output directory path for all results
     --help | -h                          flag to display help message and exit
 
@@ -71,6 +73,8 @@ CONDA_ENV=""
 FASPR_PATH=""
 RUN_FASPR="false"
 MAX_PROCESSORS="1"
+LOCAL_COLUMN="false"
+CACHE_DIR=""
 OUTDIR=""
 HELP_MODE="false"
 
@@ -128,6 +132,14 @@ do
 		MAX_PROCESSORS="$OPTARG"
 		shift
 		;;
+	--local-column)
+		LOCAL_COLUMN="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CACHE_DIR="$OPTARG"
+		shift
+		;;
 	--output-dir)
 		OUTDIR="$OPTARG"
 		shift
@@ -155,9 +167,11 @@ fi
 
 if [ "$INFILE" != "_list" ] && [ ! -s "$INFILE" ]
 then
-	echo >&2 "Error: no input file '$INFILE'"
+	echo >&2 "Error: invalid input file '$INFILE'"
 	exit 1
 fi
+
+INFILENAME="$(basename $INFILE)"
 
 if [ -z "$GNN_PACKAGE_FILES" ]
 then
@@ -175,6 +189,80 @@ if [ "$RUN_FASPR" == "true" ] &&  [ ! -s "$FASPR_PATH" ]
 then
 	echo >&2 "Error: non FASPR file '$FASPR_PATH'"
 	exit 1
+fi
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+################################################################################
+
+HASHSUM=""
+
+if [ -n "$CACHE_DIR" ] && [ "$INFILE" != "_list" ]
+then
+	{
+		echo "$RESTRICT_INPUT $AS_ASSEMBLY $INPUT_IS_SCRIPT $SUBSELECT_CONTACTS $RUN_FASPR"
+		
+		cat "$INFILE"
+		
+		echo "$GNN_PACKAGE_FILES" \
+		| sed 's|\s\+|\n|g' \
+		| egrep . \
+		| while read -r GNN_PACKAGE_FILE
+		do
+			if [ -d "$GNN_PACKAGE_FILE" ]
+			then
+				find "$GNN_PACKAGE_FILES" -type f -name '*.tar' -not -empty | sort | xargs cat
+			else
+				cat "$GNN_PACKAGE_FILE"
+			fi
+		done
+	} \
+	| md5sum | awk '{print $1}' \
+	> "${TMPLDIR}/hashsum.txt"
+	
+	HASHSUM="voronota-iface-gnn-score-$(cat ${TMPLDIR}/hashsum.txt)"
+	
+	if [ -s "${CACHE_DIR}/${HASHSUM}.tar.gz" ]
+	then
+		mkdir -p "${TMPLDIR}/saved_results"
+		
+		cp "${CACHE_DIR}/${HASHSUM}.tar.gz" "${TMPLDIR}/saved_results/archive.tar.gz"
+		
+		cd "${TMPLDIR}/saved_results"
+		tar -xf "./archive.tar.gz"
+		cd - &> /dev/null
+		
+		if [ ! -s "${TMPLDIR}/saved_results/results_summary_table.txt" ] || [ ! -s "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt" ] || [ ! -s "${TMPLDIR}/saved_results/results_per_contact.txt" ] || [ ! -s "${TMPLDIR}/saved_results/results_per_residue.txt" ]
+		then
+			echo >&2 "Error: invalid cached archive '${CACHE_DIR}/${HASHSUM}.tar.gz'"
+			exit 1
+		fi
+		
+		if [ "$LOCAL_COLUMN" == "true" ]
+		then
+			cat "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt"
+		else
+			cat "${TMPLDIR}/saved_results/results_summary_table.txt"
+		fi
+		
+		if [ -n "$OUTDIR" ]
+		then
+			mkdir -p "$OUTDIR"
+			if [ "$LOCAL_COLUMN" == "true" ]
+			then
+				mv "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+			else
+				mv "${TMPLDIR}/saved_results/results_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+			fi
+			mv "${TMPLDIR}/saved_results/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
+			mv "${TMPLDIR}/saved_results/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
+		fi
+		
+		exit 0
+	fi
 fi
 
 ################################################################################
@@ -209,9 +297,6 @@ then
 fi
 
 ################################################################################
-
-readonly TMPLDIR=$(mktemp -d)
-trap "rm -r $TMPLDIR" EXIT
 
 mkdir -p "${TMPLDIR}/gnn_runs"
 
@@ -297,8 +382,6 @@ voronota-js-fast-iface-data-graph \
   "${MORE_FAST_IFACE_DATA_GRAPH_PARAMETERS[@]}" \
 > /dev/null
 
-INFILENAME="$(basename $INFILE)"
-
 if [ ! -s "${TMPLDIR}/${INFILENAME}_edges.txt" ] || [ ! -s "${TMPLDIR}/${INFILENAME}_vertices.txt" ]
 then
 	echo >&2 "Error: failed to generate data graph"
@@ -364,9 +447,13 @@ dt_glob$num_of_residues=nrow(dt_res);
 dt_glob$average_pcadscore=mean(dt_res$pcadscore);
 dt_glob$weighted_average_pcadscore=sum(dt_res$pcadscore*dt_res$area)/sum(dt_res$area);
 
+dt_res_pretty=dt_res[, c("ID", "pcadscore")];
+dt_res_pretty$pcadscore=round(dt_res_pretty$pcadscore, digits=2);
+
 write.table(dt, file="results_per_contact.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 write.table(dt_glob, file="results_summary_expanded.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 write.table(dt_res, file="results_per_residue.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
+write.table(dt_res_pretty, file="results_per_residue_pretty.txt", quote=FALSE, col.names=FALSE, row.names=FALSE, sep=" ");
 EOF
 
 if [ ! -s "./results_per_contact.txt" ] || [ ! -s "./results_summary_expanded.txt" ] || [ ! -s "./results_per_residue.txt" ]
@@ -381,15 +468,53 @@ cat "./results_summary_expanded.txt" \
 | column -t \
 > "./results_summary_table.txt"
 
-cat "./results_summary_table.txt"
+{
+	echo "local_column"
+	cat "./results_per_residue_pretty.txt" \
+	| sed 's/R\S\+//' \
+	| sed 's/c<//' \
+	| sed 's/r<//' \
+	| tr -d '>' \
+	| awk '{print $1 ":" $2}' \
+	| tr '\n' ',' \
+	| sed 's/,$/\n/'
+} > "./results_local_column.txt"
+	
+paste "./results_summary_table.txt" "./results_local_column.txt" \
+| tr '\t' ' ' \
+| column -t \
+> "./results_summary_table_with_local_column.txt"
+
+if [ -n "$CACHE_DIR" ] && [ -n "$HASHSUM" ]
+then
+	tar -czf "${HASHSUM}.tar.gz" "./results_summary_table.txt" "./results_summary_table_with_local_column.txt" "./results_per_contact.txt" "./results_per_residue.txt"
+fi
+
+if [ "$LOCAL_COLUMN" == "true" ]
+then
+	cat "./results_summary_table_with_local_column.txt"
+else
+	cat "./results_summary_table.txt"
+fi
 
 if [ -n "$OUTDIR" ]
 then
 	cd - &> /dev/null
 	mkdir -p "$OUTDIR"
-	mv "${TMPLDIR}/results_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+	if [ "$LOCAL_COLUMN" == "true" ]
+	then
+		mv "${TMPLDIR}/results_summary_table_with_local_column.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+	else
+		mv "${TMPLDIR}/results_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+	fi
 	mv "${TMPLDIR}/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
 	mv "${TMPLDIR}/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
+fi
+
+if [ -n "$CACHE_DIR" ] && [ -n "$HASHSUM" ]
+then
+	mkdir -p "$CACHE_DIR"
+	mv "${TMPLDIR}/${HASHSUM}.tar.gz" "$CACHE_DIR/${HASHSUM}.tar.gz"
 fi
 
 exit 0
