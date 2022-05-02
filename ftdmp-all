@@ -31,7 +31,7 @@ Options:
     --sbatch-docking          string     sbatch parameters to run docking in parallel, default is ''
     --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
-    --local-columns           string     flag to add per-residue scores to the global output table
+    --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
@@ -45,6 +45,9 @@ Options:
     --relax-complexes         string     options to relax complexes, default is ''
     --only-dock-and-score     string     flag to only dock, score and quit after scoring
     --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
+    --casp15-qa               string     flag to output CASP15 QA answer, default is 'false'
+    --casp15-qa-target        string     target name for outputting CASP15 QA answer, default is '_THETARGET_'
+    --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -111,6 +114,9 @@ MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
 ONLY_DOCK_AND_SCORE="false"
 DIVERSIFY=""
+CASP15QA="false"
+CASP15QA_TARGET="_THETARGET_"
+CASP15QA_AUTHOR="_THEAUTHOR_"
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -271,6 +277,18 @@ do
 		;;
 	--diversify)
 		DIVERSIFY="$OPTARG"
+		shift
+		;;
+	--casp15-qa)
+		CASP15QA="$OPTARG"
+		shift
+		;;
+	--casp15-qa-target)
+		CASP15QA_TARGET="$OPTARG"
+		shift
+		;;
+	--casp15-qa-author-id)
+		CASP15QA_AUTHOR="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -588,6 +606,19 @@ fi
 
 ################################################################################
 
+if [ "$CASP15QA" == "true" ]
+then
+	ftdmp-form-casp15-qa-answer \
+	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
+	  --prefix-for-gnn-scores 'raw_FIGNN' \
+	  --prefix-for-jury-scores 'raw_RJS' \
+	  --target-name "$CASP15QA_TARGET" \
+	  --author-id "$CASP15QA_AUTHOR" \
+	> "${OUTPUT_PATH}/raw_casp15_qa_answer.txt"
+fi
+
+################################################################################
+
 if [ "$NUMBER_OF_COMPLEXES_TO_BUILD" -gt "0" ]
 then
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_built_results.txt"
@@ -761,6 +792,19 @@ if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 then
 	echo >&2 "Error: no relaxed jury results"
 	exit 1
+fi
+
+################################################################################
+
+if [ "$CASP15QA" == "true" ]
+then
+	ftdmp-form-casp15-qa-answer \
+	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
+	  --prefix-for-gnn-scores 'relaxed_FIGNN' \
+	  --prefix-for-jury-scores 'relaxed_RJS' \
+	  --target-name "$CASP15QA_TARGET" \
+	  --author-id "$CASP15QA_AUTHOR" \
+	> "${OUTPUT_PATH}/relaxed_casp15_qa_answer.txt"
 fi
 
 ################################################################################

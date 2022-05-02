@@ -154,7 +154,7 @@ fi
 echo "PFRMAT QA"
 echo "TARGET ${TARGET_NAME}"
 echo "AUTHOR ${AUTHOR_ID}"
-echo "METHOD VoroifaGNN"
+echo "METHOD VoroIFGNN"
 echo "MODEL 1"
 echo "QMODE 2"
 cat "${TMPLDIR}/output.txt" | tr ',' ' '
