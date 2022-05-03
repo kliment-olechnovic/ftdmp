@@ -29,6 +29,7 @@ Options:
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
+    --keep-top-for-slow       number     number of top complexes to keep before first slower scoring stage, default is 300
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
     --parallel                number     number of processes to run when scoring, default is 8
     --cache-dir               string     cache directory path to store results of past slower calculations
@@ -105,6 +106,7 @@ SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
+SCORING_TOP_STAGE1_FOR_SLOW="300"
 CLASH_TOUR_TOLERANCE="0.05"
 SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
@@ -198,6 +200,10 @@ do
 		;;
 	--keep-top)
 		SCORING_TOP_STAGE1="$OPTARG"
+		shift
+		;;
+	--keep-top-for-slow)
+		SCORING_TOP_STAGE1_FOR_SLOW="$OPTARG"
 		shift
 		;;
 	--clash-tour-tolerance)
@@ -584,6 +590,41 @@ then
 	
 	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
+if [ -n "$SCORING_TOP_STAGE1_FOR_SLOW" ] && [ "$SCORING_TOP_STAGE1_FOR_SLOW" -lt "$SCORING_TOP_STAGE1" ]
+then
+	if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] || [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ] || [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		if [ -n "$SCORING_TOP_STAGE1_FOR_SLOW" ] && [ "$SCORING_TOP_STAGE1_FOR_SLOW" -lt "$(cat ${TMPLDIR}/current_ids.txt | wc -l)" ]
+		then
+			NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_slow_restriction.txt"
+			
+			{
+				cat "${TMPLDIR}/current_ids.txt" | head -1
+				{
+					if [ "$SCORING_MODE_PROTEIN" == "true" ] ; then echo "FIV" ; fi
+					if [ "$SCORING_MODE_GENERIC" == "true" ] ; then echo "FIVb" ; fi
+					if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ] ; then echo "FIV_sr" ; fi
+					if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ] ; then echo "FIVb_sr" ; fi
+				} \
+				| while read -r DEPENDENCYSUFFIX
+				do
+					cat "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_${DEPENDENCYSUFFIX}.txt" | awk -v linelim="$SCORING_TOP_STAGE1_FOR_SLOW" '{if(NR>1 && NR<=(linelim+1)){print $1}}'
+				done \
+				| sort | uniq
+			} \
+			> "${TMPLDIR}/restricting_ids.txt"
+			
+			ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "${TMPLDIR}/restricting_ids.txt" > "$NEXT_SCORING_RESULTS_FILE"
+			
+			PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+		fi
+	fi
 fi
 
 ################################################################################

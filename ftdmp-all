@@ -35,6 +35,7 @@ Options:
     --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
+    --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 300
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
@@ -105,6 +106,7 @@ SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
+SCORING_TOP_STAGE1_FOR_SLOW="300"
 SCORING_RANKS=""
 SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="10 50" 
@@ -239,6 +241,10 @@ do
 		;;
 	--scoring-full-top)
 		SCORING_TOP_STAGE1="$OPTARG"
+		shift
+		;;
+	--scoring-full-top-slow)
+		SCORING_TOP_STAGE1_FOR_SLOW="$OPTARG"
 		shift
 		;;
 	--scoring-rank-names)
@@ -547,6 +553,7 @@ ftdmp-all-score \
   --score-symmetry          "$SCORE_SYMMETRY" \
   --local-columns           "$LOCAL_COLUMNS" \
   --keep-top                "$SCORING_TOP_STAGE1" \
+  --keep-top-for-slow       "$SCORING_TOP_STAGE1_FOR_SLOW" \
   --clash-tour-tolerance    "0.05" \
   --parallel                "$SCORING_PROCESSORS" \
   --cache-dir               "$CACHE_DIR" \
@@ -759,6 +766,7 @@ ftdmp-all-score \
   --score-symmetry          "$SCORE_SYMMETRY" \
   --local-columns           "$LOCAL_COLUMNS" \
   --keep-top                "$SCORING_TOP_STAGE1" \
+  --keep-top-for-slow       "$SCORING_TOP_STAGE1_FOR_SLOW" \
   --clash-tour-tolerance    "0.01" \
   --parallel                "$SCORING_PROCESSORS" \
   --cache-dir               "$CACHE_DIR" \
