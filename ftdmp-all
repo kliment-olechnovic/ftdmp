@@ -28,6 +28,7 @@ Options:
     --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
     --parallel-docking        number     number of processes to run when docking, default is 8
     --parallel-scoring        number     number of processes to run when scoring, default is 8
+    --cache-dir               string     cache directory path to store results of past slower calculations
     --sbatch-docking          string     sbatch parameters to run docking in parallel, default is ''
     --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
@@ -97,6 +98,7 @@ FTDOCK_ANGLE_STEP="9"
 MIN_GRID_SEP="20"
 DOCKING_PROCESSORS="8"
 SCORING_PROCESSORS="8"
+CACHE_DIR=""
 DOCKING_SBATCH=""
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
@@ -209,6 +211,10 @@ do
 		;;
 	--parallel-scoring)
 		SCORING_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CACHE_DIR="$OPTARG"
 		shift
 		;;
 	--sbatch-docking)
@@ -543,6 +549,7 @@ ftdmp-all-score \
   --keep-top                "$SCORING_TOP_STAGE1" \
   --clash-tour-tolerance    "0.05" \
   --parallel                "$SCORING_PROCESSORS" \
+  --cache-dir               "$CACHE_DIR" \
   --sbatch                  "$SCORING_SBATCH" \
   --output-names-prefix     "raw_" \
   --output-dir              "$OUTPUT_PATH"
@@ -754,6 +761,7 @@ ftdmp-all-score \
   --keep-top                "$SCORING_TOP_STAGE1" \
   --clash-tour-tolerance    "0.01" \
   --parallel                "$SCORING_PROCESSORS" \
+  --cache-dir               "$CACHE_DIR" \
   --sbatch                  "$SCORING_SBATCH" \
   --output-names-prefix     "relaxed_" \
   --output-dir              "$OUTPUT_PATH"

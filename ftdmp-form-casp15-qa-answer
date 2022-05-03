@@ -136,7 +136,7 @@ if(sd(areas)>0)
 gnn_qa_scores=pnorm(dt[, gnn_sum_of_gnn_scores]/adjusted_mean_area-1);
 
 jury_qa_scores=dt[, jury_max];
-jury_qa_scores=(jury_qa_scores/max(jury_qa_scores))*max(dt[, gnn_average_pcadscore]);
+jury_qa_scores=(jury_qa_scores/max(jury_qa_scores))*max(dt[, gnn_weighted_average_pcadscore]);
 
 dt$gnn_qa_score=round(gnn_qa_scores, digits=3);
 dt$jury_qa_score=round(jury_qa_scores, digits=3);

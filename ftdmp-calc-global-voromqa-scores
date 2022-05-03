@@ -12,6 +12,7 @@ Options:
     --monomer1                string     static monomer input file path
     --monomer2                string     mobile monomer input file path
     --parallel                number     total number of parallel parts, default is 1
+    --cache-dir               string     cache directory path to store results of past calculations
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --colnames-prefix         string     prefix for output column names, default is 'FGV_'
     --adjoin                             flag to output results joined with input
@@ -42,13 +43,14 @@ then
 	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
 fi
 
-command -v voronota-js-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-voromqa' executable not in binaries path"; exit 1; }
+command -v voronota-js-only-global-voromqa &> /dev/null || { echo >&2 "Error: 'voronota-js-only-global-voromqa' executable not in binaries path"; exit 1; }
 
 INPUT_PREFIX=""
 INPUT_SUFFIX=".pdb"
 MONOMERFILE1=""
 MONOMERFILE2=""
 PARALLEL_PARTS="1"
+CACHE_DIR=""
 SBATCH_PARAMETERS=""
 COLNAMES_PREFIX="FGV_"
 USE_MONOMERS="false"
@@ -81,6 +83,10 @@ do
 		;;
 	--parallel)
 		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CACHE_DIR="$OPTARG"
 		shift
 		;;
 	--sbatch-parameters)
@@ -171,11 +177,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS"
+	| voronota-js-only-global-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --cache-dir "$CACHE_DIR"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-voromqa --input _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" \
+	| voronota-js-only-global-voromqa --input _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --cache-dir "$CACHE_DIR" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
 fi
 } \

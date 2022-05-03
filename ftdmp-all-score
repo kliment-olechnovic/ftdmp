@@ -31,6 +31,7 @@ Options:
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
     --parallel                number     number of processes to run when scoring, default is 8
+    --cache-dir               string     cache directory path to store results of past slower calculations
     --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
     --output-names-prefix     string     output names prefix, default is ''
     --output-dir              string  *  output directory path
@@ -98,6 +99,7 @@ CONDA_ENV=""
 INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
+CACHE_DIR=""
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
@@ -172,6 +174,10 @@ do
 		;;
 	--parallel)
 		SCORING_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CACHE_DIR="$OPTARG"
 		shift
 		;;
 	--sbatch)
@@ -601,6 +607,7 @@ then
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 		  --parallel "$SCORING_PROCESSORS" \
+		  --cache-dir "$CACHE_DIR" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --local-column "$LOCAL_COLUMNS" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIGNN_" \
@@ -633,6 +640,7 @@ then
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
 		  --parallel "$SCORING_PROCESSORS" \
+		  --cache-dir "$CACHE_DIR" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --rebuild-sidechains \
 		  --local-column "$LOCAL_COLUMNS" \
@@ -665,6 +673,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --cache-dir "$CACHE_DIR" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FGV_" \
 		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FGV_full_dark_score" \
 		> "$NEXT_SCORING_RESULTS_FILE"

@@ -17,6 +17,7 @@ Options:
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
     --local-column            string     flag to add per-residue scores to the global output table
     --parallel                number     total number of parallel parts, default is 1
+    --cache-dir               string     cache directory path to store results of past calculations
     --colnames-prefix         string     prefix for output column names, default is 'FIGNN_'
     --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
@@ -56,6 +57,7 @@ MONOMERFILE2=""
 CONDA_PATH=""
 CONDA_ENV=""
 PARALLEL_PARTS="1"
+CACHE_DIR=""
 SUBSELECT_CONTACTS="[]"
 COLNAMES_PREFIX="FIGNN_"
 USE_MONOMERS="false"
@@ -98,6 +100,10 @@ do
 		;;
 	--parallel)
 		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CACHE_DIR="$OPTARG"
 		shift
 		;;
 	--subselect-contacts)
@@ -205,6 +211,8 @@ MORE_IFACE_GNN_PARAMETERS+=("--subselect-contacts")
 MORE_IFACE_GNN_PARAMETERS+=("$SUBSELECT_CONTACTS")
 MORE_IFACE_GNN_PARAMETERS+=("--local-column")
 MORE_IFACE_GNN_PARAMETERS+=("$LOCAL_COLUMN")
+MORE_IFACE_GNN_PARAMETERS+=("--cache-dir")
+MORE_IFACE_GNN_PARAMETERS+=("$CACHE_DIR")
 
 if [ "$REBUILD_SIDECHAINS" == "true" ]
 then

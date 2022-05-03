@@ -241,22 +241,25 @@ then
 			exit 1
 		fi
 		
-		if [ "$LOCAL_COLUMN" == "true" ]
-		then
-			cat "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt"
-		else
-			cat "${TMPLDIR}/saved_results/results_summary_table.txt"
-		fi
+		{
+			if [ "$LOCAL_COLUMN" == "true" ]
+			then
+				cat "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt"
+			else
+				cat "${TMPLDIR}/saved_results/results_summary_table.txt"
+			fi
+		} \
+		| sed '1 s|^|input_name |' \
+		| sed "2 s|^|${INFILENAME} |" \
+		| column -t \
+		> "${TMPLDIR}/saved_results/display_summary_table.txt"
+		
+		cat "${TMPLDIR}/saved_results/display_summary_table.txt"
 		
 		if [ -n "$OUTDIR" ]
 		then
 			mkdir -p "$OUTDIR"
-			if [ "$LOCAL_COLUMN" == "true" ]
-			then
-				mv "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-			else
-				mv "${TMPLDIR}/saved_results/results_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-			fi
+			mv "${TMPLDIR}/saved_results/display_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
 			mv "${TMPLDIR}/saved_results/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
 			mv "${TMPLDIR}/saved_results/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
 		fi
@@ -451,22 +454,16 @@ dt_res_pretty=dt_res[, c("ID", "pcadscore")];
 dt_res_pretty$pcadscore=round(dt_res_pretty$pcadscore, digits=2);
 
 write.table(dt, file="results_per_contact.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
-write.table(dt_glob, file="results_summary_expanded.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
+write.table(dt_glob, file="results_summary_table.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 write.table(dt_res, file="results_per_residue.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 write.table(dt_res_pretty, file="results_per_residue_pretty.txt", quote=FALSE, col.names=FALSE, row.names=FALSE, sep=" ");
 EOF
 
-if [ ! -s "./results_per_contact.txt" ] || [ ! -s "./results_summary_expanded.txt" ] || [ ! -s "./results_per_residue.txt" ]
+if [ ! -s "./results_per_contact.txt" ] || [ ! -s "./results_summary_table.txt" ] || [ ! -s "./results_per_residue.txt" ]
 then
 	echo >&2 "Error: failed to summarize results"
 	exit 1
 fi
-
-cat "./results_summary_expanded.txt" \
-| sed '1 s|^|input_name |' \
-| sed "2 s|^|${INFILENAME} |" \
-| column -t \
-> "./results_summary_table.txt"
 
 {
 	echo "local_column"
@@ -482,7 +479,6 @@ cat "./results_summary_expanded.txt" \
 	
 paste "./results_summary_table.txt" "./results_local_column.txt" \
 | tr '\t' ' ' \
-| column -t \
 > "./results_summary_table_with_local_column.txt"
 
 if [ -n "$CACHE_DIR" ] && [ -n "$HASHSUM" ]
@@ -490,23 +486,26 @@ then
 	tar -czf "${HASHSUM}.tar.gz" "./results_summary_table.txt" "./results_summary_table_with_local_column.txt" "./results_per_contact.txt" "./results_per_residue.txt"
 fi
 
-if [ "$LOCAL_COLUMN" == "true" ]
-then
-	cat "./results_summary_table_with_local_column.txt"
-else
-	cat "./results_summary_table.txt"
-fi
+{
+	if [ "$LOCAL_COLUMN" == "true" ]
+	then
+		cat "./results_summary_table_with_local_column.txt"
+	else
+		cat "./results_summary_table.txt"
+	fi
+} \
+| sed '1 s|^|input_name |' \
+| sed "2 s|^|${INFILENAME} |" \
+| column -t \
+> "./display_summary_table.txt"
+
+cat "./display_summary_table.txt"
 
 if [ -n "$OUTDIR" ]
 then
 	cd - &> /dev/null
 	mkdir -p "$OUTDIR"
-	if [ "$LOCAL_COLUMN" == "true" ]
-	then
-		mv "${TMPLDIR}/results_summary_table_with_local_column.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-	else
-		mv "${TMPLDIR}/results_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-	fi
+	mv "${TMPLDIR}/display_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
 	mv "${TMPLDIR}/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
 	mv "${TMPLDIR}/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
 fi
