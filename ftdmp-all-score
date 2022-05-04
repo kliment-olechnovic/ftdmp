@@ -60,6 +60,7 @@ function compute_hash_of_input_structures
 	
 	{
 		cat "$TABLE_FILE" | awk '{print $1}' | head -n "$TABLE_HEAD_LINES_TO_KEEP" | sort
+		cat "$TABLE_FILE" | head -n "$TABLE_HEAD_LINES_TO_KEEP" | ftdmp-extract-table-columns ID scale x y z a1 a2 a3 2> /dev/null | sort
 		if [ -n "$TABLE_MONOMERFILE1" ]
 		then
 			cat "$TABLE_MONOMERFILE1"

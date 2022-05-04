@@ -210,7 +210,7 @@ then
 fi
 
 mkdir -p "$(dirname "$MATRIX_OUTPUT")"
-cat "${TMPLDIR}/output" > "$MATRIX_OUTPUT"
+cat "${TMPLDIR}/output" | sort > "$MATRIX_OUTPUT"
 
 cat "${TMPLDIR}/input"
 
