@@ -868,11 +868,39 @@ then
 			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_average_gnn_score_rank" \
 			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores ${SCORENAME_PREFIX}FIGNN_average_gnn_score" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_gnn_scores_tour_rank" \
+			| ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_average_pcadscore" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_average_pcadscore_rank" \
 			| ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore_rank"
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores -${SCORENAME_PREFIX}FIGNN_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores_FIV_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score -${SCORENAME_PREFIX}FIGNN_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_avg_gnn_score_FIV_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore -${SCORENAME_PREFIX}FIGNN_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_wavg_pcadscore_FIV_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores -${SCORENAME_PREFIX}FIGNN_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score -${SCORENAME_PREFIX}FIGNN_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_avg_gnn_score_FIVb_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore -${SCORENAME_PREFIX}FIGNN_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_wavg_pcadscore_FIVb_energy_tour_rank"
 		else
 			cat
 		fi
@@ -883,30 +911,7 @@ then
 			ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores -${SCORENAME_PREFIX}FIV_iface_clash_score" \
 			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores_clash_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score -${SCORENAME_PREFIX}FIV_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_avg_gnn_score_FIV_energy_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore -${SCORENAME_PREFIX}FIV_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_wavg_pcadscore_FIV_energy_tour_rank"
-		else
-			cat
-		fi
-	} \
-	| {
-		if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] && [ "$SCORING_MODE_GENERIC" == "true" ]
-		then
-			ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_average_gnn_score -${SCORENAME_PREFIX}FIVb_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_avg_gnn_score_FIVb_energy_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_weighted_average_pcadscore -${SCORENAME_PREFIX}FIVb_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_wavg_pcadscore_FIVb_energy_tour_rank"
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sum_of_gnn_scores_clash_tour_rank"
 		else
 			cat
 		fi
@@ -963,11 +968,39 @@ then
 			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score_rank" \
 			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores ${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_gnn_scores_tour_rank" \
+			| ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_pcadscore" \
 			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_average_pcadscore_rank" \
 			| ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore_rank"
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores -${SCORENAME_PREFIX}FIGNN_sr_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores_FIV_sr_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score -${SCORENAME_PREFIX}FIGNN_sr_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore -${SCORENAME_PREFIX}FIGNN_sr_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores -${SCORENAME_PREFIX}FIGNN_sr_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score -${SCORENAME_PREFIX}FIGNN_sr_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore -${SCORENAME_PREFIX}FIGNN_sr_mock_voromqa_energy" \
+			  --tolerances "0 0" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank"
 		else
 			cat
 		fi
@@ -978,30 +1011,7 @@ then
 			ftdmp-sort-table \
 			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores -${SCORENAME_PREFIX}FIV_sr_iface_clash_score" \
 			  --tolerances "0 $CLASH_TOUR_TOLERANCE" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores_clash_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score -${SCORENAME_PREFIX}FIV_sr_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore -${SCORENAME_PREFIX}FIV_sr_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank"
-		else
-			cat
-		fi
-	} \
-	| {
-		if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
-		then
-			ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_sr_average_gnn_score -${SCORENAME_PREFIX}FIVb_sr_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank" \
-			| ftdmp-sort-table \
-			  --columns "${SCORENAME_PREFIX}FIGNN_sr_weighted_average_pcadscore -${SCORENAME_PREFIX}FIVb_sr_iface_energy" \
-			  --tolerances "0 0" \
-			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank"
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores_clash_tour_rank"
 		else
 			cat
 		fi
