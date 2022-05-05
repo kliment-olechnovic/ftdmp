@@ -58,7 +58,7 @@ fi
 
 FIRSTFILE="$(cat "$TMPLDIR/input_list" | head -1)"
 
-HEADERSTART="$(head -1 "$FIRSTFILE" | awk '{print $1}')"
+HEADERSTART="$(head -1 "$FIRSTFILE" | awk '{if(NF>1){print $1 " "}else{print $1}}')"
 
 if [ "$INCOUNT" -eq "1" ]
 then
@@ -81,6 +81,6 @@ then
 	exit 1
 fi
 
-cat "${TMPLDIR}/joined_output" | egrep "^${HEADERSTART} "
-cat "${TMPLDIR}/joined_output" | egrep -v "^${HEADERSTART} "
+cat "${TMPLDIR}/joined_output" | egrep "^${HEADERSTART}"
+cat "${TMPLDIR}/joined_output" | egrep -v "^${HEADERSTART}"
 
