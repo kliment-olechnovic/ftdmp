@@ -458,6 +458,8 @@ then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
 raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
 raw_FIGNN_sum_of_gnn_scores_rank
 raw_FIGNN_average_gnn_score_rank
 raw_FIGNN_gnn_scores_tour_rank
@@ -477,15 +479,7 @@ raw_FIGNN_and_FGV_dark_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "modern_for_protein_protein" ]
-then
-	SCORING_RANKS="
-raw_FIV_iface_energy_rank
-raw_FIGNN_sum_of_gnn_scores_rank
-"
-fi
-
-SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g')"
+SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//g' | sed 's/\s\+$//g')"
 
 SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
