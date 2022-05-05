@@ -47,6 +47,7 @@ Options:
     --relax-complexes         string     options to relax complexes, default is ''
     --only-dock-and-score     string     flag to only dock, score and quit after scoring
     --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
+    --plot-jury-scores        string     flag to output plot of jury scores, default is ''
     --casp15-qa               string     flag to output CASP15 QA answer, default is 'false'
     --casp15-qa-target        string     target name for outputting CASP15 QA answer, default is '_THETARGET_'
     --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
@@ -118,6 +119,7 @@ MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
 ONLY_DOCK_AND_SCORE="false"
 DIVERSIFY=""
+PLOT_JURY_SCORES=""
 CASP15QA="false"
 CASP15QA_TARGET="_THETARGET_"
 CASP15QA_AUTHOR="_THEAUTHOR_"
@@ -289,6 +291,10 @@ do
 		;;
 	--diversify)
 		DIVERSIFY="$OPTARG"
+		shift
+		;;
+	--plot-jury-scores )
+		PLOT_JURY_SCORES="$OPTARG"
 		shift
 		;;
 	--casp15-qa)
@@ -695,7 +701,7 @@ fi
 
 ################################################################################
 
-if [ "$CASP15QA" == "true" ]
+if [ "$CASP15QA" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] && [ "$LOCAL_COLUMNS" == "true" ]
 then
 	ftdmp-form-casp15-qa-answer \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
@@ -704,6 +710,14 @@ then
 	  --target-name "$CASP15QA_TARGET" \
 	  --author-id "$CASP15QA_AUTHOR" \
 	> "${OUTPUT_PATH}/raw_casp15_qa_answer.txt"
+fi
+
+if [ "$PLOT_JURY_SCORES" == "true" ]
+then
+	ftdmp-plot-jury-scores \
+	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
+	  --prefix-for-jury-scores 'raw_RJS' \
+	  --output "${OUTPUT_PATH}/raw_RJS_plot.png"
 fi
 
 ################################################################################
@@ -887,7 +901,7 @@ fi
 
 ################################################################################
 
-if [ "$CASP15QA" == "true" ]
+if [ "$CASP15QA" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] && [ "$LOCAL_COLUMNS" == "true" ]
 then
 	ftdmp-form-casp15-qa-answer \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
@@ -896,6 +910,14 @@ then
 	  --target-name "$CASP15QA_TARGET" \
 	  --author-id "$CASP15QA_AUTHOR" \
 	> "${OUTPUT_PATH}/relaxed_casp15_qa_answer.txt"
+fi
+
+if [ "$PLOT_JURY_SCORES" == "true" ]
+then
+	ftdmp-plot-jury-scores \
+	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
+	  --prefix-for-jury-scores 'relaxed_RJS' \
+	  --output "${OUTPUT_PATH}/relaxed_RJS_plot.png"
 fi
 
 ################################################################################
