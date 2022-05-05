@@ -1,0 +1,149 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-plot-jury-scores' plots jury scores from a scoring table
+
+Options:
+    --input-scoring-table     string  *  input scoring table file path
+    --prefix-for-jury-scores  string     input column names prefix, default is 'RJS' \
+    --output                  string  *  output plot file path
+    --help | -h                          flag to display help message and exit
+
+Example:
+    ftdmp-plot-jury-scores --input-scoring-table ./scores/scoring_results.txt \
+      --prefix-for-jury-scores 'raw_RJS'  --output ./plot.png
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+FROM_TABLE=""
+PREFIX_FOR_JURY_SCORES="RJS_"
+OUTFILE=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input-scoring-table)
+		FROM_TABLE="$OPTARG"
+		shift
+		;;
+	--prefix-for-jury-scores)
+		PREFIX_FOR_JURY_SCORES="$OPTARG"
+		shift
+		;;
+	--output)
+		OUTFILE="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FROM_TABLE" ]
+then
+	echo >&2 "Error: input scoring table file not specified"
+	exit 1
+fi
+
+if [ ! -s "$FROM_TABLE" ]
+then
+	echo >&2 "Error: invalid input scoring table file '$FROM_TABLE'"
+	exit 1
+fi
+
+if [ -z "$OUTFILE" ]
+then
+	echo >&2 "Error: output plot file not specified"
+	exit 1
+fi
+
+command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cp "$FROM_TABLE" "$TMPLDIR/input.txt"
+
+cd "$TMPLDIR"
+
+cat "./input.txt" \
+| head -1 \
+| sed 's/^\s\+//' \
+| sed 's/\s\+/ /g' \
+| tr ' ' '\n' \
+| egrep "^${PREFIX_FOR_JURY_SCORES}_top" \
+| sed 's/^\(\S\+_top\)\(\S\+\)/\1\2 \2/' \
+> "./top_columns_info.txt"
+
+R --vanilla --args "$PREFIX_FOR_JURY_SCORES" > /dev/null << 'EOF'
+args=commandArgs(TRUE);
+prefix_for_jury=args[1];
+
+dt=read.table("input.txt", header=TRUE, stringsAsFactors=FALSE);
+maxcol=paste0(prefix_for_jury, "_max");
+
+topcols_info=read.table("top_columns_info.txt", header=FALSE, stringsAsFactors=FALSE);
+top_names=topcols_info$V1;
+top_nums=topcols_info$V2;
+if(top_nums[length(top_nums)]>=9999){top_nums[length(top_nums)]=top_nums[length(top_nums)-1]+5*(top_nums[length(top_nums)-1]-top_nums[length(top_nums)-2]);}
+
+png("result.png", width=1000, height=600, units="px", pointsize=14);
+
+dt=dt[order(dt[,maxcol]),];
+
+plot(c(0, max(top_nums)), c(0, 1), type="n", xlab="top", ylab="ranks jury score", main=paste0("Jury scores, red ID = '", dt$ID[nrow(dt)], "'"));
+
+for(i in 1:nrow(dt))
+{
+	sdt=data.frame(x=top_nums, y=as.numeric(dt[i, top_names]));
+	sdt=sdt[which(sdt$y>0),];
+	thecol=ifelse(i==nrow(dt), "#FF0000", "#777777");
+	thelwd=ifelse(i==nrow(dt), 1.5, 1);
+	points(sdt$x, sdt$y, type="l", col=thecol, lwd=thelwd);
+	points(x=0, y=dt[i, maxcol], col=thecol);
+}
+
+dev.off();
+
+EOF
+
+if [ ! -s "${TMPLDIR}/result.png" ]
+then
+	echo >&2 "Error: no output plot produced"
+	exit 1
+fi
+
+cd - &> /dev/null
+
+mkdir -p "$(dirname ${OUTFILE})"
+
+mv "${TMPLDIR}/result.png" "$OUTFILE"
+

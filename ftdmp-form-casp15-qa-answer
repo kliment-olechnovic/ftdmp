@@ -18,7 +18,9 @@ Standard output:
     CASP15 QA answer file
 
 Example:
-    ftdmp-all-jury --input-scoring-table ./scores/scoring_results.txt --names-prefix 'raw_' --target-name 'T1999' --author-id '1234-5678-9000'
+
+    ftdmp-form-casp15-qa-answer --input-scoring-table ./scores/scoring_results.txt --prefix-for-gnn-scores 'raw_FIGNN' \
+      --prefix-for-jury-scores 'raw_RJS' --target-name 'T1999' --author-id '1234-5678-9000'
 
 EOF
 exit 1
