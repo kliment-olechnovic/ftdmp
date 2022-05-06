@@ -35,43 +35,85 @@ for(i in 1:nrow(input_table))
 	
 	subresult=data.frame(ID=input_table[i, 2]);
 	subresult$top1_success=ifelse(dt$raw_FICS_iface_cadscore[r1]==max(dt$raw_FICS_iface_cadscore), 1, 0);
-	subresult$top1_cadscore=dt$raw_FICS_iface_cadscore[r1];
+	subresult$top1_cs=dt$raw_FICS_iface_cadscore[r1];
 	subresult$top1_F1=dt$raw_FICS_iface_F1[r1];
-	subresult$top1_site_cadscore=dt$raw_FICS_iface_site_based_cadscore[r1];
-	subresult$cor_with_cadscore=cor(dt$raw_RJS_max, dt$raw_FICS_iface_cadscore);
-	subresult$cor_with_F1=cor(dt$raw_RJS_max, dt$raw_FICS_iface_F1);
-	subresult$max_cadscore=max(dt$raw_FICS_iface_cadscore);
-	subresult$max_site_cadscore=max(dt$raw_FICS_iface_site_based_cadscore);
+	subresult$top1_scs=dt$raw_FICS_iface_site_based_cadscore[r1];
+	subresult$cor_w_cs=cor(dt$raw_RJS_max, dt$raw_FICS_iface_cadscore);
+	subresult$cor_w_F1=cor(dt$raw_RJS_max, dt$raw_FICS_iface_F1);
+	subresult$max_cs=max(dt$raw_FICS_iface_cadscore);
+	subresult$max_scs=max(dt$raw_FICS_iface_site_based_cadscore);
 	subresult$max_F1=max(dt$raw_FICS_iface_F1);
 	
-	if(is.element("raw_FIV_iface_energy_rank", colnames(dt))) {
-		subresult$old_sum_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_iface_energy_rank==1)];
+	if(is.element("raw_FIV_iface_area", colnames(dt))) {
+		subresult$area_scs=dt$raw_FICS_iface_site_based_cadscore[order(0-dt$raw_FIV_iface_area)[1]];
 	} else {
-		subresult$old_sum_top1_cadscore=0;
+		subresult$area_scs=0;
+	}
+	
+	if(is.element("raw_FIV_iface_energy_rank", colnames(dt))) {
+		subresult$o_sum_scs=dt$raw_FICS_iface_site_based_cadscore[which(dt$raw_FIV_iface_energy_rank==1)];
+	} else {
+		subresult$o_sum_scs=0;
 	}
 	
 	if(is.element("raw_FIGNN_sum_of_gnn_scores_rank", colnames(dt))) {
-		subresult$gnn_sum_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_sum_of_gnn_scores_rank==1)];
+		subresult$gnn_sum_scs=dt$raw_FICS_iface_site_based_cadscore[which(dt$raw_FIGNN_sum_of_gnn_scores_rank==1)];
 	} else {
-		subresult$gnn_sum_top1_cadscore=0;
+		subresult$gnn_sum_scs=0;
 	}
 	
 	if(is.element("raw_FIGNN_average_gnn_score_rank", colnames(dt))) {
-		subresult$gnn_avg_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_average_gnn_score_rank==1)];
+		subresult$gnn_avg_scs=dt$raw_FICS_iface_site_based_cadscore[which(dt$raw_FIGNN_average_gnn_score_rank==1)];
 	} else {
-		subresult$gnn_avg_top1_cadscore=0;
+		subresult$gnn_avg_scs=0;
 	}
 	
-	if(is.element("raw_FIV_and_FGV_light_tour_rank", colnames(dt))) {
-		subresult$old_tour_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_and_FGV_light_tour_rank==1)];
+	if(is.element("raw_FIV_and_FGV_dark_tour_rank", colnames(dt))) {
+		subresult$o_tour_scs=dt$raw_FICS_iface_site_based_cadscore[which(dt$raw_FIV_and_FGV_dark_tour_rank==1)];
 	} else {
-		subresult$old_tour_top1_cadscore=0;
+		subresult$o_tour_scs=0;
 	}
 	
 	if(is.element("raw_FIGNN_and_FGV_dark_tour_rank", colnames(dt))) {
-		subresult$gnn_tour_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_and_FGV_dark_tour_rank==1)];
+		subresult$gnn_tour_scs=dt$raw_FICS_iface_site_based_cadscore[which(dt$raw_FIGNN_and_FGV_dark_tour_rank==1)];
 	} else {
-		subresult$gnn_tour_top1_cadscore=0;
+		subresult$gnn_tour_scs=0;
+	}
+	
+	if(is.element("raw_FIV_iface_area", colnames(dt))) {
+		subresult$area_cs=dt$raw_FICS_iface_cadscore[order(0-dt$raw_FIV_iface_area)[1]];
+	} else {
+		subresult$area_cs=0;
+	}
+	
+	if(is.element("raw_FIV_iface_energy_rank", colnames(dt))) {
+		subresult$o_sum_cs=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_iface_energy_rank==1)];
+	} else {
+		subresult$o_sum_cs=0;
+	}
+	
+	if(is.element("raw_FIGNN_sum_of_gnn_scores_rank", colnames(dt))) {
+		subresult$gnn_sum_cs=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_sum_of_gnn_scores_rank==1)];
+	} else {
+		subresult$gnn_sum_cs=0;
+	}
+	
+	if(is.element("raw_FIGNN_average_gnn_score_rank", colnames(dt))) {
+		subresult$gnn_avg_cs=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_average_gnn_score_rank==1)];
+	} else {
+		subresult$gnn_avg_cs=0;
+	}
+	
+	if(is.element("raw_FIV_and_FGV_dark_tour_rank", colnames(dt))) {
+		subresult$o_tour_cs=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_and_FGV_dark_tour_rank==1)];
+	} else {
+		subresult$o_tour_cs=0;
+	}
+	
+	if(is.element("raw_FIGNN_and_FGV_dark_tour_rank", colnames(dt))) {
+		subresult$gnn_tour_cs=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_and_FGV_dark_tour_rank==1)];
+	} else {
+		subresult$gnn_tour_cs=0;
 	}
 	
 	if(length(result)==0){result=subresult;}else{result=rbind(result, subresult);}

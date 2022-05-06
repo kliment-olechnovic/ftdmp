@@ -18,7 +18,7 @@ for MAINMODE in extended_for_protein_protein standard_for_protein_protein extend
 do
 	for JURYSLICES in "1 30" "3 30"
 	do
-		for JURYMAXS in 1 3
+		for JURYMAXS in 1 3 5
 		do
 			./run_in_predefined_mode.bash "$MAINMODE" "$JURYMAXS" "$JURYSLICES" "$PDBID"
 			

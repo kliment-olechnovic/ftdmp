@@ -23,7 +23,7 @@ cd "./output_summaries_evaluation"
 
 R --vanilla << 'EOF' > /dev/null
 dt=read.table("global_results.txt", header=TRUE, stringsAsFactors=FALSE);
-dt=dt[order(0-dt$top1_cadscore, 0-dt$top1_F1),];
+dt=dt[order(0-dt$top1_cs, 0-dt$top1_F1),];
 write.table(dt, file="global_results.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 EOF
 
