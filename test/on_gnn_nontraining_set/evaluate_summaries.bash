@@ -31,16 +31,48 @@ for(i in 1:nrow(input_table))
 {
 	dt=read.table(input_table[i, 1], header=TRUE, stringsAsFactors=FALSE);
 	
+	r1=which(dt$raw_RJS_rank==1);
+	
 	subresult=data.frame(ID=input_table[i, 2]);
-	subresult$top1_success=ifelse(dt$raw_FICS_iface_cadscore[1]==max(dt$raw_FICS_iface_cadscore), 1, 0);
-	subresult$top1_cadscore=dt$raw_FICS_iface_cadscore[1];
-	subresult$top1_F1=dt$raw_FICS_iface_F1[1];
-	subresult$top1_site_cadscore=dt$raw_FICS_iface_site_based_cadscore[1];
+	subresult$top1_success=ifelse(dt$raw_FICS_iface_cadscore[r1]==max(dt$raw_FICS_iface_cadscore), 1, 0);
+	subresult$top1_cadscore=dt$raw_FICS_iface_cadscore[r1];
+	subresult$top1_F1=dt$raw_FICS_iface_F1[r1];
+	subresult$top1_site_cadscore=dt$raw_FICS_iface_site_based_cadscore[r1];
 	subresult$cor_with_cadscore=cor(dt$raw_RJS_max, dt$raw_FICS_iface_cadscore);
 	subresult$cor_with_F1=cor(dt$raw_RJS_max, dt$raw_FICS_iface_F1);
 	subresult$max_cadscore=max(dt$raw_FICS_iface_cadscore);
 	subresult$max_site_cadscore=max(dt$raw_FICS_iface_site_based_cadscore);
 	subresult$max_F1=max(dt$raw_FICS_iface_F1);
+	
+	if(is.element("raw_FIV_iface_energy_rank", colnames(dt))) {
+		subresult$old_sum_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_iface_energy_rank==1)];
+	} else {
+		subresult$old_sum_top1_cadscore=0;
+	}
+	
+	if(is.element("raw_FIGNN_sum_of_gnn_scores_rank", colnames(dt))) {
+		subresult$gnn_sum_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_sum_of_gnn_scores_rank==1)];
+	} else {
+		subresult$gnn_sum_top1_cadscore=0;
+	}
+	
+	if(is.element("raw_FIGNN_average_gnn_score_rank", colnames(dt))) {
+		subresult$gnn_avg_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_average_gnn_score_rank==1)];
+	} else {
+		subresult$gnn_avg_top1_cadscore=0;
+	}
+	
+	if(is.element("raw_FIV_and_FGV_light_tour_rank", colnames(dt))) {
+		subresult$old_tour_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIV_and_FGV_light_tour_rank==1)];
+	} else {
+		subresult$old_tour_top1_cadscore=0;
+	}
+	
+	if(is.element("raw_FIGNN_and_FGV_dark_tour_rank", colnames(dt))) {
+		subresult$gnn_tour_top1_cadscore=dt$raw_FICS_iface_cadscore[which(dt$raw_FIGNN_and_FGV_dark_tour_rank==1)];
+	} else {
+		subresult$gnn_tour_top1_cadscore=0;
+	}
 	
 	if(length(result)==0){result=subresult;}else{result=rbind(result, subresult);}
 }
@@ -50,7 +82,7 @@ result_summary$ID="mean_of_all";
 
 for(i in 2:ncol(result))
 {
-	result_summary[,i]=mean(result[,i]);
+	result_summary[,i]=round(mean(result[,i]), digits=3);
 }
 
 result=rbind(result_summary, result);
