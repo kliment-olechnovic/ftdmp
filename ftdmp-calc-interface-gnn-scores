@@ -246,7 +246,7 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-iface-gnn-score --input _list --input-is-script "${MORE_IFACE_GNN_PARAMETERS[@]}"
+	| voronota-iface-gnn-score --input _list --input-is-script 'true' "${MORE_IFACE_GNN_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \

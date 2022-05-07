@@ -563,8 +563,8 @@ then
 	  --sbatch                  "$DOCKING_SBATCH" \
 	  --output-dir              "$OUTPUT_PATH"
 
-	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_static.pdb"
-	PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/monomer_mobile.pdb"
+	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/${JOB_NAME}/monomer_static.pdb"
+	PREPARED_MOBILE_STRUCTURE_FILE="${OUTPUT_PATH}/${JOB_NAME}/monomer_mobile.pdb"
 fi
 
 if [ "$DOCKING_REGIME" == "homo" ]
