@@ -485,6 +485,32 @@ raw_FIGNN_and_FGV_dark_tour_rank
 "
 fi
 
+if [ "$SCORING_RANKS" == "extended_for_protein_protein_only_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_rank
+raw_FIGNN_sr_average_gnn_score_rank
+raw_FIGNN_sr_gnn_scores_tour_rank
+raw_FIGNN_sr_average_pcadscore_rank
+raw_FIGNN_sr_weighted_average_pcadscore_rank
+raw_FIGNN_sr_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
+raw_FIV_sr_and_FGV_light_tour_rank
+raw_FIV_sr_and_FGV_dark_tour_rank
+raw_FIGNN_sr_and_FGV_light_tour_rank
+raw_FIGNN_sr_and_FGV_dark_tour_rank
+"
+fi
+
 SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
 
 SCORING_MODE_PROTEIN="false"

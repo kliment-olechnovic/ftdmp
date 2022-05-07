@@ -1060,6 +1060,36 @@ then
 			cat
 		fi
 	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy ${SCORENAME_PREFIX}FGV_full_light_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_and_FGV_light_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "-${SCORENAME_PREFIX}FIV_sr_iface_energy ${SCORENAME_PREFIX}FGV_full_dark_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIV_sr_and_FGV_dark_tour_rank"
+		else
+			cat
+		fi
+	} \
+	| {
+		if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
+		then
+			ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_light_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_and_FGV_light_tour_rank" \
+			| ftdmp-sort-table \
+			  --columns "${SCORENAME_PREFIX}FIGNN_sr_sum_of_gnn_scores ${SCORENAME_PREFIX}FGV_full_dark_score" \
+			  --tolerances "0 0.01" \
+			  --add-rank-column "${SCORENAME_PREFIX}FIGNN_sr_and_FGV_dark_tour_rank"
+		else
+			cat
+		fi
+	} \
 	> "$NEXT_SCORING_RESULTS_FILE"
 fi
 
