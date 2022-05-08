@@ -409,6 +409,16 @@ raw_FIVb_energy_clash_tour_rank
 "
 fi
 
+if [ "$SCORING_RANKS" == "standard_for_protein_protein_only_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+"
+fi
+
 if [ "$SCORING_RANKS" == "standard_for_generic" ]
 then
 	SCORING_RANKS="
@@ -504,10 +514,6 @@ raw_FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank
 raw_FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank
 raw_FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank
 raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
-raw_FIV_sr_and_FGV_light_tour_rank
-raw_FIV_sr_and_FGV_dark_tour_rank
-raw_FIGNN_sr_and_FGV_light_tour_rank
-raw_FIGNN_sr_and_FGV_dark_tour_rank
 "
 fi
 

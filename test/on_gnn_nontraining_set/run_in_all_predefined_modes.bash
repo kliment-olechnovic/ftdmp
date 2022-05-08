@@ -14,9 +14,9 @@ fi
 
 echo >&2 "Processing '$PDBID'"
 
-for MAINMODE in extended_for_protein_protein standard_for_protein_protein extended_for_protein_protein_no_sr standard_for_protein_protein_no_sr
+for MAINMODE in extended_for_protein_protein standard_for_protein_protein extended_for_protein_protein_no_sr standard_for_protein_protein_no_sr extended_for_protein_protein_only_sr standard_for_protein_protein_only_sr
 do
-	for JURYSLICES in "1 30" "3 30"
+	for JURYSLICES in "1 30"
 	do
 		for JURYMAXS in 1 3 5
 		do

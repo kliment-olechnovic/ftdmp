@@ -129,9 +129,9 @@ for(i in 2:ncol(result))
 
 result=rbind(result_summary, result);
 
-write.table(result, file="output.txt", quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
+write.table(result, file=outfile, quote=FALSE, col.names=TRUE, row.names=FALSE, sep=" ");
 
 EOF
 
-cat "output.txt" | sed "s|^mean_of_all|${MODENAME}|" | column -t
+cat "${TMPLDIR}/results.txt" | sed "s|^mean_of_all|${MODENAME}|" | column -t
 
