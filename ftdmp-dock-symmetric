@@ -19,7 +19,7 @@ Standard output:
     
 Example:
 
-    ftdmp-dock-two-monomers --monomer monomer.pdb --symmetry '-c2' --output-dir output
+    ftdmp-dock-symmetric --monomer monomer.pdb --symmetry '-c2' --output-dir output
 
 EOF
 exit 1

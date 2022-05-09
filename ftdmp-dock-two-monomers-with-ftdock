@@ -1,0 +1,280 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-dock-two-monomers-with-ftdock' produces many dimeric structures by docking two monomeric structures
+
+Options:
+    --monomer1                string  *  static monomer input file path
+    --monomer2                string  *  mobile monomer input file path
+    --job-name                string     job name to use as prefix for identifiers
+    --logs-output             string     logs output directory path
+    --parallel                number     total number of parallel parts, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+    --ftdock-keep             number     ftdock keep parameter, default is 5
+    --ftdock-angle-step       number     ftdock angle step parameter, default is 9
+    --ftdock-min-grid-sep     number     ftdock minimum grid separation between same-rotation translations, default is 20
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    space-separated table of docking results
+    
+Examples:
+
+    ftdmp-dock-two-monomers-with-ftdock --monomer1 monomer1.pdb --monomer2 monomer2.pdb --logs-output docking_results --parallel 8
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
+command -v ftdock &> /dev/null || { echo >&2 "Error: 'ftdock' executable not in binaries path"; exit 1; }
+
+MONOMERFILE1=""
+MONOMERFILE2=""
+JOBNAME=""
+OUTDIR=""
+PARALLEL_PARTS="1"
+PARALLEL_ID=""
+SBATCH_PARAMETERS=""
+FTDOCK_KEEP="5"
+FTDOCK_ANGLE_STEP="9"
+MIN_GRID_SEP="20"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--monomer1)
+		MONOMERFILE1="$OPTARG"
+		shift
+		;;
+	--monomer2)
+		MONOMERFILE2="$OPTARG"
+		shift
+		;;
+	--job-name)
+		JOBNAME="$OPTARG"
+		shift
+		;;
+	--logs-output)
+		OUTDIR="$OPTARG"
+		shift
+		;;
+	--parallel)
+		PARALLEL_PARTS="$OPTARG"
+		shift
+		;;
+	--parallel-id)
+		PARALLEL_ID="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--ftdock-keep)
+		FTDOCK_KEEP="$OPTARG"
+		shift
+		;;
+	--ftdock-angle-step)
+		FTDOCK_ANGLE_STEP="$OPTARG"
+		shift
+		;;
+	--ftdock-min-grid-sep)
+		MIN_GRID_SEP="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static monomer input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static monomer input file '$MONOMERFILE1'"
+	exit 1
+fi
+
+if [ -z "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile monomer input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile monomer input file '$MONOMERFILE2'"
+	exit 1
+fi
+
+if [ -z "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -ne "$PARALLEL_PARTS" ] || [ "$PARALLEL_PARTS" -lt "1" ]
+then
+	echo >&2 "Error: invalid number of parallel parts '$PARALLEL_PARTS', must be a positive number"
+	exit 1
+fi
+
+if [ -n "$PARALLEL_ID" ]
+then
+	if [ "$PARALLEL_ID" -ne "$PARALLEL_ID" ] || [ "$PARALLEL_ID" -lt "1" ] || [ "$PARALLEL_ID" -gt "$PARALLEL_PARTS" ]
+	then
+		echo >&2 "Error: invalid parallel part ID '$PARALLEL_ID', must be a positive number less than the total number of parts ($PARALLEL_PARTS)"
+		exit 1
+	fi
+fi
+
+if [ -n "$SBATCH_PARAMETERS" ]
+then
+	command -v sbatch &> /dev/null || { echo >&2 "Error: 'sbatch' executable not in binaries path"; exit 1; }
+	command -v squeue &> /dev/null || { echo >&2 "Error: 'squeue' executable not in binaries path"; exit 1; }
+fi
+
+if [ -z "$FTDOCK_KEEP" ] || [ "$FTDOCK_KEEP" -ne "$FTDOCK_KEEP" ] || [ "$FTDOCK_KEEP" -lt "1" ]
+then
+	echo >&2 "Error: invalid ftdock keep parameter '$FTDOCK_KEEP', must be a positive integer"
+	exit 1
+fi
+
+if [ -z "$FTDOCK_ANGLE_STEP" ] || [ "$FTDOCK_ANGLE_STEP" -ne "$FTDOCK_ANGLE_STEP" ] || [ "$FTDOCK_ANGLE_STEP" -lt "9" ]
+then
+	echo >&2 "Error: invalid ftdock angle step parameter '$FTDOCK_ANGLE_STEP', must be an integer greater than 8"
+	exit 1
+fi
+
+if [ -z "$MIN_GRID_SEP" ] || [ "$MIN_GRID_SEP" -ne "$MIN_GRID_SEP" ] || [ "$MIN_GRID_SEP" -lt "0" ]
+then
+	echo >&2 "Error: invalid minimum grid separation '$MIN_GRID_SEP', must be a non-negative integer"
+	exit 1
+fi
+
+MIN_SQUARED_SEP="$((${MIN_GRID_SEP}*${MIN_GRID_SEP}))"
+
+if [ -z "$OUTDIR" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	OUTDIR="${TMPLDIR}/docking"
+fi
+
+if [ -z "$PARALLEL_ID" ]
+then
+	if [ -n "$SBATCH_PARAMETERS" ]
+	then
+		mkdir -p "$TMPLDIR/slurm_logs"
+		
+		seq 1 "$PARALLEL_PARTS" \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id \
+		| egrep '^Submitted batch job ' \
+		| awk '{print $4}' \
+		> "$TMPLDIR/slurm_job_ids"
+		
+		sleep 1
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+		do
+			sleep 5
+			REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		done
+		
+		find "$TMPLDIR/slurm_logs/" -type f -not -empty | xargs -L 1 cat >&2
+	else
+		seq 1 "$PARALLEL_PARTS" | xargs -L 1 -P "$PARALLEL_PARTS" "$ZEROARG" "${ALLARGS[@]}" --logs-output "$OUTDIR" --parallel-id
+	fi
+	
+	{
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk -v jobname="$JOBNAME" '{print jobname "ftd" NR " " $0}'
+	} \
+	> "${OUTDIR}/all_parts_results_table.txt"
+	
+	cat "${OUTDIR}/all_parts_results_table.txt"
+	
+	exit 0
+fi
+
+OUTDIR="${OUTDIR}/part${PARALLEL_ID}"
+mkdir -p "$OUTDIR"
+
+ftdmp-prepare-monomer --input "$MONOMERFILE1" --output-for-ftdock "$OUTDIR/monomer1.pdb"
+
+if [ ! -s "$OUTDIR/monomer1.pdb" ]
+then
+	echo >&2 "Error: failed to prepare monomer 1"
+	exit 1
+fi
+
+ftdmp-prepare-monomer --input "$MONOMERFILE2" --output-for-ftdock "$OUTDIR/monomer2.pdb"
+
+if [ ! -s "$OUTDIR/monomer2.pdb" ]
+then
+	echo >&2 "Error: failed to prepare monomer 2"
+	exit 1
+fi
+
+cd "$OUTDIR"
+
+ftdock -static monomer1.pdb -mobile monomer2.pdb -noelec -keep "$FTDOCK_KEEP" -angle_step "$FTDOCK_ANGLE_STEP" -reduce_translations "$MIN_SQUARED_SEP" -parallel_parts "$PARALLEL_PARTS" -parallel_id "$PARALLEL_ID" > log_ftdock.txt
+
+if [ ! -s "ftdock_global.dat" ]
+then
+	echo >&2 "Error: failed to run ftdock"
+	exit 1
+fi
+
+FTDOCK_GRID_SIZE="$(cat ftdock_global.dat | egrep '^Global grid size ' | awk '{print $5}')"
+
+FTDOCK_TOTAL_SPAN="$(cat ftdock_global.dat | egrep '^Global total span ' | awk '{print $6}')"
+
+if [ -z "$FTDOCK_GRID_SIZE" ] || [ -z "$FTDOCK_TOTAL_SPAN" ] || [ "$FTDOCK_GRID_SIZE" -ne "$FTDOCK_GRID_SIZE" ]
+then
+	echo >&2 "Error: failed to read ftdock grid parameters"
+	exit 1
+fi
+
+{
+echo "scscore scale x y z a1 a2 a3 a4 a5 a6 a7 a8 a9"
+
+cat ftdock_global.dat | egrep '^G_DATA' \
+| awk -v gridsize="$FTDOCK_GRID_SIZE" -v totalspan="$FTDOCK_TOTAL_SPAN" '{print $4 " " (totalspan/gridsize) " " $6 " " $7 " " $8 " " $9 " " $10 " " $11 " 0 0 0 0 0 0"}'
+} \
+> "part_results_table.txt"
+
+rm "monomer1.pdb" "monomer2.pdb"
+

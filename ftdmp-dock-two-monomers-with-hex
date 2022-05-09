@@ -1,0 +1,234 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-dock-two-monomers-with-hex' produces many dimeric structures by docking two monomeric structures
+
+Options:
+    --monomer1                string  *  static monomer input file path
+    --monomer2                string  *  mobile monomer input file path
+    --job-name                string     job name to use as prefix for identifiers
+    --hex-macro-mode          string     flag to enable HEX macro mode, default is 'true'
+    --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
+    --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
+    --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    space-separated table of docking results
+    
+Examples:
+
+    ftdmp-dock-two-monomers-with-hex --monomer1 monomer1.pdb --monomer2 monomer2.pdb --hex-max-solutions 30000
+
+EOF
+exit 1
+}
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$FTDMPDIR" ]
+then
+	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+command -v ftdmp-prepare-monomer &> /dev/null || { echo >&2 "Error: 'ftdmp-prepare-monomer' executable not in binaries path"; exit 1; }
+command -v hex &> /dev/null || { echo >&2 "Error: 'hex' executable not in binaries path"; exit 1; }
+
+MONOMERFILE1=""
+MONOMERFILE2=""
+JOBNAME=""
+HEX_MACRO_MODE="true"
+HEX_MAX_SOLUTIONS="10000"
+HEX_SCRIPT=""
+HEX_SWAP_AND_REPEAT="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--monomer1)
+		MONOMERFILE1="$OPTARG"
+		shift
+		;;
+	--monomer2)
+		MONOMERFILE2="$OPTARG"
+		shift
+		;;
+	--job-name)
+		JOBNAME="$OPTARG"
+		shift
+		;;
+	--hex-macro-mode)
+		HEX_MACRO_MODE="$OPTARG"
+		shift
+		;;
+	--hex-max-solutions)
+		HEX_MAX_SOLUTIONS="$OPTARG"
+		shift
+		;;
+	--hex-script)
+		HEX_SCRIPT="$OPTARG"
+		shift
+		;;
+	--hex-swap-and-repeat)
+		HEX_SWAP_AND_REPEAT="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static monomer input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE1" ]
+then
+	echo >&2 "Error: no static monomer input file '$MONOMERFILE1'"
+	exit 1
+fi
+
+if [ -z "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile monomer input file specified"
+	exit 1
+fi
+
+if [ ! -s "$MONOMERFILE2" ]
+then
+	echo >&2 "Error: no mobile monomer input file '$MONOMERFILE2'"
+	exit 1
+fi
+
+if [ -z "$HEX_MAX_SOLUTIONS" ] || [ "$HEX_MAX_SOLUTIONS" -ne "$HEX_MAX_SOLUTIONS" ] || [ "$HEX_MAX_SOLUTIONS" -lt "101" ]
+then
+	echo >&2 "Error: invalid number of docking solutions '$HEX_MAX_SOLUTIONS', must be a positive number larger than 100"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+ftdmp-prepare-monomer --input "$MONOMERFILE1" --output-for-ftdock "$TMPLDIR/monomer1.pdb"
+
+if [ ! -s "$TMPLDIR/monomer1.pdb" ]
+then
+	echo >&2 "Error: failed to prepare monomer 1"
+	exit 1
+fi
+
+ftdmp-prepare-monomer --input "$MONOMERFILE2" --output-for-ftdock "$TMPLDIR/monomer2.pdb"
+
+if [ ! -s "$TMPLDIR/monomer2.pdb" ]
+then
+	echo >&2 "Error: failed to prepare monomer 2"
+	exit 1
+fi
+
+cd "$TMPLDIR"
+
+{
+	if [ "$HEX_MACRO_MODE" == "true" ]
+	then
+		echo "activate_macro_model"
+	fi
+	
+	echo "$HEX_SCRIPT"
+	
+	echo "max_docking_solutions ${HEX_MAX_SOLUTIONS}"
+	
+	echo "activate_docking"
+} \
+| tr ';' '\n' \
+| sed 's/^\s\+//' \
+| sed 's/\s\+$//' \
+> ./common_settings.mac
+
+{
+	echo "open_receptor ${TMPLDIR}/monomer1.pdb"
+	echo "open_ligand ${TMPLDIR}/monomer2.pdb"
+	cat ./common_settings.mac
+	echo "save_matrix ${TMPLDIR}/matrix_main.hex"
+} \
+> ./full_settings_main.mac
+
+cat ./full_settings_main.mac | hex &> /dev/null
+
+if [ ! -s "./matrix_main.hex" ]
+then
+	echo >&2 "Error: failed to dock with HEX"
+	exit 1
+fi
+
+if [ "$HEX_SWAP_AND_REPEAT" == "true" ]
+then
+	{
+		echo "open_receptor ${TMPLDIR}/monomer2.pdb"
+		echo "open_ligand ${TMPLDIR}/monomer1.pdb"
+		cat ./common_settings.mac
+		echo "save_matrix ${TMPLDIR}/matrix_alt.hex"
+	} \
+	> ./full_settings_alt.mac
+
+	cat ./full_settings_alt.mac | hex &> /dev/null
+fi
+
+{
+	cat "./matrix_main.hex"
+	if [ -s "./matrix_alt.hex" ]
+	then
+		cat "./matrix_alt.hex"
+	fi
+} \
+| egrep '^LigandMatrix:' -A 3 \
+| egrep -v '^--$' \
+| sed 's/\s\+/ /g' \
+| sed 's/^\s//' \
+| sed 's/\s$//' \
+| sed 's/^LigandMatrix//' \
+| tr '\n' ' ' \
+| tr ':' '\n' \
+| egrep . \
+| awk '{print sprintf("%g %g %g %g %g %g %g %g %g %g %g %g", $4, $8, $12, $1, $2, $3, $5, $6, $7, $9, $10, $11);}' \
+> ./reformatted_matrices.txt
+
+if [ ! -s "./reformatted_matrices.txt" ]
+then
+	echo >&2 "Error: failed to reformat matrices"
+	exit 1
+fi
+
+{
+echo "ID scscore scale x y z a1 a2 a3 a4 a5 a6 a7 a8 a9"
+
+cat ./reformatted_matrices.txt \
+| awk -v jobname="$JOBNAME" '{print jobname "hex" NR " 0 0 " $0}'
+} \
+> ./results.txt
+
+cat ./results.txt
+

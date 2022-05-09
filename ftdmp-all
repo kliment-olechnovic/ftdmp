@@ -23,9 +23,15 @@ Options:
     --conda-env               string     conda main environment name, default is ''
     --conda-env-for-gnn       string     conda GNN environment name, equals the main environment name if not set
     --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
+    --use-ftdock              string     flag to use ftdock, default is 'true'
+    --use-hex                 string     flag to use HEX, default is 'false'
     --ftdock-keep             number     ftdock keep parameter, default is 1
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
-    --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
+    --ftdock-min-grid-sep     number     minimum grid separation between same-rotation translations, default is 20
+    --hex-macro-mode          string     flag to enable HEX macro mode, default is 'true'
+    --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
+    --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
+    --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
     --parallel-docking        number     number of processes to run when docking, default is 8
     --parallel-scoring        number     number of processes to run when scoring, default is 8
     --cache-dir               string     cache directory path to store results of past slower calculations
@@ -45,9 +51,9 @@ Options:
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
-    --only-dock-and-score     string     flag to only dock, score and quit after scoring
+    --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is 'false'
     --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
-    --plot-jury-scores        string     flag to output plot of jury scores, default is ''
+    --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
     --casp15-qa               string     flag to output CASP15 QA answer, default is 'false'
     --casp15-qa-target        string     target name for outputting CASP15 QA answer, default is '_THETARGET_'
     --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
@@ -95,9 +101,15 @@ CONDA_PATH=""
 CONDA_ENV=""
 CONDA_ENV_FOR_GNN=""
 SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
+USE_FTDOCK="true"
+USE_HEX="false"
 FTDOCK_KEEP="1"
 FTDOCK_ANGLE_STEP="9"
-MIN_GRID_SEP="20"
+FTDOCK_MIN_GRID_SEP="20"
+HEX_MACRO_MODE="true"
+HEX_MAX_SOLUTIONS="10000"
+HEX_SCRIPT=""
+HEX_SWAP_AND_REPEAT="false"
 DOCKING_PROCESSORS="8"
 SCORING_PROCESSORS="8"
 CACHE_DIR=""
@@ -119,7 +131,7 @@ MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
 ONLY_DOCK_AND_SCORE="false"
 DIVERSIFY=""
-PLOT_JURY_SCORES=""
+PLOT_JURY_SCORES="false"
 CASP15QA="false"
 CASP15QA_TARGET="_THETARGET_"
 CASP15QA_AUTHOR="_THEAUTHOR_"
@@ -197,6 +209,14 @@ do
 		SAM_PARAMETERS="$OPTARG"
 		shift
 		;;
+	--use-ftdock)
+		USE_FTDOCK="$OPTARG"
+		shift
+		;;
+	--use-hex)
+		USE_HEX="$OPTARG"
+		shift
+		;;
 	--ftdock-keep)
 		FTDOCK_KEEP="$OPTARG"
 		shift
@@ -205,8 +225,24 @@ do
 		FTDOCK_ANGLE_STEP="$OPTARG"
 		shift
 		;;
-	--min-grid-sep)
-		MIN_GRID_SEP="$OPTARG"
+	--ftdock-min-grid-sep)
+		FTDOCK_MIN_GRID_SEP="$OPTARG"
+		shift
+		;;
+	--hex-macro-mode)
+		HEX_MACRO_MODE="$OPTARG"
+		shift
+		;;
+	--hex-max-solutions)
+		HEX_MAX_SOLUTIONS="$OPTARG"
+		shift
+		;;
+	--hex-script)
+		HEX_SCRIPT="$OPTARG"
+		shift
+		;;
+	--hex-swap-and-repeat)
+		HEX_SWAP_AND_REPEAT="$OPTARG"
 		shift
 		;;
 	--parallel-docking)
@@ -588,9 +624,15 @@ then
 	  --openmm-forcefield       "$OPENMM_FORCEFIELD" \
 	  --conda-path              "$CONDA_PATH" \
 	  --conda-env               "$CONDA_ENV" \
+	  --use-ftdock              "$USE_FTDOCK" \
+	  --use-hex                 "$USE_HEX" \
 	  --ftdock-keep             "$FTDOCK_KEEP" \
 	  --ftdock-angle-step       "$FTDOCK_ANGLE_STEP" \
-	  --min-grid-sep            "$MIN_GRID_SEP" \
+	  --ftdock-min-grid-sep     "$FTDOCK_MIN_GRID_SEP" \
+	  --hex-macro-mode          "$HEX_MACRO_MODE" \
+	  --hex-max-solutions       "$HEX_MAX_SOLUTIONS" \
+	  --hex-script              "$HEX_SCRIPT" \
+	  --hex-swap-and-repeat     "$HEX_SWAP_AND_REPEAT" \
 	  --parallel                "$DOCKING_PROCESSORS" \
 	  --sbatch                  "$DOCKING_SBATCH" \
 	  --output-dir              "$OUTPUT_PATH"

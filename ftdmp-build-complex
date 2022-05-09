@@ -127,7 +127,7 @@ cat ../input \
 '{
   if($1!="ID")
   {
-    print "voronota_import_docking_result(\"-include-hydrogens -static-file " q m1 q " -mobile-file " q m2 q " -ftdock-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 "\"); voronota_assert_full_success(\"Failed to import docking results for ID " $1 "\"); outfile=" q prefix $1 suffix q "; voronota_export_atoms(\"-as-pdb -file \"+outfile); voronota_assert_full_success(\"Failed to write file \"+outfile); writeln(outfile);" > $1;
+    print "voronota_import_docking_result(\"-include-hydrogens -static-file " q m1 q " -mobile-file " q m2 q " -generic-transform " $3 " " $4 " " $5 " " $6 " " $7 " " $8 " " $9 " " $10 " " $11 " " $12 " " $13 " " $14 " " $15 "\"); voronota_assert_full_success(\"Failed to import docking results for ID " $1 "\"); outfile=" q prefix $1 suffix q "; voronota_export_atoms(\"-as-pdb -file \"+outfile); voronota_assert_full_success(\"Failed to write file \"+outfile); writeln(outfile);" > $1;
   }
 }'
 

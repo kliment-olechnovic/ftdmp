@@ -40,8 +40,11 @@ fi
   --scoring-full-top-slow 300 \
   --scoring-ranks-top 100 \
   --plot-jury-scores "true" \
-  --ftdock-keep 10 \
+  --use-ftdock 'true' \
+  --use-hex 'true' \
+  --ftdock-keep 1 \
   --ftdock-angle-step 9 \
+  --hex-max-solutions 2000 \
   --parallel-docking 8 \
   --parallel-scoring 8 \
   --scoring-rank-names "$MAINMODE" \

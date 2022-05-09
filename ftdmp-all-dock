@@ -19,9 +19,15 @@ Options:
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
     --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
+    --use-ftdock              string     flag to use ftdock, default is 'true'
+    --use-hex                 string     flag to use HEX, default is 'false'
     --ftdock-keep             number     ftdock keep parameter, default is 1
     --ftdock-angle-step       number     ftdock angle step parameter, default is 9
-    --min-grid-sep            number     minimum grid separation between same-rotation translations, default is 20
+    --ftdock-min-grid-sep     number     ftdock minimum grid separation between same-rotation translations, default is 20
+    --hex-macro-mode          string     flag to enable HEX macro mode, default is 'true'
+    --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
+    --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
+    --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
     --parallel                number     number of processes to run when docking, default is 8
     --sbatch                  string     sbatch parameters to run docking in parallel, default is ''
     --output-dir              string  *  output directory path
@@ -61,9 +67,15 @@ OPENMM_FORCEFIELD=""
 CONDA_PATH=""
 CONDA_ENV=""
 SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
+USE_FTDOCK="true"
+USE_HEX="false"
 FTDOCK_KEEP="1"
 FTDOCK_ANGLE_STEP="9"
-MIN_GRID_SEP="20"
+FTDOCK_MIN_GRID_SEP="20"
+HEX_MACRO_MODE="true"
+HEX_MAX_SOLUTIONS="10000"
+HEX_SCRIPT=""
+HEX_SWAP_AND_REPEAT="false"
 DOCKING_PROCESSORS="8"
 DOCKING_SBATCH=""
 OUTPUT_PATH=""
@@ -123,6 +135,14 @@ do
 		SAM_PARAMETERS="$OPTARG"
 		shift
 		;;
+	--use-ftdock)
+		USE_FTDOCK="$OPTARG"
+		shift
+		;;
+	--use-hex)
+		USE_HEX="$OPTARG"
+		shift
+		;;
 	--ftdock-keep)
 		FTDOCK_KEEP="$OPTARG"
 		shift
@@ -131,8 +151,24 @@ do
 		FTDOCK_ANGLE_STEP="$OPTARG"
 		shift
 		;;
-	--min-grid-sep)
-		MIN_GRID_SEP="$OPTARG"
+	--ftdock-min-grid-sep)
+		FTDOCK_MIN_GRID_SEP="$OPTARG"
+		shift
+		;;
+	--hex-macro-mode)
+		HEX_MACRO_MODE="$OPTARG"
+		shift
+		;;
+	--hex-max-solutions)
+		HEX_MAX_SOLUTIONS="$OPTARG"
+		shift
+		;;
+	--hex-script)
+		HEX_SCRIPT="$OPTARG"
+		shift
+		;;
+	--hex-swap-and-repeat)
+		HEX_SWAP_AND_REPEAT="$OPTARG"
 		shift
 		;;
 	--parallel)
@@ -185,6 +221,15 @@ else
 	[ -n "$MOBILE_STRUCTURE_SELECTION" ] || { echo >&2 "Error: mobile structure selection not defined in hetero docking mode"; exit 1;}
 	
 	DOCKING_REGIME="hetero"
+fi
+
+if [ "$DOCKING_REGIME" == "hetero" ]
+then
+	if [ "$USE_FTDOCK" != "true" ] && [ "$USE_HEX" != "true" ]
+	then
+		echo >&2 "Error: no tool usage turned on for hetero docking"
+		exit 1
+	fi
 fi
 
 [ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
@@ -254,24 +299,70 @@ DOCKING_RESULTS_FILE="${OUTPUT_PATH}/docking_results.txt"
 
 if [ "$DOCKING_REGIME" == "hetero" ]
 then
-	{
-	cat "$PREPARED_STATIC_STRUCTURE_FILE"
-	cat "$PREPARED_MOBILE_STRUCTURE_FILE"
-	echo "$FTDOCK_KEEP"
-	echo "$FTDOCK_ANGLE_STEP"
-	echo "$MIN_GRID_SEP"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_RESULTS_FILE")" --dependent-file "$DOCKING_RESULTS_FILE"
+	DOCKING_FTDOCK_RESULTS_FILE="${OUTPUT_PATH}/docking_ftdock_results.txt"
+	DOCKING_HEX_RESULTS_FILE="${OUTPUT_PATH}/docking_hex_results.txt"
 	
-	if [ ! -s "$DOCKING_RESULTS_FILE" ]
+	if [ "$USE_FTDOCK" == "true" ]
 	then
-		ftdmp-dock-two-monomers --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-		  --job-name "${JOB_NAME}_" \
-		  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
-		  --ftdock-keep "$FTDOCK_KEEP" \
-		  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
-		  --min-grid-sep "$MIN_GRID_SEP" \
-		> "$DOCKING_RESULTS_FILE"
+		{
+		cat "$PREPARED_STATIC_STRUCTURE_FILE"
+		cat "$PREPARED_MOBILE_STRUCTURE_FILE"
+		echo "$FTDOCK_KEEP"
+		echo "$FTDOCK_ANGLE_STEP"
+		echo "$FTDOCK_MIN_GRID_SEP"
+		} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_FTDOCK_RESULTS_FILE")" --dependent-file "$DOCKING_FTDOCK_RESULTS_FILE"
+		
+		if [ ! -s "$DOCKING_FTDOCK_RESULTS_FILE" ]
+		then
+			ftdmp-dock-two-monomers-with-ftdock --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+			  --job-name "${JOB_NAME}_" \
+			  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
+			  --ftdock-keep "$FTDOCK_KEEP" \
+			  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
+			  --ftdock-min-grid-sep "$FTDOCK_MIN_GRID_SEP" \
+			> "$DOCKING_FTDOCK_RESULTS_FILE"
+		fi
 	fi
+	
+	if [ "$USE_HEX" == "true" ]
+	then
+		{
+		cat "$PREPARED_STATIC_STRUCTURE_FILE"
+		cat "$PREPARED_MOBILE_STRUCTURE_FILE"
+		echo "$HEX_MACRO_MODE"
+		echo "$HEX_MAX_SOLUTIONS"
+		echo "$HEX_SCRIPT"
+		echo "$HEX_SWAP_AND_REPEAT"
+		} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_HEX_RESULTS_FILE")" --dependent-file "$DOCKING_HEX_RESULTS_FILE"
+		
+		if [ ! -s "$DOCKING_HEX_RESULTS_FILE" ]
+		then
+			ftdmp-dock-two-monomers-with-hex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+			  --job-name "${JOB_NAME}_" \
+			  --hex-macro-mode "$HEX_MACRO_MODE" \
+			  --hex-max-solutions "$HEX_MAX_SOLUTIONS" \
+			  --hex-script "$HEX_SCRIPT" \
+			  --hex-swap-and-repeat "$HEX_SWAP_AND_REPEAT" \
+			> "$DOCKING_HEX_RESULTS_FILE"
+		fi
+	fi
+	
+	{
+		if [ "$USE_FTDOCK" == "true" ]
+		then
+			cat "$DOCKING_FTDOCK_RESULTS_FILE"
+		fi
+		
+		if [ "$USE_HEX" == "true" ]
+		then
+			if [ "$USE_FTDOCK" == "true" ]
+			then
+				cat "$DOCKING_HEX_RESULTS_FILE" | tail -n +2
+			else
+				cat "$DOCKING_HEX_RESULTS_FILE"
+			fi
+		fi
+	} > "$DOCKING_RESULTS_FILE"
 fi
 
 if [ "$DOCKING_REGIME" == "homo" ]
