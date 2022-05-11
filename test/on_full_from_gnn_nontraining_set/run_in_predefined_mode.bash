@@ -44,7 +44,7 @@ fi
   --use-hex 'true' \
   --ftdock-keep 1 \
   --ftdock-angle-step 9 \
-  --hex-max-solutions 2000 \
+  --hex-max-solutions 6000 \
   --parallel-docking 8 \
   --parallel-scoring 8 \
   --scoring-rank-names "$MAINMODE" \
