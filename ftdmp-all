@@ -19,6 +19,7 @@ Options:
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
+    --ftdmp-root              string     ftdmp root path, default is '' (autodetected from the calling command)
     --conda-path              string     conda installation path, default is ''
     --conda-early             string     flag to activate conda as early as possible
     --conda-env               string     conda main environment name, default is ''
@@ -80,12 +81,6 @@ then
 	print_help_and_exit
 fi
 
-if [ -z "$FTDMPDIR" ]
-then
-	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
-fi
-
 JOB_NAME=""
 PRE_DOCKED_INPUT_DIR=""
 STATIC_STRUCTURE_FILE=""
@@ -98,6 +93,7 @@ SYMMETRY_DOCKING=""
 INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 OPENMM_FORCEFIELD=""
+FTDMP_ROOT=""
 CONDA_PATH=""
 CONDA_EARLY="false"
 CONDA_ENV=""
@@ -192,6 +188,10 @@ do
 		;;
 	--openmm-forcefield)
 		OPENMM_FORCEFIELD="$OPTARG"
+		shift
+		;;
+	--ftdmp-root)
+		FTDMP_ROOT="$OPTARG"
 		shift
 		;;
 	--conda-path)
@@ -644,6 +644,19 @@ then
 	fi
 	
 	CONDA_PATH=""
+fi
+
+################################################################################
+
+if [ -z "$FTDMPDIR" ] || [ -n "$FTDMP_ROOT" ]
+then
+	if [ -z "$FTDMP_ROOT" ]
+	then
+		export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	else
+		export FTDMPDIR="$FTDMP_ROOT"
+	fi
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 ################################################################################
