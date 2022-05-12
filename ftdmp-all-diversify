@@ -120,7 +120,6 @@ then
 	  --site-cadscore-column "${NAMES_PREFIX}FICS_iface_site_based_cadscore" \
 	  --cadscore-step "$CADSCORE_STEP" \
 	  --site-cadscore-step "$SITE_CADSCORE_STEP" \
-	| column -t \
 	> "$NEXT_SCORING_RESULTS_FILE"
 fi
 

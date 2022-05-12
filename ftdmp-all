@@ -20,6 +20,7 @@ Options:
     --reference               string     input structure file to compute CAD-score with, default is ''
     --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
     --conda-path              string     conda installation path, default is ''
+    --conda-early             string     flag to activate conda as early as possible
     --conda-env               string     conda main environment name, default is ''
     --conda-env-for-gnn       string     conda GNN environment name, equals the main environment name if not set
     --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
@@ -98,6 +99,7 @@ INTERFACE_SUBSELECTION="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 OPENMM_FORCEFIELD=""
 CONDA_PATH=""
+CONDA_EARLY="false"
 CONDA_ENV=""
 CONDA_ENV_FOR_GNN=""
 SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
@@ -194,6 +196,10 @@ do
 		;;
 	--conda-path)
 		CONDA_PATH="$OPTARG"
+		shift
+		;;
+	--conda-early)
+		CONDA_EARLY="$OPTARG"
 		shift
 		;;
 	--conda-env)
@@ -606,6 +612,42 @@ fi
 
 ################################################################################
 
+if [ "$CONDA_EARLY" == "true" ]
+then
+	if [ -z "$CONDA_DEFAULT_ENV" ]
+	then
+		if [ -z "$CONDA_PATH" ]
+		then
+			echo >&2 "Error: not in conda environment, and the conda path is not provided"
+			exit 1
+		fi
+		if [ ! -s "${CONDA_PATH}/bin/activate" ]
+		then
+			echo >&2 "Error: no conda activation script '${CONDA_PATH}/bin/activate'"
+			exit 1
+		fi
+		source "${CONDA_PATH}/bin/activate"
+	fi
+	
+	if [ -n "$CONDA_ENV" ]
+	then
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			conda activate "$CONDA_ENV"
+		fi
+		
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			echo >&2 "Error: no '$CONDA_ENV' environment"
+			exit 1
+		fi
+	fi
+	
+	CONDA_PATH=""
+fi
+
+################################################################################
+
 PREPARED_STATIC_STRUCTURE_FILE=""
 PREPARED_MOBILE_STRUCTURE_FILE=""
 INPUT_COMPLEX_PREFIX=""
@@ -873,7 +915,7 @@ fi
 
 ################################################################################
 
-if [ "$NUMBER_OF_COMPLEXES_TO_BUILD" -lt "1" ] || [ -z "$RELAX_COMPLEXES" ]
+if [ "$NUMBER_OF_COMPLEXES_TO_BUILD" -lt "1" ] || [ -z "$RELAX_COMPLEXES" ] || [ "$RELAX_COMPLEXES" == "false" ]
 then
 	exit 0
 fi
