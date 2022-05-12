@@ -61,8 +61,6 @@ command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executab
 
 command -v voronota-js-fast-iface-data-graph &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-data-graph' executable not in binaries path"; exit 1; }
 
-command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
-
 INFILE=""
 GNN_PACKAGE_FILES=""
 RESTRICT_INPUT="[]"
@@ -304,6 +302,8 @@ then
 		exit 1
 	fi
 fi
+
+command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
 
 ################################################################################
 
