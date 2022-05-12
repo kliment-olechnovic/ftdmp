@@ -648,7 +648,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --cache-dir "$CACHE_DIR" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --local-column "$LOCAL_COLUMNS" \
@@ -681,7 +681,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --parallel "$SCORING_PROCESSORS" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --cache-dir "$CACHE_DIR" \
 		  --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV" \
 		  --rebuild-sidechains \

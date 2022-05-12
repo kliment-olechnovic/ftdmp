@@ -19,6 +19,7 @@ Options:
     --faspr-path              string     path to FASPR binary, default is ''
     --run-faspr               string     flag to rebuild sidechains using FASPR, default is 'false'
     --processors              number     maximum number of processors to run in parallel, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --local-column            string     flag to add per-residue scores to the global output table
     --cache-dir               string     cache directory path to store results of past calls
     --output-dir              string     output directory path for all results
@@ -73,6 +74,7 @@ CONDA_ENV=""
 FASPR_PATH=""
 RUN_FASPR="false"
 MAX_PROCESSORS="1"
+SBATCH_PARAMETERS=""
 LOCAL_COLUMN="false"
 CACHE_DIR=""
 OUTDIR=""
@@ -130,6 +132,10 @@ do
 		;;
 	--processors)
 		MAX_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	--local-column)
@@ -333,10 +339,38 @@ done < "${TMPLDIR}/gnn_runs/list.txt"
 
 if [ "$INFILE" == "_list" ]
 then
-	cat \
-	| egrep . \
-	| xargs -L 1 -P "$MAX_PROCESSORS" "$ZEROARG" "${ALLARGS[@]}" --conda-path "" --conda-env "" --output-dir "${TMPLDIR}/outdir" --input \
-	> /dev/null
+	cat | egrep . | sort | uniq > "$TMPLDIR/input_list"
+	
+	if [ ! -s "$TMPLDIR/input_list" ]
+	then
+		echo >&2 "Error: no stdin data"
+		exit 1
+	fi
+	
+	if [ -n "$SBATCH_PARAMETERS" ]
+	then
+		mkdir -p "$TMPLDIR/slurm_logs"
+		
+		cat "$TMPLDIR/input_list" \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --output-dir "${TMPLDIR}/outdir" --input \
+		| egrep '^Submitted batch job ' \
+		| awk '{print $4}' \
+		> "$TMPLDIR/slurm_job_ids"
+		
+		sleep 1
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+		do
+			sleep 5
+			REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		done
+		
+		find "$TMPLDIR/slurm_logs/" -type f -name '*.err' -not -empty | xargs -L 1 cat >&2
+	else
+		cat "$TMPLDIR/input_list" \
+		| xargs -L 1 -P "$MAX_PROCESSORS" "$ZEROARG" "${ALLARGS[@]}" --conda-path "" --conda-env "" --output-dir "${TMPLDIR}/outdir" --input \
+		> /dev/null
+	fi
 	
 	find "${TMPLDIR}/outdir/" -type f -name '*__gnn_scores_global.txt' \
 	| xargs cat \

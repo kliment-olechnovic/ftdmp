@@ -180,7 +180,7 @@ fi
 
 if [ "$INFILE" == "_list" ]
 then	
-	cat | egrep . | sort | uniq > "$TMPLDIR/input_list"
+	cat | egrep . | egrep -v '^_list$' | sort | uniq > "$TMPLDIR/input_list"
 	
 	if [ ! -s "$TMPLDIR/input_list" ]
 	then
