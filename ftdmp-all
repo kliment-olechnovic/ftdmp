@@ -37,7 +37,8 @@ Options:
     --parallel-docking        number     number of processes to run when docking, default is 8
     --parallel-scoring        number     number of processes to run when scoring, default is 8
     --cache-dir               string     cache directory path to store results of past slower calculations
-    --sbatch-docking          string     sbatch parameters to run docking in parallel, default is ''
+    --sbatch-for-ftdock       string     sbatch parameters to run docking with ftdock in parallel, default is ''
+    --sbatch-for-hex-or-sam   string     sbatch parameters to run docking with HEX or SAM on cluster, default is ''
     --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
@@ -111,7 +112,8 @@ HEX_SWAP_AND_REPEAT="false"
 DOCKING_PROCESSORS="8"
 SCORING_PROCESSORS="8"
 CACHE_DIR=""
-DOCKING_SBATCH=""
+DOCKING_SBATCH_FOR_FTDOCK=""
+DOCKING_SBATCH_FOR_HEX_OR_SAM=""
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
@@ -263,8 +265,12 @@ do
 		CACHE_DIR="$OPTARG"
 		shift
 		;;
-	--sbatch-docking)
-		DOCKING_SBATCH="$OPTARG"
+	--sbatch-for-ftdock)
+		DOCKING_SBATCH_FOR_FTDOCK="$OPTARG"
+		shift
+		;;
+	--sbatch-for-hex-or-sam)
+		DOCKING_SBATCH_FOR_HEX_OR_SAM="$OPTARG"
 		shift
 		;;
 	--sbatch-scoring)
@@ -689,7 +695,8 @@ then
 	  --hex-script              "$HEX_SCRIPT" \
 	  --hex-swap-and-repeat     "$HEX_SWAP_AND_REPEAT" \
 	  --parallel                "$DOCKING_PROCESSORS" \
-	  --sbatch                  "$DOCKING_SBATCH" \
+	  --sbatch-for-ftdock       "$DOCKING_SBATCH_FOR_FTDOCK" \
+	  --sbatch-for-hex-or-sam   "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
 	  --output-dir              "$OUTPUT_PATH"
 
 	PREPARED_STATIC_STRUCTURE_FILE="${OUTPUT_PATH}/${JOB_NAME}/monomer_static.pdb"
@@ -708,6 +715,7 @@ then
 	  --conda-path              "$CONDA_PATH" \
 	  --conda-env               "$CONDA_ENV" \
 	  --sam-parameters          "$SAM_PARAMETERS" \
+	  --sbatch-for-hex-or-sam   "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
 	  --output-dir              "$OUTPUT_PATH"
 	
 	INPUT_COMPLEX_PREFIX="${OUTPUT_PATH}/${JOB_NAME}/homo_complexes/"

@@ -19,7 +19,7 @@ then
 	exit 1
 fi
 
-sbatch --job-name=rdwf --partition=Cluster --ntasks=1 --cpus-per-task=8 --mem-per-cpu=4000 \
+sbatch --job-name=rdwf --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=4000 \
 /home/kliment/git/ftdmp/ftdmp-all \
   --output-dir "./output" \
   --cache-dir ./cache \
@@ -43,8 +43,11 @@ sbatch --job-name=rdwf --partition=Cluster --ntasks=1 --cpus-per-task=8 --mem-pe
   --ftdock-keep 1 \
   --ftdock-angle-step 9 \
   --hex-max-solutions 6000 \
-  --parallel-docking 8 \
-  --parallel-scoring 8 \
+  --parallel-docking 32 \
+  --parallel-scoring 64 \
+  --sbatch-for-ftdock '--job-name=ftdock --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=4000' \
+  --sbatch-for-hex-or-sam '--job-name=hexsam --partition=Cluster --ntasks=1 --cpus-per-task=8 --mem-per-cpu=4000' \
+  --sbatch-scoring '--job-name=dscore --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8000' \
   --scoring-rank-names "$MAINMODE" \
   --scoring-jury-maxs "$JURYMAXS" \
   --scoring-jury-slices "$JURYSLICES" \

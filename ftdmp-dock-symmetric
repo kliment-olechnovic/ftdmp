@@ -12,6 +12,7 @@ Options:
     --output-dir              string  *  output directory path
     --job-name                string     job name to use as prefix for identifiers, default is 'sym'
     --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
+    --sbatch-parameters       string     sbatch parameters to run on cluster, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -24,6 +25,9 @@ Example:
 EOF
 exit 1
 }
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
 
 if [ -z "$1" ]
 then
@@ -45,6 +49,7 @@ SYMMETRYCLASS=""
 OUTDIR=""
 JOBNAME="sym"
 SAM_PARAMETERS="-top=8000 -show=2000 -clusters=2000"
+SBATCH_PARAMETERS=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -71,6 +76,10 @@ do
 		;;
 	--sam-parameters)
 		SAM_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -121,6 +130,28 @@ SYMMETRYCLASS="$(echo $SYMMETRYCLASS | sed 's/^\(..\)\(.\+\)/\1 \2/')"
 
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
+
+if [ -n "$SBATCH_PARAMETERS" ]
+then
+	mkdir -p "$TMPLDIR/slurm_logs"
+	
+	sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --sbatch-parameters "" \
+	| egrep '^Submitted batch job ' \
+	| awk '{print $4}' \
+	> "$TMPLDIR/slurm_job_ids"
+	
+	sleep 1
+	REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+	while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+	do
+		sleep 5
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+	done
+	
+	find "$TMPLDIR/slurm_logs/" -type f -name '*.err' -not -empty | xargs -L 1 cat >&2
+	find "$TMPLDIR/slurm_logs/" -type f -name '*.out' -not -empty | xargs -L 1 cat
+	exit 0
+fi
 
 ftdmp-prepare-monomer --input "$MONOMERFILE" --output-for-ftdock "${TMPLDIR}/${JOBNAME}.pdb"
 

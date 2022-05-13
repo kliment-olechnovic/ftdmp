@@ -14,6 +14,7 @@ Options:
     --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
     --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
     --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
+    --sbatch-parameters       string     sbatch parameters to run on cluster, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -26,6 +27,9 @@ Examples:
 EOF
 exit 1
 }
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
 
 if [ -z "$1" ]
 then
@@ -49,6 +53,7 @@ HEX_MACRO_MODE="true"
 HEX_MAX_SOLUTIONS="10000"
 HEX_SCRIPT=""
 HEX_SWAP_AND_REPEAT="false"
+SBATCH_PARAMETERS=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -83,6 +88,10 @@ do
 		;;
 	--hex-swap-and-repeat)
 		HEX_SWAP_AND_REPEAT="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -132,6 +141,28 @@ fi
 
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
+
+if [ -n "$SBATCH_PARAMETERS" ]
+then
+	mkdir -p "$TMPLDIR/slurm_logs"
+	
+	sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --sbatch-parameters "" \
+	| egrep '^Submitted batch job ' \
+	| awk '{print $4}' \
+	> "$TMPLDIR/slurm_job_ids"
+	
+	sleep 1
+	REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+	while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+	do
+		sleep 5
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+	done
+	
+	find "$TMPLDIR/slurm_logs/" -type f -name '*.err' -not -empty | xargs -L 1 cat >&2
+	find "$TMPLDIR/slurm_logs/" -type f -name '*.out' -not -empty | xargs -L 1 cat
+	exit 0
+fi
 
 ftdmp-prepare-monomer --input "$MONOMERFILE1" --output-for-ftdock "$TMPLDIR/monomer1.pdb"
 

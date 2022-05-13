@@ -28,8 +28,9 @@ Options:
     --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
     --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
     --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
-    --parallel                number     number of processes to run when docking, default is 8
-    --sbatch                  string     sbatch parameters to run docking in parallel, default is ''
+    --parallel                number     number of processes to run when docking with ftdock, default is 8
+    --sbatch-for-ftdock       string     sbatch parameters to run docking with ftdock in parallel, default is ''
+    --sbatch-for-hex-or-sam   string     sbatch parameters to run docking with HEX or SAM on cluster, default is ''
     --output-dir              string  *  output directory path
     --help | -h                          flag to display help message and exit
 
@@ -77,7 +78,8 @@ HEX_MAX_SOLUTIONS="10000"
 HEX_SCRIPT=""
 HEX_SWAP_AND_REPEAT="false"
 DOCKING_PROCESSORS="8"
-DOCKING_SBATCH=""
+DOCKING_SBATCH_FOR_FTDOCK=""
+DOCKING_SBATCH_FOR_HEX_OR_SAM=""
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -175,8 +177,12 @@ do
 		DOCKING_PROCESSORS="$OPTARG"
 		shift
 		;;
-	--sbatch)
-		DOCKING_SBATCH="$OPTARG"
+	--sbatch-for-ftdock)
+		DOCKING_SBATCH_FOR_FTDOCK="$OPTARG"
+		shift
+		;;
+	--sbatch-for-hex-or-sam)
+		DOCKING_SBATCH_FOR_HEX_OR_SAM="$OPTARG"
 		shift
 		;;
 	--output-dir)
@@ -316,7 +322,7 @@ then
 		then
 			ftdmp-dock-two-monomers-with-ftdock --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 			  --job-name "${JOB_NAME}_" \
-			  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH" \
+			  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH_FOR_FTDOCK" \
 			  --ftdock-keep "$FTDOCK_KEEP" \
 			  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
 			  --ftdock-min-grid-sep "$FTDOCK_MIN_GRID_SEP" \
@@ -339,6 +345,7 @@ then
 		then
 			ftdmp-dock-two-monomers-with-hex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 			  --job-name "${JOB_NAME}_" \
+			  --sbatch-parameters "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
 			  --hex-macro-mode "$HEX_MACRO_MODE" \
 			  --hex-max-solutions "$HEX_MAX_SOLUTIONS" \
 			  --hex-script "$HEX_SCRIPT" \
@@ -377,6 +384,7 @@ then
 	then
 		ftdmp-dock-symmetric --monomer "$PREPARED_MOBILE_STRUCTURE_FILE" \
 		  --job-name "${JOB_NAME}" \
+		  --sbatch-parameters "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
 		  --symmetry "$SYMMETRY_DOCKING" \
 		  --sam-parameters "$SAM_PARAMETERS" \
 		  --output-dir "${OUTPUT_PATH}/homo_complexes" \
