@@ -803,6 +803,7 @@ then
 	  --names-prefix          "raw_" \
 	  --cadscore-step         "$DIVERSIFY" \
 	  --site-cadscore-step    "$DIVERSIFY" \
+	  --zero-count            "5" \
 	  --build-complexes       "$NUMBER_OF_COMPLEXES_TO_BUILD"
 	
 	exit 0

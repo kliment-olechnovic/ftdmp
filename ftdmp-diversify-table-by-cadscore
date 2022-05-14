@@ -9,8 +9,10 @@ cat >&2 << 'EOF'
 Options:
     --cadscore-column         string  *  name of a column with CAD-score values
     --site-cadscore-column    string  *  name of a column with site-based CAD-score values
+    --zero-sort               string     columns to sort the zero-scored portion of input
     --cadscore-step           number     step size for CAD-score values, default is 0.1
     --site-cadscore-step      number     step size for site-based CAD-score values, default is 0.1
+    --zero-count              number     number of zero-scored results to include, default is 1
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -40,8 +42,10 @@ fi
 
 CADSCORE_COLUMN=""
 SITE_CADSCORE_COLUMN=""
+ZERO_SORT=""
 CADSCORE_STEP="0.1"
 SITE_CADSCORE_STEP="0.1"
+ZERO_COUNT="1"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -58,12 +62,20 @@ do
 		SITE_CADSCORE_COLUMN="$OPTARG"
 		shift
 		;;
+	--zero-sort)
+		ZERO_SORT="$OPTARG"
+		shift
+		;;
 	--cadscore-step)
 		CADSCORE_STEP="$OPTARG"
 		shift
 		;;
 	--site-cadscore-step)
 		SITE_CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	--zero-count)
+		ZERO_COUNT="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -121,7 +133,15 @@ fi
 	cat "${TMPLDIR}/input" \
 	| ftdmp-filter-table '==0' "$CADSCORE_COLUMN" \
 	| ftdmp-filter-table '==0' "$SITE_CADSCORE_COLUMN" \
-	| awk '{if(NR==2){print $0}}'
+	| {
+		if [ -n "$ZERO_SORT" ]
+		then
+			ftdmp-sort-table --columns "$ZERO_SORT"
+		else
+			cat
+		fi
+	} \
+	| awk -v zerocount="$ZERO_COUNT" '{if(NR>1 && NR<=(zerocount+1)){print $0}}'
 } \
 > "${TMPLDIR}/output"
 

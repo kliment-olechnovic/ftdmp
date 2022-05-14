@@ -11,6 +11,7 @@ Options:
     --names-prefix            string     names prefix, default is ''
     --cadscore-step           number     step size for CAD-score values, default is 0.1
     --site-cadscore-step      number     step size for site-based CAD-score values, default is 0.1
+    --zero-count              number     number of zero-scored results to include, default is 1
     --build-complexes         number     number of top complexes to build, default is 0
     --help | -h                          flag to display help message and exit
 
@@ -40,6 +41,7 @@ FROM_TABLE=""
 NAMES_PREFIX=""
 CADSCORE_STEP="0.1"
 SITE_CADSCORE_STEP="0.1"
+ZERO_COUNT="1"
 NUMBER_OF_COMPLEXES_TO_BUILD="0"
 HELP_MODE="false"
 
@@ -63,6 +65,10 @@ do
 		;;
 	--site-cadscore-step)
 		SITE_CADSCORE_STEP="$OPTARG"
+		shift
+		;;
+	--zero-count)
+		ZERO_COUNT="$OPTARG"
 		shift
 		;;
 	--build-complexes)
@@ -118,8 +124,10 @@ then
 	| ftdmp-diversify-table-by-cadscore \
 	  --cadscore-column "${NAMES_PREFIX}FICS_iface_cadscore" \
 	  --site-cadscore-column "${NAMES_PREFIX}FICS_iface_site_based_cadscore" \
+	  --zero-sort "-${NAMES_PREFIX}FIV_iface_energy" \
 	  --cadscore-step "$CADSCORE_STEP" \
 	  --site-cadscore-step "$SITE_CADSCORE_STEP" \
+	  --zero-count "$ZERO_COUNT" \
 	> "$NEXT_SCORING_RESULTS_FILE"
 fi
 
