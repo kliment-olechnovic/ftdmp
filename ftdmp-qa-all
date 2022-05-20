@@ -1,0 +1,621 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-qa-all' scores and ranks multimeric structures of proteins or nucleic acids
+
+Options:
+    --workdir                 string  *  path to directory for caching and writing detailed results
+    --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
+    --reference               string     input structure file to compute CAD-score with, default is ''
+    --ftdmp-root              string     ftdmp root path, default is '' (autodetected from the calling command)
+    --conda-path              string     conda installation path, default is ''
+    --conda-early             string     flag to activate conda as early as possible
+    --conda-env               string     conda main environment name, default is ''
+    --processors              number     number of processes to run when scoring, default is 8
+    --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
+    --score-symmetry          string     flag to score symmetry, default is 'false'
+    --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
+    --rank-names              string  *  rank names to use, or name of a standard set of rank names, default is 'extended_for_protein_protein_no_sr'
+    --jury-slices             string     slice sizes sequence definition for ranks jury scoring, default is '1 10'
+    --jury-cluster            number     clustering threshold for ranks jury scoring, default is 0.9
+    --jury-maxs               number     number of max values to use for ranks jury scoring, default is 1
+    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
+    --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    input file paths
+
+Standard output:
+    space-separated table of scores
+
+Examples:
+
+    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein
+    
+    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein_no_sr
+    
+    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein
+    
+    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein_no_sr
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+WORKDIR=""
+INTERFACE_SUBSELECTION="[]"
+REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
+FTDMP_ROOT=""
+CONDA_PATH=""
+CONDA_EARLY="false"
+CONDA_ENV=""
+SCORING_PROCESSORS="8"
+SCORING_SBATCH=""
+SCORE_SYMMETRY="false"
+REMAP_CADSCORE="false"
+SCORING_RANKS="extended_for_protein_protein_no_sr"
+SCORING_RANKS_JURY_SLICES="1 10" 
+SCORING_RANKS_JURY_CLUSTER="0.9" 
+SCORING_RANKS_JURY_MAX_VALUES="1" 
+REDUNDANCY_THRESHOLD="1"
+PLOT_JURY_SCORES="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--workdir)
+		WORKDIR="$OPTARG"
+		shift
+		;;
+	--subselect-contacts)
+		INTERFACE_SUBSELECTION="$OPTARG"
+		shift
+		;;
+	--reference)
+		REFERENCE_STRUCTURE_FILE_FOR_COMPARISON="$OPTARG"
+		shift
+		;;
+	--openmm-forcefield)
+		OPENMM_FORCEFIELD="$OPTARG"
+		shift
+		;;
+	--ftdmp-root)
+		FTDMP_ROOT="$OPTARG"
+		shift
+		;;
+	--conda-path)
+		CONDA_PATH="$OPTARG"
+		shift
+		;;
+	--conda-early)
+		CONDA_EARLY="$OPTARG"
+		shift
+		;;
+	--conda-env)
+		CONDA_ENV="$OPTARG"
+		CONDA_ENV_FOR_GNN="$OPTARG"
+		shift
+		;;
+	--processors)
+		SCORING_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--sbatch)
+		SCORING_SBATCH="$OPTARG"
+		shift
+		;;
+	--score-symmetry)
+		SCORE_SYMMETRY="$OPTARG"
+		shift
+		;;
+	--remap-cadscore)
+		REMAP_CADSCORE="$OPTARG"
+		shift
+		;;
+	--rank-names)
+		SCORING_RANKS="$OPTARG"
+		shift
+		;;
+	--jury-slices)
+		SCORING_RANKS_JURY_SLICES="$OPTARG"
+		shift
+		;;
+	--jury-cluster)
+		SCORING_RANKS_JURY_CLUSTER="$OPTARG"
+		shift
+		;;
+	--jury-maxs)
+		SCORING_RANKS_JURY_MAX_VALUES="$OPTARG"
+		shift
+		;;
+	--redundancy-threshold)
+		REDUNDANCY_THRESHOLD="$OPTARG"
+		shift
+		;;
+	--plot-jury-scores )
+		PLOT_JURY_SCORES="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+[ -n "$WORKDIR" ] || { echo >&2 "Error: working directory path not provided"; exit 1;}
+
+[ -n "$INTERFACE_SUBSELECTION" ] || { echo >&2 "Error: contacts subselection not defined"; exit 1; }
+
+[ -n "$SCORING_RANKS" ] || { echo >&2 "Error: scoring rank names not provided"; exit 1;}
+
+[ -n "$SCORING_RANKS_JURY_SLICES" ] || { echo >&2 "Error: scoring ranks jury slices not defined"; exit 1;}
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat \
+| tr ' ' '\n' \
+| egrep '.' \
+| sort \
+| uniq \
+> "$TMPLDIR/input_list"
+
+if [ ! -s "$TMPLDIR/input_list" ]
+then
+	echo >&2 "Error: no input in stdin"
+	exit 1
+fi
+
+NUMBER_OF_INPUT_FILES="$(wc -l $TMPLDIR/input_list | awk '{print $1}')"
+
+INPUT_FILE_PATH_PREFIX="$(dirname $(head -n 1 $TMPLDIR/input_list))/"
+
+while read -r SINGLEINFILE
+do
+	if [ ! -s "$SINGLEINFILE" ]
+	then
+		echo >&2 "Error: no input file '$SINGLEINFILE'"
+		exit 1
+	fi
+	SINGLEINFILE_PATH_PREFIX="$(dirname $(head -n 1 $TMPLDIR/input_list))/"
+	if [ "$SINGLEINFILE_PATH_PREFIX" != "$INPUT_FILE_PATH_PREFIX" ]
+	then
+		echo >&2 "Error: input files fo not have the same path prefix"
+		exit 1
+	fi
+done < "$TMPLDIR/input_list"
+
+################################################################################
+
+if [ "$SCORING_RANKS" == "simple_for_protein_protein" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "standard_for_protein_protein" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "standard_for_protein_protein_no_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "standard_for_protein_protein_only_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "standard_for_generic" ]
+then
+	SCORING_RANKS="
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "extended_for_protein_protein" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_rank
+raw_FIGNN_average_gnn_score_rank
+raw_FIGNN_gnn_scores_tour_rank
+raw_FIGNN_average_pcadscore_rank
+raw_FIGNN_weighted_average_pcadscore_rank
+raw_FIGNN_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIV_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIV_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIV_energy_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIVb_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIVb_energy_tour_rank
+raw_FIV_and_FGV_light_tour_rank
+raw_FIV_and_FGV_dark_tour_rank
+raw_FIGNN_and_FGV_light_tour_rank
+raw_FIGNN_and_FGV_dark_tour_rank
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_rank
+raw_FIGNN_sr_average_gnn_score_rank
+raw_FIGNN_sr_gnn_scores_tour_rank
+raw_FIGNN_sr_average_pcadscore_rank
+raw_FIGNN_sr_weighted_average_pcadscore_rank
+raw_FIGNN_sr_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_rank
+raw_FIGNN_average_gnn_score_rank
+raw_FIGNN_gnn_scores_tour_rank
+raw_FIGNN_average_pcadscore_rank
+raw_FIGNN_weighted_average_pcadscore_rank
+raw_FIGNN_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIV_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIV_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIV_energy_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIVb_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIVb_energy_tour_rank
+raw_FIV_and_FGV_light_tour_rank
+raw_FIV_and_FGV_dark_tour_rank
+raw_FIGNN_and_FGV_light_tour_rank
+raw_FIGNN_and_FGV_dark_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "extended_for_protein_protein_only_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_sr_iface_energy_rank
+raw_FIV_sr_energy_clash_tour_rank
+raw_FIVb_sr_iface_energy_rank
+raw_FIVb_sr_energy_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_rank
+raw_FIGNN_sr_average_gnn_score_rank
+raw_FIGNN_sr_gnn_scores_tour_rank
+raw_FIGNN_sr_average_pcadscore_rank
+raw_FIGNN_sr_weighted_average_pcadscore_rank
+raw_FIGNN_sr_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank
+raw_FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank
+raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
+"
+fi
+
+SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
+
+SCORING_MODE_PROTEIN="false"
+SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
+SCORING_MODE_GENERIC="false"
+SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GNN="false"
+SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
+SCORING_MODE_PROTEIN_GLOBAL="false"
+
+if [[ "$SCORING_RANKS" == *"_FIV_"* ]]
+then
+	SCORING_MODE_PROTEIN="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIV_sr_"* ]]
+then
+	SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIVb_"* ]]
+then
+	SCORING_MODE_GENERIC="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIVb_sr_"* ]]
+then
+	SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIGNN_"* ]]
+then
+	SCORING_MODE_PROTEIN_GNN="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FIGNN_sr_"* ]]
+then
+	SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="true"
+fi
+
+if [[ "$SCORING_RANKS" == *"_FGV_"* ]]
+then
+	SCORING_MODE_PROTEIN_GLOBAL="true"
+fi
+
+if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ]
+then
+	echo >&2 "Error: no scoring action enabled"
+	exit 1
+fi
+
+################################################################################
+
+if [ "$CONDA_EARLY" == "true" ]
+then
+	if [ -z "$CONDA_DEFAULT_ENV" ]
+	then
+		if [ -z "$CONDA_PATH" ]
+		then
+			echo >&2 "Error: not in conda environment, and the conda path is not provided"
+			exit 1
+		fi
+		if [ ! -s "${CONDA_PATH}/bin/activate" ]
+		then
+			echo >&2 "Error: no conda activation script '${CONDA_PATH}/bin/activate'"
+			exit 1
+		fi
+		source "${CONDA_PATH}/bin/activate"
+	fi
+	
+	if [ -n "$CONDA_ENV" ]
+	then
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			conda activate "$CONDA_ENV"
+		fi
+		
+		if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]
+		then
+			echo >&2 "Error: no '$CONDA_ENV' environment"
+			exit 1
+		fi
+	fi
+	
+	CONDA_PATH=""
+fi
+
+################################################################################
+
+if [ -z "$FTDMPDIR" ] || [ -n "$FTDMP_ROOT" ]
+then
+	if [ -z "$FTDMP_ROOT" ]
+	then
+		export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	else
+		export FTDMPDIR="$FTDMP_ROOT"
+	fi
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+################################################################################
+
+JOB_NAME="$(cat ${TMPLDIR}/input_list | xargs cat | md5sum | awk '{print $1}')"
+
+OUTPUT_PATH="${WORKDIR}/jobs/${JOB_NAME}"
+mkdir -p "${OUTPUT_PATH}"
+
+{
+	echo "ID"
+	cat "${TMPLDIR}/input_list" | xargs -L 1 basename
+} \
+> "${OUTPUT_PATH}/ids_to_process.txt"
+
+CACHE_DIR="${WORKDIR}/cache"
+
+PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/ids_to_process.txt"
+
+################################################################################
+
+ftdmp-all-score \
+  --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
+  --structure-monomer1      "" \
+  --structure-monomer2      "" \
+  --structure-prefix        "$INPUT_FILE_PATH_PREFIX" \
+  --structure-suffix        "" \
+  --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+  --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+  --remap-cadscore          "$REMAP_CADSCORE" \
+  --mode-protein            "$SCORING_MODE_PROTEIN" \
+  --mode-protein-sr         "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" \
+  --mode-generic            "$SCORING_MODE_GENERIC" \
+  --mode-generic-sr         "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" \
+  --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
+  --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
+  --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --conda-path              "$CONDA_PATH" \
+  --conda-env               "$CONDA_ENV" \
+  --score-symmetry          "$SCORE_SYMMETRY" \
+  --keep-top                "9999999" \
+  --keep-top-for-slow       "9999999" \
+  --clash-tour-tolerance    "0.05" \
+  --parallel                "$SCORING_PROCESSORS" \
+  --cache-dir               "$CACHE_DIR" \
+  --sbatch                  "$SCORING_SBATCH" \
+  --output-names-prefix     "raw_" \
+  --output-dir              "$OUTPUT_PATH"
+
+PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results_with_ranks.txt"
+
+if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+then
+	echo >&2 "Error: no raw scoring results"
+	exit 1
+fi
+
+################################################################################
+
+if [ "$NUMBER_OF_INPUT_FILES" -gt "1" ]
+then
+	ftdmp-all-jury \
+	  --input-scoring-table     "$PREV_SCORING_RESULTS_FILE" \
+	  --structure-monomer1      "" \
+	  --structure-monomer2      "" \
+	  --structure-prefix        "$INPUT_FILE_PATH_PREFIX" \
+	  --structure-suffix        "" \
+	  --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+	  --rank-names              "$SCORING_RANKS" \
+	  --ranks-top               "9999999" \
+	  --remap-cadscore          "$REMAP_CADSCORE" \
+	  --jury-slices             "$SCORING_RANKS_JURY_SLICES" \
+	  --jury-cluster            "$SCORING_RANKS_JURY_CLUSTER" \
+	  --jury-max-values         "$SCORING_RANKS_JURY_MAX_VALUES" \
+	  --redundancy-threshold    "$REDUNDANCY_THRESHOLD" \
+	  --parallel                "$SCORING_PROCESSORS" \
+	  --sbatch                  "$SCORING_SBATCH" \
+	  --output-names-prefix     "raw_"
+	
+	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_scoring_results_RJS.txt"
+	
+	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no raw jury results"
+		exit 1
+	fi
+	
+	if [ "$PLOT_JURY_SCORES" == "true" ]
+	then
+		ftdmp-plot-jury-scores \
+		  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
+		  --prefix-for-jury-scores 'raw_RJS' \
+		  --output "${OUTPUT_PATH}/raw_RJS_plot.png"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_scoring_results_RJS_nonredundant.txt"
+	
+	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no raw non-redundant jury results"
+		exit 1
+	fi
+fi
+
+################################################################################
+
+{
+cat << 'EOF'
+ID
+raw_RJS_max
+raw_FICS_iface_cadscore
+raw_FICS_iface_site_based_cadscore
+raw_FIGNN_sum_of_gnn_scores
+raw_FIGNN_average_pcadscore
+raw_FGV_full_dark_score
+raw_FGV_full_light_score
+raw_FIV_iface_energy
+raw_FIVb_iface_energy
+raw_FIVb_iface_clash_score
+raw_FIVb_iface_area
+raw_FIGNN_sr_sum_of_gnn_scores
+raw_FIGNN_sr_average_pcadscore
+raw_FIV_sr_iface_energy
+raw_FIVb_sr_iface_energy
+raw_FIVb_sr_iface_clash_score
+raw_FIVb_sr_iface_area
+EOF
+} \
+| egrep -f <(head -n 1 "$PREV_SCORING_RESULTS_FILE" | tr ' ' '\n' | egrep . | awk -v dollar='$' '{print "^" $1 dollar}') \
+> "$TMPLDIR/columns_to_output"
+
+cat "$PREV_SCORING_RESULTS_FILE" \
+| ftdmp-extract-table-columns $(cat $TMPLDIR/columns_to_output) \
+> "$TMPLDIR/restricted_table"
+
+{
+head -n 1 "$TMPLDIR/restricted_table" \
+| tr ' ' '\n' \
+| sed 's/^raw_RJS_max$/jury_score/' \
+| sed 's/^raw_FICS_iface_cadscore$/cadscore/' \
+| sed 's/^raw_FICS_iface_site_based_cadscore$/site_cadscore/' \
+| sed 's/^raw_FIGNN_sum_of_gnn_scores$/GNN_sum_score/' \
+| sed 's/^raw_FIGNN_average_pcadscore$/GNN_pcadscore/' \
+| sed 's/^raw_FGV_full_dark_score$/voromqa_dark/' \
+| sed 's/^raw_FGV_full_light_score$/voromqa_light/' \
+| sed 's/^raw_FIV_iface_energy$/voromqa_energy/' \
+| sed 's/^raw_FIVb_iface_energy$/gen_voromqa_energy/' \
+| sed 's/^raw_FIVb_iface_area$/area/' \
+| sed 's/^raw_FIVb_iface_clash_score$/clash_score/' \
+| sed 's/^raw_FIGNN_sr_sum_of_gnn_scores$/sr_GNN_sum_score/' \
+| sed 's/^raw_FIGNN_sr_average_pcadscore$/sr_GNN_pcadscore/' \
+| sed 's/^raw_FIV_sr_iface_energy$/sr_voromqa_energy/' \
+| sed 's/^raw_FIVb_sr_iface_energy$/sr_gen_voromqa_energy/' \
+| sed 's/^raw_FIVb_sr_iface_area$/sr_area/' \
+| sed 's/^raw_FIVb_sr_iface_clash_score$/sr_clash_score/' \
+| tr '\n' ' ' \
+| sed 's/\s*$/\n/'
+
+tail -n +2 "$TMPLDIR/restricted_table" \
+| awk '{printf("%s", $1); for(i=2;i<=NF;i++){printf(" %.3f", $i);} print("");}' \
+| sed 's/\.0\+\s/ /g' \
+| sed 's/\.0\+$//g'
+} \
+| column -t \
+> "${OUTPUT_PATH}/results_for_humans.txt"
+
+cat "${OUTPUT_PATH}/results_for_humans.txt"
+
