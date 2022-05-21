@@ -1,0 +1,50 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-print-usable-environment' prints environment variables that will be used by
+other ftdmp-* programs called from the same directory as 'ftdmp-print-usable-environment'
+
+Options:
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    values of environment variables
+    
+Examples:
+
+   ftdmp-print-usable-environment
+   
+   ~/home/user/some/dir/ftdmp-print-usable-environment
+
+EOF
+exit 1
+}
+
+if [ "$1" == "--help" ] || [ "$1" == "-h" ]
+then
+	print_help_and_exit
+fi
+
+if [ -n "$1" ]
+then
+	echo >&2 "Error: command line arguments are not supported"
+	exit 1
+fi
+
+if [ -z "$FTDMPDIR" ] || [ -n "$FTDMP_ROOT" ]
+then
+	if [ -z "$FTDMP_ROOT" ]
+	then
+		export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	else
+		export FTDMPDIR="$FTDMP_ROOT"
+	fi
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+echo "FTDMP_ROOT = '${FTDMPDIR}'"
+echo "PATH = '${PATH}'"
+echo "CONDA_DEFAULT_ENV = '${CONDA_DEFAULT_ENV}'"

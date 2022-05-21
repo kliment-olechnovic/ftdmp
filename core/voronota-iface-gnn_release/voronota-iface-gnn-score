@@ -31,10 +31,13 @@ Standard output:
 Example:
     voronota-iface-gnn-score --gnn './gnn_package.tar' --input './model.pdb'
 
-Requirements installation example:
+Requirements installation example using Miniconda (needs about 9 GB of disk space):
+	wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
     bash Miniconda3-py39_4.11.0-Linux-x86_64.sh
+    source ~/miniconda3/bin/activate
+    conda install r # may skip this if you have R already and do not want it in Miniconda
     conda install pytorch -c pytorch
-    conda install pyg -c pyg -c conda-forge
+    conda install pyg -c pyg
 
 EOF
 exit 1
@@ -218,7 +221,7 @@ then
 		do
 			if [ -d "$GNN_PACKAGE_FILE" ]
 			then
-				find "$GNN_PACKAGE_FILES" -type f -name '*.tar' -not -empty | sort | xargs cat
+				find "$GNN_PACKAGE_FILE" -type f -name '*.tar' -not -empty | sort | xargs cat
 			else
 				cat "$GNN_PACKAGE_FILE"
 			fi
@@ -317,7 +320,7 @@ echo "$GNN_PACKAGE_FILES" \
 do
 	if [ -d "$GNN_PACKAGE_FILE" ]
 	then
-		find "$GNN_PACKAGE_FILES" -type f -name '*.tar' -not -empty | sort
+		find "$GNN_PACKAGE_FILE" -type f -name '*.tar' -not -empty | sort
 	else
 		echo "$GNN_PACKAGE_FILE"
 	fi

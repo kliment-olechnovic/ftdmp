@@ -23,5 +23,9 @@ cd -
 cd "./FASPR"
 rm "./FASPR"
 
+cd -
+cd "./voronota-js_release"
+rm "./voronota-js"
+
 exit 0
 
