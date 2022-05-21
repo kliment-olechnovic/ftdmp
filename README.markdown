@@ -66,17 +66,17 @@ Activate Miniconda environment an install packages:
     conda install pyg -c pyg
 
 
-# Using FTDMP
+# Using FTDMP for scoring and ranking multimeric models
 
-## Scoring and ranking multimeric models using all available scoring tools
+## Scoring and ranking multimeric protein models using all available scoring tools
 
 Example of scoring with rebuilding side-chains:
 
     ls ./*.pdb \
-      | ftdmp-qa-all \
-        --rank-names extended_for_protein_protein \
-        --conda-path ~/miniconda3 \
-        --workdir './works'
+    | ftdmp-qa-all \
+      --rank-names extended_for_protein_protein \
+      --conda-path ~/miniconda3 \
+      --workdir './works'
     
 Example of scoring without rebuilding side-chains:
 
@@ -86,7 +86,7 @@ Example of scoring without rebuilding side-chains:
       --conda-path ~/miniconda3 \
       --workdir './works'
 
-## Scoring and ranking multimeric models without using graph neural networks
+## Scoring and ranking multimeric protein models without using graph neural networks
 
 Example of scoring with rebuilding side-chains:
 
@@ -100,5 +100,14 @@ Example of scoring without rebuilding side-chains:
     ls ./*.pdb \
     | ftdmp-qa-all \
       --rank-names standard_for_protein_protein_no_sr \
+      --workdir './works'
+
+## Scoring and ranking multimeric models that include RNA or DNA:
+
+Example of scoring with rebuilding side-chains:
+
+    ls ./*.pdb \
+    | ftdmp-qa-all \
+      --rank-names standard_for_generic \
       --workdir './works'
 
