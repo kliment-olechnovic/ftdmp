@@ -36,7 +36,7 @@ To build all the included dependencies, run the following command:
 
     ./core/build.bash
 
-To, optionally, make FTDMP accessible without specifying full path, add the following line at the end of "${HOME}/.bash_profile" or "${HOME}/.bashrc":
+To, optionally, make FTDMP accessible without specifying full path, add the following line at the end of ".bash_profile" or ".bashrc":
 
     export PATH="/path/to/ftdmp:${PATH}"
 
