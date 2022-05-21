@@ -72,19 +72,33 @@ Activate Miniconda environment an install packages:
 
 Example of scoring with rebuilding side-chains:
 
-    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein
+    ls ./*.pdb \
+      | ftdmp-qa-all \
+        --rank-names extended_for_protein_protein \
+        --conda-path ~/miniconda3 \
+        --workdir './works'
     
 Example of scoring without rebuilding side-chains:
 
-    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein_no_sr
+    ls ./*.pdb \
+    | ftdmp-qa-all \
+      --rank-names extended_for_protein_protein_no_sr \
+      --conda-path ~/miniconda3 \
+      --workdir './works'
 
 ## Scoring and ranking multimeric models without using graph neural networks
 
 Example of scoring with rebuilding side-chains:
 
-    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein
+    ls ./*.pdb \
+    | ftdmp-qa-all \
+      --rank-names standard_for_protein_protein \
+      --workdir './works'
     
 Example of scoring without rebuilding side-chains:
 
-    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein_no_sr
+    ls ./*.pdb \
+    | ftdmp-qa-all \
+      --rank-names standard_for_protein_protein_no_sr \
+      --workdir './works'
 
