@@ -538,9 +538,10 @@ fi
 
 cat "./display_summary_table.txt"
 
+cd - &> /dev/null
+
 if [ -n "$OUTDIR" ]
 then
-	cd - &> /dev/null
 	mkdir -p "$OUTDIR"
 	mv "${TMPLDIR}/display_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
 	mv "${TMPLDIR}/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
