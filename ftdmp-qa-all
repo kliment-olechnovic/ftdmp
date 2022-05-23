@@ -24,6 +24,9 @@ Options:
     --jury-maxs               number     number of max values to use for ranks jury scoring, default is 1
     --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
     --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
+    --write-pdb-file          string     file path template to output scores in PDB files, default is ''
+    --write-pdb-mode          string     mode for PDB scores output ('voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'voromqa_dark'
+    --write-pdb-num           number     number of top PDB files with scores to write, default is 5
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -41,6 +44,9 @@ Examples:
     ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein
     
     ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein_no_sr
+    
+    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein \
+        --write-pdb-file './output/scored_-RANK-_-BASENAME-' --write-pdb-mode 'voromqa_dark_and_gnn' --write-pdb-num 3
 
 EOF
 exit 1
@@ -70,6 +76,9 @@ SCORING_RANKS_JURY_CLUSTER="0.9"
 SCORING_RANKS_JURY_MAX_VALUES="1" 
 REDUNDANCY_THRESHOLD="1"
 PLOT_JURY_SCORES="false"
+WRITE_SCORES_PDB_FILE=""
+WRITE_SCORES_PDB_MODE="voromqa_dark"
+WRITE_SCORES_PDB_NUM="5"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -147,8 +156,20 @@ do
 		REDUNDANCY_THRESHOLD="$OPTARG"
 		shift
 		;;
-	--plot-jury-scores )
+	--plot-jury-scores)
 		PLOT_JURY_SCORES="$OPTARG"
+		shift
+		;;
+	--write-pdb-file)
+		WRITE_SCORES_PDB_FILE="$OPTARG"
+		shift
+		;;
+	--write-pdb-mode)
+		WRITE_SCORES_PDB_MODE="$OPTARG"
+		shift
+		;;
+	--write-pdb-num)
+		WRITE_SCORES_PDB_NUM="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -173,6 +194,12 @@ fi
 [ -n "$SCORING_RANKS" ] || { echo >&2 "Error: scoring rank names not provided"; exit 1;}
 
 [ -n "$SCORING_RANKS_JURY_SLICES" ] || { echo >&2 "Error: scoring ranks jury slices not defined"; exit 1;}
+
+if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark_and_gnn" ]
+then
+	echo >&2 "Error: invalid mode '$WRITE_SCORES_PDB_MODE' for writing scores in PDB files"
+	exit 1
+fi
 
 ################################################################################
 
@@ -404,6 +431,27 @@ then
 	exit 1
 fi
 
+if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ]
+then
+	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark" ]
+	then
+		if [ "$SCORING_MODE_PROTEIN_GNN" != "true" ]
+		then
+			echo >&2 "Error: mode '$WRITE_SCORES_PDB_MODE' for writing scores in PDB files is incompatible with requested scoring ranks"
+			exit 1
+		fi
+	fi
+	
+	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark_and_gnn" ]
+	then
+		if [ "$SCORING_MODE_GENERIC" != "true" ] || [ "$SCORING_MODE_PROTEIN_GNN" != "true" ]
+		then
+			echo >&2 "Error: mode '$WRITE_SCORES_PDB_MODE' for writing scores in PDB files is incompatible with requested scoring ranks"
+			exit 1
+		fi
+	fi
+fi
+
 ################################################################################
 
 if [ "$CONDA_EARLY" == "true" ]
@@ -552,6 +600,48 @@ then
 	then
 		echo >&2 "Error: no raw non-redundant jury results"
 		exit 1
+	fi
+fi
+
+################################################################################
+
+if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ]
+then
+	cat "$PREV_SCORING_RESULTS_FILE" \
+	| ftdmp-extract-table-columns ID \
+	| tail -n +2 \
+	| head -n "$WRITE_SCORES_PDB_NUM" \
+	| awk '{print NR " " $1}' \
+	| while read -r RESULT_RANK ORIGINAL_FILE_BASENAME
+	do
+		ORIGINAL_INPUT_FILE="${INPUT_FILE_PATH_PREFIX}${ORIGINAL_FILE_BASENAME}"
+		OUTPUT_PDB_FILE="$(echo "${WRITE_SCORES_PDB_FILE}" | sed "s|-RANK-|${RESULT_RANK}|" | sed "s|-BASENAME-|${ORIGINAL_FILE_BASENAME}|")"
+		echo "${ORIGINAL_INPUT_FILE} ${OUTPUT_PDB_FILE}"
+	done \
+	> "$TMPLDIR/pdb_files_for_writing_cores"
+	
+	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark" ] || [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark_and_gnn" ]
+	then
+		cat "$TMPLDIR/pdb_files_for_writing_cores" \
+		| awk '{print " --input " $1 " --output-dark-pdb " $2}' \
+		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-js-only-global-voromqa \
+		  --cache-dir "$CACHE_DIR" \
+		  --processors 1 \
+		> /dev/null
+	fi
+	
+	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark_and_gnn" ]
+	then
+		cat "$TMPLDIR/pdb_files_for_writing_cores" \
+		| awk '{print " --input " $2 " --output-pdb-file " $2}' \
+		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-iface-gnn-score \
+		  --conda-path "$CONDA_PATH" \
+		  --conda-env "$CONDA_ENV" \
+		  --gnn "${FTDMPDIR}/core/voronota-iface-gnn_release/gnn_packages/v1" \
+		  --cache-dir "$CACHE_DIR" \
+		  --processors 1 \
+		  --output-pdb-mode "combine" \
+		> /dev/null
 	fi
 fi
 
