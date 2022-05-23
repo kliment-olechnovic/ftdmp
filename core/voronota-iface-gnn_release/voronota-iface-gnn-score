@@ -23,6 +23,8 @@ Options:
     --local-column            string     flag to add per-residue scores to the global output table
     --cache-dir               string     cache directory path to store results of past calls
     --output-dir              string     output directory path for all results
+    --output-pdb-file         string     output path for PDB file with interface residue scores, default is ''
+    --output-pdb-mode         string     mode to write b-factors ('overwrite_all', 'overwrite_iface' or 'combine'), default is 'overwrite_all'
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -41,6 +43,17 @@ Requirements installation example using Miniconda (needs about 9 GB of disk spac
 
 EOF
 exit 1
+}
+
+################################################################################
+
+function substitute_id_in_filename
+{
+	SUBSTITUTE_BASENAME="$(basename "$1")"
+	SUBSTITUTE_TEMPLATE="$2"
+	
+	echo "$SUBSTITUTE_TEMPLATE" \
+	| sed "s|-BASENAME-|${SUBSTITUTE_BASENAME}|"
 }
 
 ################################################################################
@@ -79,6 +92,9 @@ SBATCH_PARAMETERS=""
 LOCAL_COLUMN="false"
 CACHE_DIR=""
 OUTDIR=""
+OUTPUT_PDB_FILE=""
+OUTPUT_PDB_MODE="overwrite_all"
+JUST_OUTPUT_FROM_DIR=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -151,6 +167,18 @@ do
 		OUTDIR="$OPTARG"
 		shift
 		;;
+	--output-pdb-file)
+		OUTPUT_PDB_FILE="$OPTARG"
+		shift
+		;;
+	--output-pdb-mode)
+		OUTPUT_PDB_MODE="$OPTARG"
+		shift
+		;;
+	--jofd)
+		JUST_OUTPUT_FROM_DIR="$OPTARG"
+		shift
+		;;
 	-h|--help)
 		HELP_MODE="true"
 		;;
@@ -178,7 +206,168 @@ then
 	exit 1
 fi
 
+if [ -n "$OUTPUT_PDB_FILE" ] && [ "$OUTPUT_PDB_MODE" != "overwrite_all" ] && [ "$OUTPUT_PDB_MODE" != "overwrite_iface" ] && [ "$OUTPUT_PDB_MODE" != "combine" ]
+then
+	echo >&2 "Error: invalid mode for PDB output"
+	exit 1
+fi
+
 INFILENAME="$(basename $INFILE)"
+OUTDIR="$(substitute_id_in_filename "$INFILENAME" "$OUTDIR")"
+OUTPUT_PDB_FILE="$(substitute_id_in_filename "$INFILENAME" "$OUTPUT_PDB_FILE")"
+
+################################################################################
+
+if [ -n "$JUST_OUTPUT_FROM_DIR" ]
+then
+	{
+		if [ "$LOCAL_COLUMN" == "true" ]
+		then
+			cat "$JUST_OUTPUT_FROM_DIR/results_summary_table_with_local_column.txt"
+		else
+			cat "$JUST_OUTPUT_FROM_DIR/results_summary_table.txt"
+		fi
+	} \
+	| sed '1 s|^|input_name |' \
+	| sed "2 s|^|${INFILENAME} |" \
+	| column -t \
+	| {
+		if [ -n "$OUTDIR" ]
+		then
+			mkdir -p "$OUTDIR"
+			cat > "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+			cat "$JUST_OUTPUT_FROM_DIR/results_per_contact.txt" > "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
+			cat "$JUST_OUTPUT_FROM_DIR/results_per_residue.txt" > "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
+			cat "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
+		else 
+			cat
+		fi
+	}
+	
+	if [ -n "$OUTPUT_PDB_FILE" ]
+	then
+		if [ -n "$OUTPUT_PDB_FILE" ]
+		then
+			mkdir -p "$(dirname $OUTPUT_PDB_FILE)"
+		fi
+		
+{
+cat << EOF
+var common_params={}
+common_params.input_is_script='$INPUT_IS_SCRIPT';
+common_params.input_as_assembly='$AS_ASSEMBLY';
+common_params.restrict_input_atoms='$RESTRICT_INPUT';
+common_params.output_pdb_file='$OUTPUT_PDB_FILE';
+common_params.output_pdb_mode='$OUTPUT_PDB_MODE';
+var input_info={"input_file": "$INFILE", "input_file_name": "$INFILENAME", "input_adjuncts_file": "$JUST_OUTPUT_FROM_DIR/results_per_residue.txt"}
+EOF
+
+cat << 'EOF'
+analyze_structure=function(params, input)
+{
+
+if(input.input_file===undefined || input.input_file==="")
+{
+	throw ("No input file");
+}
+
+if(input.input_adjuncts_file===undefined || input.input_adjuncts_file==="")
+{
+	throw ("No input adjuncts file");
+}
+
+if(params.output_pdb_file===undefined || params.output_pdb_file==="")
+{
+	throw ("No output file path file");
+}
+
+if(params.output_pdb_mode!="overwrite_all" && params.output_pdb_mode!="overwrite_iface" && params.output_pdb_mode!="combine")
+{
+	throw ("Invalid mode for PDB output");
+}
+
+if(params.input_is_script===undefined || params.input_is_script==="")
+{
+	params.input_is_script="false";
+}
+
+if(params.input_as_assembly===undefined || params.input_as_assembly==="")
+{
+	params.input_as_assembly="false";
+}
+
+if(params.restrict_input_atoms===undefined || params.restrict_input_atoms==="")
+{
+	params.restrict_input_atoms='[]';
+}
+
+voronota_delete_objects();
+
+if(params.input_is_script=="true")
+{
+	voronota_source("-file", input.input_file);
+	voronota_assert_partial_success("Failed when running provided input script");
+}
+else
+{
+	voronota_import("-file", input.input_file, "-as-assembly", params.input_as_assembly);
+	voronota_assert_partial_success("Failed to import file");
+}
+
+voronota_restrict_atoms("-use", params.restrict_input_atoms);
+voronota_assert_full_success("Failed to restrict input atoms by the input query");
+
+voronota_import_adjuncts_of_atoms("-file", input.input_adjuncts_file);
+voronota_assert_full_success("Failed to import adjuncts");
+
+if(params.output_pdb_mode=="overwrite_all")
+{
+	voronota_set_adjunct_of_atoms("-use", "[-adjuncts-not pcadscore]", "-name", "pcadscore", "-value", 1.0);
+	
+	voronota_set_adjunct_of_atoms_by_expression("-use", "[-adjuncts pcadscore]", "-expression", "_linear_combo", "-input-adjuncts", "pcadscore", "-parameters", [100, 0], "-output-adjunct", "tf");
+	voronota_assert_full_success("Failed to set output adjuncts");
+}
+
+if(params.output_pdb_mode=="overwrite_iface")
+{
+	voronota_set_adjunct_of_atoms_by_expression("-use", "[-adjuncts pcadscore]", "-expression", "_linear_combo", "-input-adjuncts", "pcadscore", "-parameters", [100, 0], "-output-adjunct", "tf");
+	voronota_assert_full_success("Failed to set output adjuncts");
+}
+
+if(params.output_pdb_mode=="combine")
+{
+	voronota_set_adjunct_of_atoms_by_expression("-use", "[-adjuncts pcadscore]", "-expression", "_linear_combo", "-input-adjuncts", "pcadscore", "-parameters", [100, 0], "-output-adjunct", "pcadscore100");
+	voronota_assert_full_success("Failed to transform adjuncts");
+	
+	voronota_set_adjunct_of_atoms_by_expression("-use", "[-adjuncts pcadscore100]", "-expression", "_multiply", "-input-adjuncts", ["pcadscore100", "tf"], "-output-adjunct", "combo_product");
+	voronota_assert_full_success("Failed to multiply adjuncts");
+	
+	voronota_set_adjunct_of_atoms_by_expression("-use", "[-adjuncts combo_product]", "-expression", "_sqrt", "-input-adjuncts", "combo_product", "-output-adjunct", "tf");
+	voronota_assert_full_success("Failed to sqrt adjuncts");
+}
+
+voronota_export_atoms("-file", params.output_pdb_file, "-as-pdb", "-pdb-b-factor", "tf", "-pdb-ter");
+voronota_assert_full_success("Failed to export atoms with adjuncts");
+}
+
+try
+{
+	analyze_structure(common_params, input_info);
+}
+catch(error)
+{
+	log("Failed with '"+input_info.input_file_name+"': "+error);
+}
+
+EOF
+} \
+| voronota-js --no-setup-defaults
+	fi
+	
+	exit 0
+fi
+
+################################################################################
 
 if [ -z "$GNN_PACKAGE_FILES" ]
 then
@@ -212,7 +401,12 @@ then
 	{
 		echo "$RESTRICT_INPUT $AS_ASSEMBLY $INPUT_IS_SCRIPT $SUBSELECT_CONTACTS $RUN_FASPR"
 		
-		cat "$INFILE"
+		if [ "$INPUT_IS_SCRIPT" == "true" ]
+		then
+			cat "$INFILE"
+		else
+			cat "$INFILE" | egrep '^ATOM ' | cut -c 1-60 | sed 's/\s\+/ /g' | sed 's/\s\+$//'
+		fi
 		
 		echo "$GNN_PACKAGE_FILES" \
 		| sed 's|\s\+|\n|g' \
@@ -248,28 +442,7 @@ then
 			exit 1
 		fi
 		
-		{
-			if [ "$LOCAL_COLUMN" == "true" ]
-			then
-				cat "${TMPLDIR}/saved_results/results_summary_table_with_local_column.txt"
-			else
-				cat "${TMPLDIR}/saved_results/results_summary_table.txt"
-			fi
-		} \
-		| sed '1 s|^|input_name |' \
-		| sed "2 s|^|${INFILENAME} |" \
-		| column -t \
-		> "${TMPLDIR}/saved_results/display_summary_table.txt"
-		
-		cat "${TMPLDIR}/saved_results/display_summary_table.txt"
-		
-		if [ -n "$OUTDIR" ]
-		then
-			mkdir -p "$OUTDIR"
-			mv "${TMPLDIR}/saved_results/display_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-			mv "${TMPLDIR}/saved_results/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
-			mv "${TMPLDIR}/saved_results/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
-		fi
+		"$ZEROARG" "${ALLARGS[@]}" --jofd "$TMPLDIR/saved_results"
 		
 		exit 0
 	fi
@@ -523,36 +696,15 @@ then
 	tar -czf "${HASHSUM}.tar.gz" "./results_summary_table.txt" "./results_summary_table_with_local_column.txt" "./results_per_contact.txt" "./results_per_residue.txt"
 fi
 
-{
-	if [ "$LOCAL_COLUMN" == "true" ]
-	then
-		cat "./results_summary_table_with_local_column.txt"
-	else
-		cat "./results_summary_table.txt"
-	fi
-} \
-| sed '1 s|^|input_name |' \
-| sed "2 s|^|${INFILENAME} |" \
-| column -t \
-> "./display_summary_table.txt"
-
-cat "./display_summary_table.txt"
-
 cd - &> /dev/null
-
-if [ -n "$OUTDIR" ]
-then
-	mkdir -p "$OUTDIR"
-	mv "${TMPLDIR}/display_summary_table.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_global.txt"
-	mv "${TMPLDIR}/results_per_contact.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_contact.txt"
-	mv "${TMPLDIR}/results_per_residue.txt" "${OUTDIR}/${INFILENAME}__gnn_scores_per_residue.txt"
-fi
 
 if [ -n "$CACHE_DIR" ] && [ -n "$HASHSUM" ]
 then
 	mkdir -p "$CACHE_DIR"
 	mv "${TMPLDIR}/${HASHSUM}.tar.gz" "$CACHE_DIR/${HASHSUM}.tar.gz"
 fi
+
+"$ZEROARG" "${ALLARGS[@]}" --jofd "$TMPLDIR"
 
 exit 0
 
