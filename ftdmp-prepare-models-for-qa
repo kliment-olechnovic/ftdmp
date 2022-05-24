@@ -1,0 +1,172 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-prepare-models-for-qa' prepares models for QA
+
+Options:
+    --sequences               string  *  path to file with sequences in FASTA format
+    --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
+    --output-dir              string  *  output directory for prepared models
+    --processors              number     number of processors for parallel running, default is 1
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    input file paths
+
+Standard output:
+    file paths of prepares models
+
+Examples:
+
+    find ./raw_models/ -type f '*.pdb' | ftdmp-prepare-models-for-qa --sequences ./sequences.fasta --stoichiometry A3B6 --output-dir ./prepared_models
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+SEQUENCESFILE=""
+STOICHIOMETRY=""
+OUTDIR=""
+PROCESSORS="1"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--sequences)
+		SEQUENCESFILE="$OPTARG"
+		shift
+		;;
+	--stoichiometry)
+		STOICHIOMETRY="$OPTARG"
+		shift
+		;;
+	--output-dir)
+		OUTDIR="$OPTARG"
+		shift
+		;;
+	--processors)
+		PROCESSORS="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+[ -n "$SEQUENCESFILE" ] || { echo >&2 "Error: sequences file path not provided"; exit 1;}
+
+[ -s "$SEQUENCESFILE" ] || { echo >&2 "Error: no sequences file '$SEQUENCESFILE'"; exit 1;}
+
+[ -n "$STOICHIOMETRY" ] || { echo >&2 "Error: stoichiometry not provided"; exit 1;}
+
+[ -n "$OUTDIR" ] || { echo >&2 "Error: output directory not provided"; exit 1;}
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat \
+| tr ' ' '\n' \
+| sed 's|/\+|/|g' \
+| egrep '.' \
+| sort \
+| uniq \
+> "$TMPLDIR/input_list"
+
+if [ ! -s "$TMPLDIR/input_list" ]
+then
+	echo >&2 "Error: no input in stdin"
+	exit 1
+fi
+
+TOTAL_COUNT="$(cat ${TMPLDIR}/input_list | wc -l)"
+
+PREFIX_LEVEL="0"
+
+cat "$TMPLDIR/input_list" | sed 's|/\+| |g' | sed 's|^\s\+||' | sort | uniq > "$TMPLDIR/unique_spaced_names"
+NAMES_COUNT="$(cat ${TMPLDIR}/unique_spaced_names | wc -l)"
+SPACE_OCCURENCES="$(cat ${TMPLDIR}/unique_spaced_names | egrep ' \S' | wc -l)"
+
+while [ "$NAMES_COUNT" -eq "$TOTAL_COUNT" ] && [ "$SPACE_OCCURENCES" -gt "0" ]
+do
+	cat "$TMPLDIR/unique_spaced_names" | sed 's|^\S\+\s\+||' | sort | uniq > "$TMPLDIR/unique_reduced_spaced_names"
+	NAMES_COUNT="$(cat ${TMPLDIR}/unique_reduced_spaced_names | wc -l)"
+	SPACE_OCCURENCES="$(cat ${TMPLDIR}/unique_reduced_spaced_names | egrep ' \S' | wc -l)"
+	if [ "$NAMES_COUNT" -eq "$TOTAL_COUNT" ]
+	then
+		((PREFIX_LEVEL++))
+		mv "$TMPLDIR/unique_reduced_spaced_names" "$TMPLDIR/unique_spaced_names"
+	fi
+done
+
+cat "$TMPLDIR/input_list" | sed 's|/\+| |g' | sed 's|^\s\+||' > "$TMPLDIR/spaced_names"
+
+while [ "$PREFIX_LEVEL" -gt "0" ]
+do
+	cat "$TMPLDIR/spaced_names" | sed 's|^\S\+\s\+||' > "$TMPLDIR/reduced_spaced_names"
+	mv "$TMPLDIR/reduced_spaced_names" "$TMPLDIR/spaced_names"
+	((PREFIX_LEVEL--))
+done
+
+cat "$TMPLDIR/spaced_names" | sed 's|\s\+|__|g' > "$TMPLDIR/solid_names"
+
+paste "$TMPLDIR/input_list" "$TMPLDIR/solid_names" | awk '{print $1 " " $2}' > "$TMPLDIR/paths_to_names"
+
+################################################################################
+
+if [ -z "$FTDMPDIR" ] || [ -n "$FTDMP_ROOT" ]
+then
+	if [ -z "$FTDMP_ROOT" ]
+	then
+		export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	else
+		export FTDMPDIR="$FTDMP_ROOT"
+	fi
+	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+fi
+
+################################################################################
+
+cat "$TMPLDIR/paths_to_names" \
+| awk -v outdir="$OUTDIR" '{print " --input " $1 " --output " outdir "/" $2}' \
+| xargs -L 1 -P "$PROCESSORS" \
+  ftdmp-reset-ids-by-sequences \
+    --sequences "$SEQUENCESFILE" \
+    --stoichiometry "$STOICHIOMETRY"
+
+cat "$TMPLDIR/paths_to_names" \
+| awk '{print $2}' \
+| while read -r MNAME
+do
+	MFILE="${OUTDIR}/${MNAME}"
+	if [ -s "$MFILE" ]
+	then
+		echo "$MFILE"
+	fi
+done
+

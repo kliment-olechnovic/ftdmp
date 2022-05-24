@@ -18,7 +18,7 @@ Options:
     --sbatch                  string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --rank-names              string  *  rank names to use, or name of a standard set of rank names, default is 'extended_for_protein_protein_no_sr'
+    --rank-names              string     rank names to use, or name of a standard set of rank names, default is 'extended_for_protein_protein_no_sr'
     --jury-slices             string     slice sizes sequence definition for ranks jury scoring, default is '1 10'
     --jury-cluster            number     clustering threshold for ranks jury scoring, default is 0.9
     --jury-maxs               number     number of max values to use for ranks jury scoring, default is 1

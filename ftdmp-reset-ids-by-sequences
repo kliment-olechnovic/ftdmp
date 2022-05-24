@@ -1,0 +1,172 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-reset-ids-by-sequences' resets chain names and residue numbers in input structure
+according to provided sequences and stechiometry
+
+Options:
+    --input                   string  *  input file path
+    --sequences               string  *  path to file with sequences in FASTA format
+    --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
+    --output                  string  *  output file path
+    --help | -h                          flag to display help message and exit
+
+Examples:
+
+    ftdmp-reset-ids-by-sequences --input ./raw.pdb --sequences ./sequences.fasta --stoichiometry A3B6 --output ./renamed.pdb
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+INFILE=""
+SEQUENCESFILE=""
+STOICHIOMETRY=""
+OUTFILE=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--sequences)
+		SEQUENCESFILE="$OPTARG"
+		shift
+		;;
+	--stoichiometry)
+		STOICHIOMETRY="$OPTARG"
+		shift
+		;;
+	--output)
+		OUTFILE="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+[ -n "$INFILE" ] || { echo >&2 "Error: input file path not provided"; exit 1;}
+[ -s "$INFILE" ] || { echo >&2 "Error: no input file '$INFILE'"; exit 1;}
+
+[ -n "$SEQUENCESFILE" ] || { echo >&2 "Error: sequences file path not provided"; exit 1;}
+[ -s "$SEQUENCESFILE" ] || { echo >&2 "Error: no sequences file '$SEQUENCESFILE'"; exit 1;}
+
+[ -n "$STOICHIOMETRY" ] || { echo >&2 "Error: stoichiometry not provided"; exit 1;}
+
+[ -n "$OUTFILE" ] || { echo >&2 "Error: output file path not provided"; exit 1;}
+
+################################################################################
+
+if [ -z "$FTDMPDIR" ] || [ -n "$FTDMP_ROOT" ]
+then
+	if [ -z "$FTDMP_ROOT" ]
+	then
+		export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+	else
+		export FTDMPDIR="$FTDMP_ROOT"
+	fi
+	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+{
+cat << EOF
+var common_params={}
+common_params.input_pdb_file='$INFILE';
+common_params.sequences_file='$SEQUENCESFILE';
+common_params.stoichiometry_string='$STOICHIOMETRY';
+common_params.output_pdb_file='$TMPLDIR/result.pdb';
+EOF
+
+cat << 'EOF'
+process_structure=function(params)
+{
+
+if(params.input_pdb_file===undefined || params.input_pdb_file==="")
+{
+	throw ("No input file");
+}
+
+if(params.sequences_file===undefined || params.sequences_file==="")
+{
+	throw ("No sequences file");
+}
+
+if(params.stoichiometry_string===undefined || params.stoichiometry_string==="")
+{
+	throw ("No stoichiometry string");
+}
+
+if(params.output_pdb_file===undefined || params.output_pdb_file==="")
+{
+	throw ("No output file path file");
+}
+
+voronota_delete_objects();
+
+voronota_import("-file", params.input_pdb_file);
+voronota_assert_partial_success("Failed to import file");
+
+voronota_set_chain_names_and_residue_numbers_by_sequences("-sequences-file", common_params.sequences_file, "-stoichiometry-string", params.stoichiometry_string);
+voronota_assert_full_success("Failed to reset IDs by sequences");
+
+voronota_export_atoms("-file", params.output_pdb_file, "-as-pdb", "-pdb-ter");
+voronota_assert_full_success("Failed to export atoms");
+}
+
+try
+{
+	process_structure(common_params);
+}
+catch(error)
+{
+	log("Failed with '"+common_params.input_pdb_file+"': "+error);
+}
+
+EOF
+} \
+| voronota-js --no-setup-defaults
+
+if [ ! -s "$TMPLDIR/result.pdb" ]
+then
+	echo >&2 "Error: no result produced for '$INFILE'"
+	exit 1
+fi
+
+mkdir -p "$(dirname ${OUTFILE})"
+
+mv "$TMPLDIR/result.pdb" "$OUTFILE"
+
