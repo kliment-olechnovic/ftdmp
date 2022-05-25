@@ -1,0 +1,130 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-form-casp15-assembly-answer' generates an assembly answer for CASP15
+
+Options:
+    --target-name             string  *  TARGET line value
+    --author-id               string  *  AUTHOR line value
+    --method-line             string     METHOD line value, default is 'Various methods'
+    --help | -h                          flag to display help message and exit
+
+Standard input:
+    model file paths
+
+Standard output:
+    CASP15 assembly answer file
+
+Example:
+
+    ftdmp-form-casp15-assembly-answer --model ./a.pdb --model ./b.pdb --model ./c.pdb \
+        --target-name 'T1999' --author-id '1234-5678-9000'
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+TARGET_NAME=""
+AUTHOR_ID=""
+METHOD_LINE="Various methods"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-m|--model)
+		MODELS="$MODELS $OPTARG"
+		shift
+		;;
+	--target-name)
+		TARGET_NAME="$OPTARG"
+		shift
+		;;
+	--author-id)
+		AUTHOR_ID="$OPTARG"
+		shift
+		;;
+	--method-line)
+		METHOD_LINE="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$TARGET_NAME" ]
+then
+	echo >&2 "Error: target name not specified"
+	exit 1
+fi
+
+if [ -z "$AUTHOR_ID" ]
+then
+	echo >&2 "Error: author ID not specified"
+	exit 1
+fi
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cat \
+| tr ' ' '\n' \
+| egrep '.' \
+> "$TMPLDIR/models_list"
+
+if [ ! -s "$TMPLDIR/models_list" ]
+then
+	echo >&2 "Error: no model files specified"
+	exit 1
+fi
+
+while read -r MFILE
+do
+	if [ ! -s "$MFILE" ] || [ "$(cat ${MFILE} | egrep '^ATOM ' | wc -l)" -lt "1" ]
+	then
+		echo >&2 "Error: invalid model file '$MFILE'"
+		exit 1
+	fi
+done < "$TMPLDIR/models_list"
+
+echo "PFRMAT QA"
+echo "TARGET ${TARGET_NAME}"
+echo "AUTHOR ${AUTHOR_ID}"
+echo "METHOD $METHOD_LINE"
+
+cat "$TMPLDIR/models_list" \
+| awk '{print NR " " $1}' \
+| while read -r MNUM MFILE
+do
+	echo "MODEL  ${MNUM}"
+	echo "PARENT N/A"
+	cat "$MFILE" | egrep '^ATOM |^TER'
+	echo "END"
+done
+
