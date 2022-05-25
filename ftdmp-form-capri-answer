@@ -12,10 +12,10 @@ Options:
     --brk                     string  *  input .brk file path
     --output                  string  *  output file path
     --authors                 string  *  authors string
-    --force-top-picks         string     space-separated listo of picks to put in front
+    --force-top-picks         string     space-separated list of picks to put in front
     --align-sel               string     selection of atoms copy to align
     --rename-chains           string     chain renaming rule to apply
-    --scoring-set              string     scoring set file path to produce scoring answer, default is ''
+    --scoring-set             string     scoring set file path to produce scoring answer, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard input:
