@@ -672,6 +672,7 @@ raw_FIVb_sr_iface_clash_score
 raw_FIVb_sr_iface_area
 raw_FIV_and_FGV_light_tour_rank
 raw_FIV_and_FGV_dark_tour_rank
+raw_RDDS_ordered_score
 EOF
 } \
 | egrep -f <(head -n 1 "$PREV_SCORING_RESULTS_FILE" | tr ' ' '\n' | egrep . | awk -v dollar='$' '{print "^" $1 dollar}') \
@@ -703,6 +704,7 @@ head -n 1 "$TMPLDIR/restricted_table" \
 | sed 's/^raw_FIVb_sr_iface_clash_score$/sr_clash_score/' \
 | sed 's/^raw_FIV_and_FGV_light_tour_rank$/rank_2018/' \
 | sed 's/^raw_FIV_and_FGV_dark_tour_rank$/rank_2020/' \
+| sed 's/^raw_RDDS_ordered_score$/redundancy/' \
 | tr '\n' ' ' \
 | sed 's/\s*$/\n/'
 
