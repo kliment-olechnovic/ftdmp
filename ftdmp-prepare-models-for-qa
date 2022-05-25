@@ -10,6 +10,7 @@ Options:
     --sequences               string  *  path to file with sequences in FASTA format
     --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
     --output-dir              string  *  output directory for prepared models
+    --restrict-output         string     query to restrict output atoms, default is '[]'
     --processors              number     number of processors for parallel running, default is 1
     --help | -h                          flag to display help message and exit
 
@@ -37,6 +38,7 @@ fi
 SEQUENCESFILE=""
 STOICHIOMETRY=""
 OUTDIR=""
+RESTRICT_OUTPUT="[]"
 PROCESSORS="1"
 HELP_MODE="false"
 
@@ -56,6 +58,10 @@ do
 		;;
 	--output-dir)
 		OUTDIR="$OPTARG"
+		shift
+		;;
+	--restrict-output)
+		RESTRICT_OUTPUT="$OPTARG"
 		shift
 		;;
 	--processors)
@@ -157,7 +163,8 @@ cat "$TMPLDIR/paths_to_names" \
 | xargs -L 1 -P "$PROCESSORS" \
   ftdmp-reset-ids-by-sequences \
     --sequences "$SEQUENCESFILE" \
-    --stoichiometry "$STOICHIOMETRY"
+    --stoichiometry "$STOICHIOMETRY" \
+    --restrict-output "$RESTRICT_OUTPUT"
 
 cat "$TMPLDIR/paths_to_names" \
 | awk '{print $2}' \

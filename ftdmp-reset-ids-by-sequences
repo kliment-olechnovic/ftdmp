@@ -12,6 +12,7 @@ Options:
     --sequences               string  *  path to file with sequences in FASTA format
     --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
     --output                  string  *  output file path
+    --restrict-output         string     query to restrict output atoms, default is '[]'
     --help | -h                          flag to display help message and exit
 
 Examples:
@@ -33,6 +34,7 @@ INFILE=""
 SEQUENCESFILE=""
 STOICHIOMETRY=""
 OUTFILE=""
+RESTRICT_OUTPUT="[]"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -55,6 +57,10 @@ do
 		;;
 	--output)
 		OUTFILE="$OPTARG"
+		shift
+		;;
+	--restrict-output)
+		RESTRICT_OUTPUT="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -106,6 +112,7 @@ trap "rm -r $TMPLDIR" EXIT
 cat << EOF
 var common_params={}
 common_params.input_pdb_file='$INFILE';
+common_params.restrict_output_atoms='$RESTRICT_OUTPUT';
 common_params.sequences_file='$SEQUENCESFILE';
 common_params.stoichiometry_string='$STOICHIOMETRY';
 common_params.output_pdb_file='$TMPLDIR/result.pdb';
@@ -135,6 +142,11 @@ if(params.output_pdb_file===undefined || params.output_pdb_file==="")
 	throw ("No output file path file");
 }
 
+if(params.restrict_output_atoms===undefined || params.restrict_output_atoms==="")
+{
+	params.restrict_output_atoms='[]';
+}
+
 voronota_delete_objects();
 
 voronota_import("-file", params.input_pdb_file);
@@ -142,6 +154,9 @@ voronota_assert_partial_success("Failed to import file");
 
 voronota_set_chain_names_and_residue_numbers_by_sequences("-sequences-file", common_params.sequences_file, "-stoichiometry-string", params.stoichiometry_string);
 voronota_assert_full_success("Failed to reset IDs by sequences");
+
+voronota_restrict_atoms("-use", params.restrict_output_atoms);
+voronota_assert_full_success("Failed to restrict output atoms");
 
 voronota_export_atoms("-file", params.output_pdb_file, "-as-pdb", "-pdb-ter");
 voronota_assert_full_success("Failed to export atoms");
