@@ -22,7 +22,11 @@ Standard output:
 
 Examples:
 
-    find ./raw_models/ -type f '*.pdb' | ftdmp-prepare-models-for-qa --sequences ./sequences.fasta --stoichiometry A3B6 --output-dir ./prepared_models
+    find ./raw_models/ -type f '*.pdb' | ftdmp-prepare-models-for-qa --sequences ./sequences.fasta \
+        --stoichiometry A3B6 --output-dir ./prepared_models
+    
+    find ./raw_models/ -type f '*.pdb' | ftdmp-prepare-models-for-qa --sequences ./sequences.fasta \
+        --stoichiometry A3B6 --output-dir ./prepared_models --restrict-output "(not [-chain A,C,E -rnum 1:39])"
 
 EOF
 exit 1
