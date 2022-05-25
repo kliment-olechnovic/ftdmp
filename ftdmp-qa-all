@@ -18,7 +18,7 @@ Options:
     --sbatch                          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry                  string     flag to score symmetry, default is 'false'
     --remap-cadscore                  string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'extended_for_protein_protein_no_sr'
+    --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
     --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '1 10'
     --jury-cluster                    number     clustering threshold for ranks jury scoring, default is 0.95
     --jury-maxs                       number     number of max values to use for ranks jury scoring, default is 2
@@ -37,21 +37,21 @@ Standard output:
 
 Examples:
 
-    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein_no_sr
+    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr
     
-    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names standard_for_protein_protein_no_sr
+    ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names protein_protein_voromqa_no_sr
     
-    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names extended_for_protein_protein_no_sr \
+    ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
         --write-pdb-file './output/scored_-RANK-_-BASENAME-' --write-pdb-mode 'voromqa_dark_and_gnn' --write-pdb-num 5
 
 Named collections of rank names:
 
-    extended_for_protein_protein_no_sr
-    extended_for_protein_protein_with_sr
-    standard_for_protein_protein_no_sr
-    standard_for_protein_protein_with_sr
-    simple_for_protein_protein
-    standard_for_generic
+    protein_protein_voromqa_and_global_and_gnn_no_sr
+    protein_protein_voromqa_and_global_and_gnn_with_sr
+    protein_protein_voromqa_no_sr
+    protein_protein_voromqa_with_sr
+    protein_protein_simplest_voromqa
+    generalized_voromqa
 
 EOF
 exit 1
@@ -75,7 +75,7 @@ SCORING_PROCESSORS="8"
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 REMAP_CADSCORE="false"
-SCORING_RANKS="extended_for_protein_protein_no_sr"
+SCORING_RANKS="protein_protein_voromqa_and_global_and_gnn_no_sr"
 SCORING_RANKS_JURY_SLICES="1 10" 
 SCORING_RANKS_JURY_CLUSTER="0.95" 
 SCORING_RANKS_JURY_MAX_VALUES="2" 
@@ -245,7 +245,7 @@ done < "$TMPLDIR/input_list"
 
 ################################################################################
 
-if [ "$SCORING_RANKS" == "simple_for_protein_protein" ]
+if [ "$SCORING_RANKS" == "protein_protein_simplest_voromqa" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -253,7 +253,7 @@ raw_FIV_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_protein_protein_with_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_with_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -267,7 +267,7 @@ raw_FIVb_sr_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_protein_protein_no_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_no_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -277,7 +277,7 @@ raw_FIVb_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_protein_protein_only_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_only_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_sr_iface_energy_rank
@@ -287,7 +287,7 @@ raw_FIVb_sr_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_generic" ]
+if [ "$SCORING_RANKS" == "generalized_voromqa" ]
 then
 	SCORING_RANKS="
 raw_FIVb_iface_energy_rank
@@ -295,7 +295,7 @@ raw_FIVb_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_with_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_global_and_gnn_with_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -337,7 +337,7 @@ raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_global_and_gnn_no_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -363,7 +363,7 @@ raw_FIGNN_and_FGV_dark_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_only_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_gnn_only_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_sr_iface_energy_rank
