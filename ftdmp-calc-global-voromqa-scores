@@ -11,6 +11,7 @@ Options:
     --input-suffix            string     input file path suffix, default is '.pdb'
     --monomer1                string     static monomer input file path
     --monomer2                string     mobile monomer input file path
+    --subselect-atoms         string     query to subselect atoms, default is '[]'
     --parallel                number     total number of parallel parts, default is 1
     --cache-dir               string     cache directory path to store results of past calculations
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
@@ -52,6 +53,7 @@ MONOMERFILE2=""
 PARALLEL_PARTS="1"
 CACHE_DIR=""
 SBATCH_PARAMETERS=""
+SUBSELECT_ATOMS="[]"
 COLNAMES_PREFIX="FGV_"
 USE_MONOMERS="false"
 ADJOIN="false"
@@ -91,6 +93,10 @@ do
 		;;
 	--sbatch-parameters)
 		SBATCH_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--subselect-atoms)
+		SUBSELECT_ATOMS="$OPTARG"
 		shift
 		;;
 	--colnames-prefix)
@@ -153,6 +159,17 @@ then
 	exit 1
 fi
 
+MORE_GLOBAL_VOROMQA_PARAMETERS=()
+
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("--restrict-input")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("$SUBSELECT_ATOMS")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("--processors")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("$PARALLEL_PARTS")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("--cache-dir")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("$CACHE_DIR")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("--sbatch-parameters")
+MORE_GLOBAL_VOROMQA_PARAMETERS+=("$SBATCH_PARAMETERS")
+
 readonly TMPLDIR=$(mktemp -d)
 trap "rm -r $TMPLDIR" EXIT
 
@@ -177,11 +194,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-only-global-voromqa --input _list --input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --cache-dir "$CACHE_DIR"
+	| voronota-js-only-global-voromqa --input _list --input-is-script "${MORE_GLOBAL_VOROMQA_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-only-global-voromqa --input _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --cache-dir "$CACHE_DIR" \
+	| voronota-js-only-global-voromqa --input _list "${MORE_GLOBAL_VOROMQA_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
 fi
 } \

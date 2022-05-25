@@ -9,6 +9,7 @@ cat >&2 << 'EOF'
 Options:
     --workdir                         string  *  path to directory for caching and writing detailed results
     --subselect-contacts              string     query to subselect inter-chain contacts for scoring, default is '[]'
+    --subselect-atoms-global          string     query to subselect atoms for global scores, default is '[]'
     --reference                       string     input structure file to compute CAD-score with, default is ''
     --ftdmp-root                      string     ftdmp root path, default is '' (autodetected from the calling command)
     --conda-path                      string     conda installation path, default is ''
@@ -66,6 +67,7 @@ fi
 
 WORKDIR=""
 INTERFACE_SUBSELECTION="[]"
+SUBSELECT_ATOMS_FOR_GLOBAL="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 FTDMP_ROOT=""
 CONDA_PATH=""
@@ -98,6 +100,10 @@ do
 		;;
 	--subselect-contacts)
 		INTERFACE_SUBSELECTION="$OPTARG"
+		shift
+		;;
+	--subselect-atoms-global)
+		SUBSELECT_ATOMS_FOR_GLOBAL="$OPTARG"
 		shift
 		;;
 	--reference)
@@ -532,6 +538,7 @@ ftdmp-all-score \
   --structure-prefix        "$INPUT_FILE_PATH_PREFIX" \
   --structure-suffix        "" \
   --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+  --subselect-atoms-global  "$SUBSELECT_ATOMS_FOR_GLOBAL" \
   --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
   --remap-cadscore          "$REMAP_CADSCORE" \
   --mode-protein            "$SCORING_MODE_PROTEIN" \
