@@ -629,8 +629,9 @@ then
 	| awk '{print NR " " $1}' \
 	| while read -r RESULT_RANK ORIGINAL_FILE_BASENAME
 	do
+		PRETTY_RESULT_RANK="$(echo 00000000${RESULT_RANK} | sed 's/.*\(....\)$/\1/')"
 		ORIGINAL_INPUT_FILE="${INPUT_FILE_PATH_PREFIX}${ORIGINAL_FILE_BASENAME}"
-		OUTPUT_PDB_FILE="$(echo "${WRITE_SCORES_PDB_FILE}" | sed "s|-RANK-|${RESULT_RANK}|" | sed "s|-BASENAME-|${ORIGINAL_FILE_BASENAME}|")"
+		OUTPUT_PDB_FILE="$(echo "${WRITE_SCORES_PDB_FILE}" | sed "s|-RANK-|${PRETTY_RESULT_RANK}|" | sed "s|-BASENAME-|${ORIGINAL_FILE_BASENAME}|")"
 		echo "${ORIGINAL_INPUT_FILE} ${OUTPUT_PDB_FILE}"
 	done \
 	> "$TMPLDIR/pdb_files_for_writing_cores"
