@@ -10,7 +10,6 @@ Options:
     --input-prefix            string     input file path prefix, default is ''
     --input-suffix            string     input file path suffix, default is ''
     --brk                     string  *  input .brk file path
-    --output                  string  *  output file path
     --authors                 string  *  authors string
     --force-top-picks         string     space-separated list of picks to put in front
     --align-sel               string     selection of atoms copy to align
@@ -22,14 +21,15 @@ Standard input:
     list of structure files or IDs
 
 Standard output:
-    list of used structure files
+    file ready for CAPRI submission
     
 Examples:
 
 	(echo file1.pdb ; echo file2.pdb) \
 	| ftdmp-form-capri-answer \
-	  --brk input/capri.brk --output output/answer.pdb \
-	  --align-sel '[-chain A]' --rename-chains 'C=E,D=F'
+	  --brk input/capri.brk \
+	  --align-sel '[-chain A]' --rename-chains 'C=E,D=F' \
+	> ./answer.pdb
 
 EOF
 exit 1
@@ -51,7 +51,6 @@ command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executab
 INPUT_PREFIX=""
 INPUT_SUFFIX=""
 BRKFILE=""
-OUTFILE=""
 AUTHORS=""
 FORCE_TOP_PICKS=""
 ALIGN_SEL=""
@@ -75,10 +74,6 @@ do
 		;;
 	--brk)
 		BRKFILE="$OPTARG"
-		shift
-		;;
-	--output)
-		OUTFILE="$OPTARG"
 		shift
 		;;
 	--authors)
@@ -119,12 +114,6 @@ fi
 if [ -z "$SCORING_SET_FILE" ] && [ -z "$BRKFILE" ]
 then
 	echo >&2 "Error: neither input .brk file path nor scoring set file path provided"
-	exit 1
-fi
-
-if [ -z "$OUTFILE" ]
-then
-	echo >&2 "Error: output file path not provided"
 	exit 1
 fi
 
@@ -237,8 +226,6 @@ then
 	exit 1
 fi
 
-mkdir -p "$(dirname "$OUTFILE")"
-
 if [ -z "$SCORING_SET_FILE" ]
 then
 	{
@@ -259,7 +246,7 @@ then
 		
 		echo "END"
 	} \
-	> "$OUTFILE"
+	> "${TMPLDIR}/answer_output"
 fi
 
 if [ -n "$SCORING_SET_FILE" ]
@@ -293,8 +280,8 @@ then
 		
 		echo "END"
 	} \
-	> "$OUTFILE"
+	> "${TMPLDIR}/answer_output"
 fi
 
-cat "${TMPLDIR}/input"
+cat "${TMPLDIR}/answer_output"
 
