@@ -199,7 +199,7 @@ then
 	exit 1
 fi
 
-echo "PFRMAT QA"
+echo "PFRMAT TS"
 echo "TARGET ${TARGET_NAME}"
 echo "AUTHOR ${AUTHOR_ID}"
 echo "METHOD ${METHOD_LINE}"
