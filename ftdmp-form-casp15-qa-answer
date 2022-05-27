@@ -8,10 +8,12 @@ cat >&2 << 'EOF'
 
 Options:
     --input-scoring-table     string  *  input scoring table file path
+    --scoring-mode            string     scoring mode ('jury_and_sum_gnn', 'pure_gnn' or 'voromqa_select'), default is 'jury_and_sum_gnn'
     --prefix-for-gnn-scores   string     input column names prefix, default is 'FIGNN' \
     --prefix-for-jury-scores  string     input column names prefix, default is 'RJS' \
     --target-name             string     TARGET line value, default is '_THETARGET_'
     --author-id               string     AUTHOR line value, default is '_THEAUTHOR_'
+    --method-line             string     METHOD line value, default is 'VoroIFGNN'
     --help | -h                          flag to display help message and exit
 
 Standard output:
@@ -34,10 +36,12 @@ then
 fi
 
 FROM_TABLE=""
+SCORING_MODE="jury_and_sum_gnn"
 PREFIX_FOR_GNN_SCORES="FIGNN_"
 PREFIX_FOR_JURY_SCORES="RJS_"
 TARGET_NAME="_THETARGET_"
 AUTHOR_ID="_THEAUTHOR_"
+METHOD_LINE="VoroIFGNN"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -48,6 +52,10 @@ do
 	case $OPTION in
 	--input-scoring-table)
 		FROM_TABLE="$OPTARG"
+		shift
+		;;
+	--scoring-mode)
+		SCORING_MODE="$OPTARG"
 		shift
 		;;
 	--prefix-for-gnn-scores)
@@ -64,6 +72,10 @@ do
 		;;
 	--author-id)
 		AUTHOR_ID="$OPTARG"
+		shift
+		;;
+	--method-line)
+		METHOD_LINE="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -93,6 +105,18 @@ then
 	exit 1
 fi
 
+if [ -z "$SCORING_MODE" ]
+then
+	echo >&2 "Error: scoring mode not specified"
+	exit 1
+fi
+
+if [ "$SCORING_MODE" != "jury_and_sum_gnn" ] && [ "$SCORING_MODE" != "pure_gnn" ] && [ "$SCORING_MODE" != "voromqa_select" ]
+then
+	echo >&2 "Error: invalid scoring mode"
+	exit 1
+fi
+
 command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
 
 ################################################################################
@@ -104,10 +128,11 @@ cp "$FROM_TABLE" "$TMPLDIR/input.txt"
 
 cd "$TMPLDIR"
 
-R --vanilla --args "$PREFIX_FOR_GNN_SCORES" "$PREFIX_FOR_JURY_SCORES" > /dev/null << 'EOF'
+R --vanilla --args "$SCORING_MODE" "$PREFIX_FOR_GNN_SCORES" "$PREFIX_FOR_JURY_SCORES" > /dev/null << 'EOF'
 args=commandArgs(TRUE);
-prefix_for_gnn=args[1];
-prefix_for_jury=args[2];
+scoring_mode=args[1];
+prefix_for_gnn=args[2];
+prefix_for_jury=args[3];
 
 gnn_sum_of_gnn_scores=paste0(prefix_for_gnn, "_sum_of_gnn_scores");
 gnn_sum_of_areas=paste0(prefix_for_gnn, "_sum_of_areas");
@@ -136,14 +161,35 @@ if(sd(areas)>0)
 }
 
 gnn_qa_scores=pnorm(dt[, gnn_sum_of_gnn_scores]/adjusted_mean_area-1);
+gnn_qa_normalized_scores=pnorm(dt[, gnn_average_gnn_score]-1);
+gnn_qa_pcadscores=dt[, gnn_average_pcadscore];
 
 jury_qa_scores=dt[, jury_max];
 jury_qa_scores=(jury_qa_scores/max(jury_qa_scores))*max(dt[, gnn_weighted_average_pcadscore]);
 
 dt$gnn_qa_score=round(gnn_qa_scores, digits=3);
+dt$gnn_qa_normalized_score=round(gnn_qa_normalized_scores, digits=3);
+dt$gnn_qa_pcadscore=round(gnn_qa_pcadscores, digits=3);
 dt$jury_qa_score=round(jury_qa_scores, digits=3);
 
 result=dt[, c("ID", "jury_qa_score", "gnn_qa_score", gnn_local_column)];
+
+if(scoring_mode=="pure_gnn")
+{
+	result=dt[, c("ID", "gnn_qa_normalized_score", "gnn_qa_pcadscore", gnn_local_column)];
+	result=result[order(0-result$gnn_qa_normalized_score),];
+}
+
+if(scoring_mode=="voromqa_select")
+{
+	voromqa_select_2020_scores=1-(dt$raw_FIV_and_FGV_dark_tour_rank/max(dt$raw_FIV_and_FGV_dark_tour_rank));
+	voromqa_dark_scores=dt$raw_FGV_full_dark_score;
+	dt$voromqa_select_2020_score=round(voromqa_select_2020_scores, digits=3);
+	dt$voromqa_dark_score=round(voromqa_dark_scores, digits=3);
+	result=dt[, c("ID", "voromqa_select_2020_score", "voromqa_dark_score")];
+	result=result[order(0-result$voromqa_select_2020_score),];
+}
+
 write.table(result, file="output.txt", quote=FALSE, col.names=FALSE, row.names=FALSE, sep=" ");
 EOF
 
@@ -156,9 +202,14 @@ fi
 echo "PFRMAT QA"
 echo "TARGET ${TARGET_NAME}"
 echo "AUTHOR ${AUTHOR_ID}"
-echo "METHOD VoroIFGNN"
+echo "METHOD ${METHOD_LINE}"
 echo "MODEL 1"
-echo "QMODE 2"
+if [ "$SCORING_MODE" != "voromqa_select" ]
+then
+	echo "QMODE 2"
+else
+	echo "QMODE 1"
+fi
 cat "${TMPLDIR}/output.txt" | tr ',' ' '
 echo "END"
 
