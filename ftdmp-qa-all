@@ -28,6 +28,7 @@ Options:
     --write-pdb-file                  string     file path template to output scores in PDB files, default is ''
     --write-pdb-mode                  string     mode for PDB scores output ('voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'voromqa_dark_and_gnn'
     --write-pdb-num                   number     number of top PDB files with scores to write, default is 5
+    --write-full-table                string     file path to output full table, default is ''
     --help | -h                                  flag to display help message and exit
 
 Standard input:
@@ -86,6 +87,7 @@ PLOT_JURY_SCORES=""
 WRITE_SCORES_PDB_FILE=""
 WRITE_SCORES_PDB_MODE="voromqa_dark_and_gnn"
 WRITE_SCORES_PDB_NUM="5"
+WRITE_FULL_TABLE=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -181,6 +183,10 @@ do
 		;;
 	--write-pdb-num)
 		WRITE_SCORES_PDB_NUM="$OPTARG"
+		shift
+		;;
+	--write-full-table)
+		WRITE_FULL_TABLE="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -531,6 +537,12 @@ PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/ids_to_process.txt"
 
 ################################################################################
 
+LOCAL_COLUMNS="false"
+if [ -n "$WRITE_FULL_TABLE" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
+then
+	LOCAL_COLUMNS="true"
+fi
+
 ftdmp-all-score \
   --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
   --structure-monomer1      "" \
@@ -551,6 +563,7 @@ ftdmp-all-score \
   --conda-path              "$CONDA_PATH" \
   --conda-env               "$CONDA_ENV" \
   --score-symmetry          "$SCORE_SYMMETRY" \
+  --local-columns           "$LOCAL_COLUMNS" \
   --keep-top                "9999999" \
   --keep-top-for-slow       "9999999" \
   --clash-tour-tolerance    "0.05" \
@@ -591,6 +604,13 @@ then
 	  --output-names-prefix     "raw_"
 	
 	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_scoring_results_RJS.txt"
+	
+	if [ -n "$WRITE_FULL_TABLE" ]
+	then
+		mkdir -p "$(dirname ${WRITE_FULL_TABLE})"	
+		cat "$PREV_SCORING_RESULTS_FILE" \
+		> "$WRITE_FULL_TABLE"
+	fi
 	
 	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 	then
