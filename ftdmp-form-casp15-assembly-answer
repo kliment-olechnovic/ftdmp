@@ -113,7 +113,7 @@ do
 	fi
 done < "$TMPLDIR/models_list"
 
-echo "PFRMAT QA"
+echo "PFRMAT TS"
 echo "TARGET ${TARGET_NAME}"
 echo "AUTHOR ${AUTHOR_ID}"
 echo "METHOD $METHOD_LINE"
