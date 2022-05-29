@@ -173,11 +173,12 @@ dt$gnn_qa_pcadscore=round(gnn_qa_pcadscores, digits=3);
 dt$jury_qa_score=round(jury_qa_scores, digits=3);
 
 result=dt[, c("ID", "jury_qa_score", "gnn_qa_score", gnn_local_column)];
+result=result[order(0-result$jury_qa_score, 0-result$gnn_qa_score),];
 
 if(scoring_mode=="pure_gnn")
 {
 	result=dt[, c("ID", "gnn_qa_normalized_score", "gnn_qa_pcadscore", gnn_local_column)];
-	result=result[order(0-result$gnn_qa_normalized_score),];
+	result=result[order(0-result$gnn_qa_normalized_score, 0-result$gnn_qa_pcadscore),];
 }
 
 if(scoring_mode=="voromqa_select")
@@ -187,7 +188,7 @@ if(scoring_mode=="voromqa_select")
 	dt$voromqa_select_2020_score=round(voromqa_select_2020_scores, digits=3);
 	dt$voromqa_dark_score=round(voromqa_dark_scores, digits=3);
 	result=dt[, c("ID", "voromqa_select_2020_score", "voromqa_dark_score")];
-	result=result[order(0-result$voromqa_select_2020_score),];
+	result=result[order(0-result$voromqa_select_2020_score, 0-result$voromqa_dark_score),];
 }
 
 write.table(result, file="output.txt", quote=FALSE, col.names=FALSE, row.names=FALSE, sep=" ");
