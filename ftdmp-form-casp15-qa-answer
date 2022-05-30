@@ -148,6 +148,12 @@ jury_max=paste0(prefix_for_jury, "_max");
 
 dt=read.table("input.txt", header=TRUE, stringsAsFactors=FALSE);
 
+adjusted_max_num_of_atoms=as.vector(quantile(dt$raw_FIVb_input_atoms, p=c(0.95)))[1];
+completeness_score=dt$raw_FIVb_input_atoms/adjusted_max_num_of_atoms;
+completeness_score[which(completeness_score<0.01)]=0.01;
+completeness_score[which(completeness_score>1.0)]=1.0;
+completeness_score=(1-((1-completeness_score)^3));
+
 areas=dt[, gnn_sum_of_areas];
 adjusted_mean_area=mean(areas);
 if(sd(areas)>0)
@@ -161,8 +167,8 @@ if(sd(areas)>0)
 }
 
 gnn_qa_scores=pnorm(dt[, gnn_sum_of_gnn_scores]/adjusted_mean_area-1);
-gnn_qa_normalized_scores=pnorm(dt[, gnn_average_gnn_score]-1);
-gnn_qa_pcadscores=dt[, gnn_average_pcadscore];
+gnn_qa_normalized_scores=pnorm(dt[, gnn_average_gnn_score]-1)*completeness_score;
+gnn_qa_pcadscores=dt[, gnn_average_pcadscore]*completeness_score;
 
 jury_qa_scores=dt[, jury_max];
 jury_qa_scores=(jury_qa_scores/max(jury_qa_scores))*max(dt[, gnn_weighted_average_pcadscore]);
@@ -177,8 +183,8 @@ result=result[order(0-result$jury_qa_score, 0-result$gnn_qa_score),];
 
 if(scoring_mode=="pure_gnn")
 {
-	result=dt[, c("ID", "gnn_qa_normalized_score", "gnn_qa_pcadscore", gnn_local_column)];
-	result=result[order(0-result$gnn_qa_normalized_score, 0-result$gnn_qa_pcadscore),];
+	result=dt[, c("ID", "gnn_qa_score", "gnn_qa_pcadscore", gnn_local_column)];
+	result=result[order(0-result$gnn_qa_score, 0-result$gnn_qa_pcadscore),];
 }
 
 if(scoring_mode=="voromqa_select")
