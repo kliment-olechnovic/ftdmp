@@ -354,10 +354,41 @@ private:
 		std::map<CRADsPair, double> result;
 		for(std::map<CRADsPair, double>::const_iterator it=map_of_contacts.begin();it!=map_of_contacts.end();++it)
 		{
-			if(!it->first.a.chainID.empty() || !it->first.b.chainID.empty())
+			if(!it->first.a.chainID.empty() && !it->first.b.chainID.empty())
 			{
 				result[it->first]=it->second;
 			}
+			else if(!it->first.a.chainID.empty() && it->first.b.chainID.empty())
+			{
+				CRAD mock=it->first.b;
+				mock.chainID="mock";
+				result[CRADsPair(it->first.a, mock)]+=it->second;
+			}
+			else if(!it->first.b.chainID.empty() && it->first.a.chainID.empty())
+			{
+				CRAD mock=it->first.a;
+				mock.chainID="mock";
+				result[CRADsPair(it->first.b, mock)]+=it->second;
+			}
+		}
+		return result;
+	}
+
+	static std::map<CRADsPair, double> primitively_approximate_contacts(const std::map<CRADsPair, double>& map_of_contacts, const bool ignore_residue_names)
+	{
+		std::map<CRADsPair, double> result;
+		for(std::map<CRADsPair, double>::const_iterator it=map_of_contacts.begin();it!=map_of_contacts.end();++it)
+		{
+			CRAD mock_a=it->first.a;
+			CRAD mock_b=it->first.b;
+			mock_a.resSeq=1;
+			mock_b.resSeq=1;
+			if(ignore_residue_names)
+			{
+				mock_a.resName="ALA";
+				mock_b.resName="ALA";
+			}
+			result[CRADsPair(mock_a, mock_b)]+=it->second;
 		}
 		return result;
 	}
@@ -371,11 +402,13 @@ private:
 			std::map<CRADsPair, double>& map_of_contacts)
 	{
 		const std::vector<std::string> chain_names=get_sorted_chain_names_from_map_of_contacts(map_of_contacts);
+		std::map<CRADsPair, double> assessment_map_of_target_contacts=summarize_pair_mapping_of_values(map_of_target_contacts, ignore_residue_names);
+		std::map<CRADsPair, double> assessment_map_of_contacts=summarize_pair_mapping_of_values(map_of_contacts, ignore_residue_names);
 		if(chain_names.size()<2)
 		{
 			return;
 		}
-		if(chain_names.size()<=5)
+		if(chain_names.size()<=6)
 		{
 			std::pair<std::map<std::string, std::string>, double> best_renaming(generate_map_of_renamings_from_two_lists(chain_names, chain_names), 0.0);
 			std::vector<std::string> permutated_chain_names=chain_names;
@@ -383,8 +416,8 @@ private:
 			{
 				const std::map<std::string, std::string> map_of_renamings=generate_map_of_renamings_from_two_lists(chain_names, permutated_chain_names);
 				const double score=construct_global_cad_descriptor(
-						map_of_target_contacts,
-						rename_chains_in_map_of_contacts(map_of_contacts, map_of_renamings),
+						assessment_map_of_target_contacts,
+						rename_chains_in_map_of_contacts(assessment_map_of_contacts, map_of_renamings),
 						ignore_residue_names,
 						binarize).score();
 				if(score>best_renaming.second)
@@ -412,6 +445,11 @@ private:
 		}
 		else
 		{
+			if(chain_names.size()>12)
+			{
+				assessment_map_of_target_contacts=primitively_approximate_contacts(assessment_map_of_target_contacts, ignore_residue_names);
+				assessment_map_of_contacts=primitively_approximate_contacts(assessment_map_of_contacts, ignore_residue_names);
+			}
 			std::map<std::string, std::string> map_of_renamings;
 			std::map<std::string, std::string> map_of_renamings_in_target;
 			for(std::size_t i=0;i<chain_names.size();i++)
@@ -421,21 +459,22 @@ private:
 			}
 			std::set<std::string> set_of_free_chains_left(chain_names.begin(), chain_names.end());
 			std::set<std::string> set_of_free_chains_right(chain_names.begin(), chain_names.end());
-			while(!set_of_free_chains_left.empty())
+			while(!set_of_free_chains_left.empty() && !set_of_free_chains_right.empty())
 			{
 				std::pair<std::string, std::string> best_pair(*set_of_free_chains_left.begin(), *set_of_free_chains_right.begin());
 				double best_score=0.0;
-				for(std::set<std::string>::const_iterator it_left=set_of_free_chains_left.begin();it_left!=set_of_free_chains_left.end();++it_left)
+				for(std::set<std::string>::const_iterator it_right=set_of_free_chains_right.begin();it_right!=set_of_free_chains_right.end();++it_right)
 				{
-					for(std::set<std::string>::const_iterator it_right=set_of_free_chains_right.begin();it_right!=set_of_free_chains_right.end();++it_right)
+					std::map<std::string, std::string> new_map_of_renamings_in_target=map_of_renamings_in_target;
+					new_map_of_renamings_in_target[*it_right]=(*it_right);
+					const std::map<CRADsPair, double> new_submap_of_target_contacts=select_contacts_with_defined_chain_names(rename_chains_in_map_of_contacts(assessment_map_of_target_contacts, new_map_of_renamings_in_target));
+					for(std::set<std::string>::const_iterator it_left=set_of_free_chains_left.begin();it_left!=set_of_free_chains_left.end();++it_left)
 					{
 						std::map<std::string, std::string> new_map_of_renamings=map_of_renamings;
-						std::map<std::string, std::string> new_map_of_renamings_in_target=map_of_renamings_in_target;
 						new_map_of_renamings[*it_left]=(*it_right);
-						new_map_of_renamings_in_target[*it_right]=(*it_right);
 						const CADDescriptor cad_descriptor=construct_global_cad_descriptor(
-								select_contacts_with_defined_chain_names(rename_chains_in_map_of_contacts(map_of_target_contacts, new_map_of_renamings_in_target)),
-								select_contacts_with_defined_chain_names(rename_chains_in_map_of_contacts(map_of_contacts, new_map_of_renamings)),
+								new_submap_of_target_contacts,
+								select_contacts_with_defined_chain_names(rename_chains_in_map_of_contacts(assessment_map_of_contacts, new_map_of_renamings)),
 								ignore_residue_names,
 								binarize);
 						const double score=cad_descriptor.score()*cad_descriptor.target_area_sum;

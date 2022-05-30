@@ -19,6 +19,7 @@ Options:
     --sbatch                          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry                  string     flag to score symmetry, default is 'false'
     --remap-cadscore                  string     flag to use optimal chains remapping for CAD-score, default is 'false'
+    --crude-cadscore                  string     flag to use faster but crude mode for CAD-score
     --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
     --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '1 10'
     --jury-cluster                    number     clustering threshold for ranks jury scoring, default is 0.95
@@ -78,6 +79,7 @@ SCORING_PROCESSORS="8"
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 REMAP_CADSCORE="false"
+CRUDE_CADSCORE="false"
 SCORING_RANKS="protein_protein_voromqa_and_global_and_gnn_no_sr"
 SCORING_RANKS_JURY_SLICES="1 10" 
 SCORING_RANKS_JURY_CLUSTER="0.95" 
@@ -147,6 +149,10 @@ do
 		;;
 	--remap-cadscore)
 		REMAP_CADSCORE="$OPTARG"
+		shift
+		;;
+	--crude-cadscore)
+		CRUDE_CADSCORE="$OPTARG"
 		shift
 		;;
 	--rank-names)
@@ -595,6 +601,7 @@ then
 	  --rank-names              "$SCORING_RANKS" \
 	  --ranks-top               "9999999" \
 	  --remap-cadscore          "$REMAP_CADSCORE" \
+	  --crude-cadscore          "$CRUDE_CADSCORE" \
 	  --jury-slices             "$SCORING_RANKS_JURY_SLICES" \
 	  --jury-cluster            "$SCORING_RANKS_JURY_CLUSTER" \
 	  --jury-max-values         "$SCORING_RANKS_JURY_MAX_VALUES" \

@@ -14,6 +14,7 @@ Options:
     --monomer2                string     mobile monomer input file path
     --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
     --remap-chains            string     flag to calculate and use optimal chains remapping, default is 'false'
+    --crude                   string     flag to use faster but crude mode
     --parallel                number     total number of parallel parts, default is 1
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
     --help | -h                          flag to display help message and exit
@@ -55,6 +56,7 @@ PARALLEL_PARTS="1"
 SBATCH_PARAMETERS=""
 USE_MONOMERS="false"
 REMAP_CHAINS="false"
+CRUDE_MODE="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -99,6 +101,10 @@ do
 		;;
 	--remap-chains)
 		REMAP_CHAINS="$OPTARG"
+		shift
+		;;
+	--crude)
+		CRUDE_MODE="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -162,9 +168,21 @@ fi
 
 MORE_FAST_IFACE_CADSCORE_PARAMETERS=()
 
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--processors")
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("$PARALLEL_PARTS")
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--subselect-contacts")
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("$SUBSELECT_CONTACTS")
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--sbatch-parameters")
+MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("$SBATCH_PARAMETERS")
+
 if [ "$REMAP_CHAINS" == "true" ]
 then
 	MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--remap-chains")
+fi
+
+if [ "$CRUDE_MODE" == "true" ]
+then
+	MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--crude")
 fi
 
 readonly TMPLDIR=$(mktemp -d)
@@ -191,11 +209,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-cadscore-matrix --model-input-is-script --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}"
+	| voronota-js-fast-iface-cadscore-matrix --model-input-is-script "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-cadscore-matrix --subselect-contacts "$SUBSELECT_CONTACTS" --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}" \
+	| voronota-js-fast-iface-cadscore-matrix "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
 fi
 } \
