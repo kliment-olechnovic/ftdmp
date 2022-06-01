@@ -11,6 +11,8 @@ Options:
     --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
     --output-dir              string  *  output directory for prepared models
     --restrict-output         string     query to restrict output atoms, default is '[]'
+    --min-seq-identity        number     minimum allowed chain sequence identity, default is 0.0
+    --require-all-chains      string     flag to require all chains according to stoichiometry, default is 'false'
     --processors              number     number of processors for parallel running, default is 1
     --help | -h                          flag to display help message and exit
 
@@ -43,6 +45,8 @@ SEQUENCESFILE=""
 STOICHIOMETRY=""
 OUTDIR=""
 RESTRICT_OUTPUT="[]"
+MIN_SEQ_IDENTITY="0.0"
+REQUIRE_ALL_CHAINS="false"
 PROCESSORS="1"
 HELP_MODE="false"
 
@@ -66,6 +70,14 @@ do
 		;;
 	--restrict-output)
 		RESTRICT_OUTPUT="$OPTARG"
+		shift
+		;;
+	--min-seq-identity)
+		MIN_SEQ_IDENTITY="$OPTARG"
+		shift
+		;;
+	--require-all-chains)
+		REQUIRE_ALL_CHAINS="$OPTARG"
 		shift
 		;;
 	--processors)
@@ -168,7 +180,9 @@ cat "$TMPLDIR/paths_to_names" \
   ftdmp-reset-ids-by-sequences \
     --sequences "$SEQUENCESFILE" \
     --stoichiometry "$STOICHIOMETRY" \
-    --restrict-output "$RESTRICT_OUTPUT"
+    --restrict-output "$RESTRICT_OUTPUT" \
+    --min-seq-identity "$MIN_SEQ_IDENTITY" \
+    --require-all-chains "$REQUIRE_ALL_CHAINS"
 
 cat "$TMPLDIR/paths_to_names" \
 | awk '{print $2}' \

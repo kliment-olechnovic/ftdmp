@@ -13,6 +13,8 @@ Options:
     --stoichiometry           string  *  stoichiometry descriptor, e.g. 'A3B6C1'
     --output                  string  *  output file path
     --restrict-output         string     query to restrict output atoms, default is '[]'
+    --min-seq-identity        number     minimum allowed chain sequence identity, default is 0.0
+    --require-all-chains      string     flag to require all chains according to stoichiometry, default is 'false'
     --help | -h                          flag to display help message and exit
 
 Examples:
@@ -35,6 +37,8 @@ SEQUENCESFILE=""
 STOICHIOMETRY=""
 OUTFILE=""
 RESTRICT_OUTPUT="[]"
+MIN_SEQ_IDENTITY="0.0"
+REQUIRE_ALL_CHAINS="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -61,6 +65,14 @@ do
 		;;
 	--restrict-output)
 		RESTRICT_OUTPUT="$OPTARG"
+		shift
+		;;
+	--min-seq-identity)
+		MIN_SEQ_IDENTITY="$OPTARG"
+		shift
+		;;
+	--require-all-chains)
+		REQUIRE_ALL_CHAINS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -115,6 +127,8 @@ common_params.input_pdb_file='$INFILE';
 common_params.restrict_output_atoms='$RESTRICT_OUTPUT';
 common_params.sequences_file='$SEQUENCESFILE';
 common_params.stoichiometry_string='$STOICHIOMETRY';
+common_params.min_sequence_identity=$MIN_SEQ_IDENTITY;
+common_params.require_all_chains='$REQUIRE_ALL_CHAINS';
 common_params.output_pdb_file='$TMPLDIR/result.pdb';
 EOF
 
@@ -152,7 +166,7 @@ voronota_delete_objects();
 voronota_import("-file", params.input_pdb_file);
 voronota_assert_partial_success("Failed to import file");
 
-voronota_set_chain_names_and_residue_numbers_by_sequences("-sequences-file", common_params.sequences_file, "-stoichiometry-string", params.stoichiometry_string);
+voronota_set_chain_names_and_residue_numbers_by_sequences("-sequences-file", common_params.sequences_file, "-stoichiometry-string", params.stoichiometry_string, "-min-sequence-identity", common_params.min_sequence_identity, "-require-all-chains", common_params.require_all_chains);
 voronota_assert_full_success("Failed to reset IDs by sequences");
 
 voronota_restrict_atoms("-use", params.restrict_output_atoms);

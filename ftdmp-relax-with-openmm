@@ -107,7 +107,7 @@ do
 		shift
 		;;
 	--focus-first-sel)
-		FOCUS_BASE="$OPTARG"
+		FOCUS_FIRST_SEL="$OPTARG"
 		shift
 		;;
 	--focus-second-sel)
