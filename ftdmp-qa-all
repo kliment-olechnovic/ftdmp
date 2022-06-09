@@ -613,7 +613,7 @@ fi
 
 ################################################################################
 
-if [ -n "LIMIT_VOROMQA_LIGHT" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+if [ -n "$LIMIT_VOROMQA_LIGHT" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
 then
 	cat "$PREV_SCORING_RESULTS_FILE" \
 	| ftdmp-filter-table \
