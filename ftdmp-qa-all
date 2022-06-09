@@ -22,6 +22,7 @@ Options:
     --crude-cadscore                  string     flag to use faster but crude mode for CAD-score
     --keep-top-fast                   number     number of top complexes to keep after full scoring stage, default is 9999999
     --keep-top-slow                   number     number of top complexes to keep before slow full scoring stage, default is 9999999
+    --limit-voromqa-light             number     minimal allowed VoroMQA-light whole-stricture score, default is ''
     --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
     --ranks-top                       number     number of top complexes to consider for each ranking, default is 9999999
     --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '1 10'
@@ -85,6 +86,7 @@ REMAP_CADSCORE="false"
 CRUDE_CADSCORE="false"
 KEEP_TOP_FAST="9999999"
 KEEP_TOP_SLOW="9999999"
+LIMIT_VOROMQA_LIGHT=""
 SCORING_RANKS="protein_protein_voromqa_and_global_and_gnn_no_sr"
 SCORING_RANKS_TOP="9999999"
 SCORING_RANKS_JURY_SLICES="1 10" 
@@ -167,6 +169,10 @@ do
 		;;
 	--keep-top-slow)
 		KEEP_TOP_SLOW="$OPTARG"
+		shift
+		;;
+	--limit-voromqa-light)
+		LIMIT_VOROMQA_LIGHT="$OPTARG"
 		shift
 		;;
 	--rank-names)
@@ -603,6 +609,24 @@ if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
 then
 	echo >&2 "Error: no raw scoring results"
 	exit 1
+fi
+
+################################################################################
+
+if [ -n "LIMIT_VOROMQA_LIGHT" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
+then
+	cat "$PREV_SCORING_RESULTS_FILE" \
+	| ftdmp-filter-table \
+	  ">=${LIMIT_VOROMQA_LIGHT}" "raw_FGV_full_light_score" \
+	> "${OUTPUT_PATH}/raw_scoring_results_with_ranks_limited_by_voromqa_light.txt"
+	
+	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_scoring_results_with_ranks_limited_by_voromqa_light.txt"
+	
+	if [ ! -s "$PREV_SCORING_RESULTS_FILE" ]
+	then
+		echo >&2 "Error: no raw scoring results after limiting by VoroMQA-light score"
+		exit 1
+	fi
 fi
 
 ################################################################################
