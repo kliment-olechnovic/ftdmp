@@ -17,6 +17,8 @@ Options:
     --conda-path              string     conda installation path, default is ''
     --conda-env               string     conda environment name, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
+    --constraints-required    string     query to check required inter-chain contacts, default is ''
+    --constraints-banned      string     query to check banned inter-chain contacts, default is ''
     --subselect-atoms-global  string     query to subselect atoms for global scores, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
@@ -100,6 +102,8 @@ SCORENAME_PREFIX=""
 CONDA_PATH=""
 CONDA_ENV=""
 INTERFACE_SUBSELECTION="[]"
+CONSTRAINTS_REQUIRED=""
+CONSTRAINTS_BANNED=""
 SUBSELECT_ATOMS_FOR_GLOBAL="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
@@ -171,6 +175,14 @@ do
 		;;
 	--subselect-contacts)
 		INTERFACE_SUBSELECTION="$OPTARG"
+		shift
+		;;
+	--constraints-required)
+		CONSTRAINTS_REQUIRED="$OPTARG"
+		shift
+		;;
+	--constraints-banned)
+		CONSTRAINTS_BANNED="$OPTARG"
 		shift
 		;;
 	--subselect-atoms-global)
@@ -493,6 +505,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_" \
@@ -525,6 +538,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket \
 		  --score-symmetry "$SCORE_SYMMETRY" \
@@ -557,6 +571,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_sr_" \
@@ -588,6 +603,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIVb_sr_" \

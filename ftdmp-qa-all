@@ -9,6 +9,8 @@ cat >&2 << 'EOF'
 Options:
     --workdir                         string  *  path to directory for caching and writing detailed results
     --subselect-contacts              string     query to subselect inter-chain contacts for scoring, default is '[]'
+    --constraints-required            string     query to check required inter-chain contacts, default is ''
+    --constraints-banned              string     query to check banned inter-chain contacts, default is ''
     --subselect-atoms-global          string     query to subselect atoms for global scores, default is '[]'
     --reference                       string     input structure file to compute CAD-score with, default is ''
     --ftdmp-root                      string     ftdmp root path, default is '' (autodetected from the calling command)
@@ -73,6 +75,8 @@ fi
 
 WORKDIR=""
 INTERFACE_SUBSELECTION="[]"
+CONSTRAINTS_REQUIRED=""
+CONSTRAINTS_BANNED=""
 SUBSELECT_ATOMS_FOR_GLOBAL="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 FTDMP_ROOT=""
@@ -112,6 +116,14 @@ do
 		;;
 	--subselect-contacts)
 		INTERFACE_SUBSELECTION="$OPTARG"
+		shift
+		;;
+	--constraints-required)
+		CONSTRAINTS_REQUIRED="$OPTARG"
+		shift
+		;;
+	--constraints-banned)
+		CONSTRAINTS_BANNED="$OPTARG"
 		shift
 		;;
 	--subselect-atoms-global)
@@ -580,6 +592,8 @@ ftdmp-all-score \
   --structure-prefix        "$INPUT_FILE_PATH_PREFIX" \
   --structure-suffix        "" \
   --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+  --constraints-required    "$CONSTRAINTS_REQUIRED" \
+  --constraints-banned      "$CONSTRAINTS_BANNED" \
   --subselect-atoms-global  "$SUBSELECT_ATOMS_FOR_GLOBAL" \
   --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
   --remap-cadscore          "$REMAP_CADSCORE" \

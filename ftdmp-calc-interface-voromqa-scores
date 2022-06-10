@@ -12,6 +12,8 @@ Options:
     --monomer1                string     static monomer input file path
     --monomer2                string     mobile monomer input file path
     --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+    --constraints-required    string     query to check required contacts, default is ''
+    --constraints-banned      string     query to check banned contacts, default is ''
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
     --blanket                            flag to run in blanket mode
     --score-symmetry          string     flag to score symmetry, default is 'false'
@@ -55,6 +57,8 @@ MONOMERFILE2=""
 PARALLEL_PARTS="1"
 SBATCH_PARAMETERS=""
 SUBSELECT_CONTACTS="[]"
+CONSTRAINTS_REQUIRED=""
+CONSTRAINTS_BANNED=""
 COLNAMES_PREFIX="FIV_"
 USE_MONOMERS="false"
 ADJOIN="false"
@@ -97,6 +101,14 @@ do
 		;;
 	--subselect-contacts)
 		SUBSELECT_CONTACTS="$OPTARG"
+		shift
+		;;
+	--constraints-required)
+		CONSTRAINTS_REQUIRED="$OPTARG"
+		shift
+		;;
+	--constraints-banned)
+		CONSTRAINTS_BANNED="$OPTARG"
 		shift
 		;;
 	--colnames-prefix)
@@ -190,6 +202,18 @@ fi
 if [ "$SCORE_SYMMETRY" == "true" ]
 then
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--score-symmetry")
+fi
+
+if [ -n "$CONSTRAINTS_REQUIRED" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--constraints-required")
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("$CONSTRAINTS_REQUIRED")
+fi
+
+if [ -n "$CONSTRAINTS_BANNED" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--constraints-banned")
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("$CONSTRAINTS_BANNED")
 fi
 
 readonly TMPLDIR=$(mktemp -d)

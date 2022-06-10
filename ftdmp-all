@@ -17,6 +17,8 @@ Options:
     --mobile-chain            string     hetero or homo docking chain name or chain renaming rule to apply for mobile atoms, default is ''
     --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
+    --constraints-required    string     query to check required inter-chain contacts, default is ''
+    --constraints-banned      string     query to check banned inter-chain contacts, default is ''
     --reference               string     input structure file to compute CAD-score with, default is ''
     --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
     --ftdmp-root              string     ftdmp root path, default is '' (autodetected from the calling command)
@@ -92,6 +94,8 @@ MOBILE_STRUCTURE_SELECTION="[]"
 MOBILE_STRUCTURE_CHAIN=""
 SYMMETRY_DOCKING=""
 INTERFACE_SUBSELECTION="[]"
+CONSTRAINTS_REQUIRED=""
+CONSTRAINTS_BANNED=""
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 OPENMM_FORCEFIELD=""
 FTDMP_ROOT=""
@@ -182,6 +186,14 @@ do
 		;;
 	--subselect-contacts)
 		INTERFACE_SUBSELECTION="$OPTARG"
+		shift
+		;;
+	--constraints-required)
+		CONSTRAINTS_REQUIRED="$OPTARG"
+		shift
+		;;
+	--constraints-banned)
+		CONSTRAINTS_BANNED="$OPTARG"
 		shift
 		;;
 	--reference)
@@ -757,6 +769,8 @@ ftdmp-all-score \
   --structure-prefix        "$INPUT_COMPLEX_PREFIX" \
   --structure-suffix        "$INPUT_COMPLEX_SUFFIX" \
   --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+  --constraints-required    "$CONSTRAINTS_REQUIRED" \
+  --constraints-banned      "$CONSTRAINTS_BANNED" \
   --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
   --remap-cadscore          "$REMAP_CADSCORE" \
   --mode-protein            "$SCORING_MODE_PROTEIN" \
@@ -979,6 +993,8 @@ ftdmp-all-score \
   --structure-prefix        "${TOP_RELAXED_COMPLEXES_DIR}/" \
   --structure-suffix        ".pdb" \
   --subselect-contacts      "$INTERFACE_SUBSELECTION" \
+  --constraints-required    "$CONSTRAINTS_REQUIRED" \
+  --constraints-banned      "$CONSTRAINTS_BANNED" \
   --reference               "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
   --remap-cadscore          "$REMAP_CADSCORE" \
   --mode-protein            "$SCORING_MODE_PROTEIN" \
