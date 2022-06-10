@@ -678,7 +678,7 @@ fi
 {
 	echo "local_column"
 	cat "./results_per_residue_pretty.txt" \
-	| sed 's/R\S\+//' \
+	| sed 's/R<\S\+//' \
 	| sed 's/c<//' \
 	| sed 's/r<//' \
 	| tr -d '>' \
@@ -686,7 +686,7 @@ fi
 	| tr '\n' ',' \
 	| sed 's/,$/\n/'
 } > "./results_local_column.txt"
-	
+
 paste "./results_summary_table.txt" "./results_local_column.txt" \
 | tr '\t' ' ' \
 > "./results_summary_table_with_local_column.txt"
