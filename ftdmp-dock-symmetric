@@ -173,6 +173,7 @@ find "${TMPLDIR}/" -type f -name '*.pdb' -not -empty \
 
 if [ "$(cat $TMPLDIR/list_of_generated_complexes.txt | wc -l)" -lt "2" ]
 then
+	cat "$TMPLDIR/stdout.txt" >&2
 	echo >&2 "Error: failed to generate complexes"
 	exit 1
 fi
