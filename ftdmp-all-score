@@ -493,6 +493,8 @@ then
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$CONSTRAINTS_REQUIRED"
+	echo "$CONSTRAINTS_BANNED"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
@@ -526,6 +528,8 @@ then
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$CONSTRAINTS_REQUIRED"
+	echo "$CONSTRAINTS_BANNED"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
@@ -560,6 +564,8 @@ then
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$CONSTRAINTS_REQUIRED"
+	echo "$CONSTRAINTS_BANNED"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -592,6 +598,8 @@ then
 	{
 	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
 	echo "$INTERFACE_SUBSELECTION"
+	echo "$CONSTRAINTS_REQUIRED"
+	echo "$CONSTRAINTS_BANNED"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
