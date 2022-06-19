@@ -13,6 +13,7 @@ Options:
     --restrict-output         string     query to restrict output atoms, default is '[]'
     --min-seq-identity        number     minimum allowed chain sequence identity, default is 0.0
     --require-all-chains      string     flag to require all chains according to stoichiometry, default is 'false'
+    --detect-gly-linkers      string     flag to use long GLY linkers as separators between chains, default is 'false'
     --processors              number     number of processors for parallel running, default is 1
     --help | -h                          flag to display help message and exit
 
@@ -47,6 +48,7 @@ OUTDIR=""
 RESTRICT_OUTPUT="[]"
 MIN_SEQ_IDENTITY="0.0"
 REQUIRE_ALL_CHAINS="false"
+DETECT_GLY_LINKERS="false"
 PROCESSORS="1"
 HELP_MODE="false"
 
@@ -78,6 +80,10 @@ do
 		;;
 	--require-all-chains)
 		REQUIRE_ALL_CHAINS="$OPTARG"
+		shift
+		;;
+	--detect-gly-linkers)
+		DETECT_GLY_LINKERS="$OPTARG"
 		shift
 		;;
 	--processors)
@@ -182,7 +188,8 @@ cat "$TMPLDIR/paths_to_names" \
     --stoichiometry "$STOICHIOMETRY" \
     --restrict-output "$RESTRICT_OUTPUT" \
     --min-seq-identity "$MIN_SEQ_IDENTITY" \
-    --require-all-chains "$REQUIRE_ALL_CHAINS"
+    --require-all-chains "$REQUIRE_ALL_CHAINS" \
+    --detect-gly-linkers "$DETECT_GLY_LINKERS"
 
 cat "$TMPLDIR/paths_to_names" \
 | awk '{print $2}' \

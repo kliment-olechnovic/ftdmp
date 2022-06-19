@@ -15,6 +15,7 @@ Options:
     --restrict-output         string     query to restrict output atoms, default is '[]'
     --min-seq-identity        number     minimum allowed chain sequence identity, default is 0.0
     --require-all-chains      string     flag to require all chains according to stoichiometry, default is 'false'
+    --detect-gly-linkers      string     flag to use long GLY linkers as separators between chains, default is 'false'
     --help | -h                          flag to display help message and exit
 
 Examples:
@@ -39,6 +40,7 @@ OUTFILE=""
 RESTRICT_OUTPUT="[]"
 MIN_SEQ_IDENTITY="0.0"
 REQUIRE_ALL_CHAINS="false"
+DETECT_GLY_LINKERS="false"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -73,6 +75,10 @@ do
 		;;
 	--require-all-chains)
 		REQUIRE_ALL_CHAINS="$OPTARG"
+		shift
+		;;
+	--detect-gly-linkers)
+		DETECT_GLY_LINKERS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -129,6 +135,7 @@ common_params.sequences_file='$SEQUENCESFILE';
 common_params.stoichiometry_string='$STOICHIOMETRY';
 common_params.min_sequence_identity=$MIN_SEQ_IDENTITY;
 common_params.require_all_chains='$REQUIRE_ALL_CHAINS';
+common_params.detect_gly_linkers='$DETECT_GLY_LINKERS';
 common_params.output_pdb_file='$TMPLDIR/result.pdb';
 EOF
 
@@ -165,6 +172,15 @@ voronota_delete_objects();
 
 voronota_import("-file", params.input_pdb_file);
 voronota_assert_partial_success("Failed to import file");
+
+if(detect_gly_linkers==="true")
+{
+	voronota_sort_atoms_by_residue_id();
+	voronota_assert_full_success("Failed to sort atoms by residue ID file");
+	
+	voronota_set_chain_names_by_guessing("-detect-gly-linkers");
+	voronota_assert_full_success("Failed to set chain names by guessing");
+}
 
 voronota_set_chain_names_and_residue_numbers_by_sequences("-sequences-file", common_params.sequences_file, "-stoichiometry-string", params.stoichiometry_string, "-min-sequence-identity", common_params.min_sequence_identity, "-require-all-chains", common_params.require_all_chains);
 voronota_assert_full_success("Failed to reset IDs by sequences");
