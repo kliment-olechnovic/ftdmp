@@ -181,10 +181,48 @@ fi
 OUTDIR="${OUTDIR}"
 mkdir -p "$OUTDIR"
 
-cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs mv -t "$OUTDIR"
+cat "$TMPLDIR/list_of_generated_complexes.txt" \
+| while read MFILE_IN
+do
+	MFILE_NAME="$(basename ${MFILE_IN})"
+	MFILE_OUT="${OUTDIR}/${MFILE_NAME}"
+
+{
+cat << EOF
+var params={}
+params.input_pdb_file='$MFILE_IN';
+params.output_pdb_file='$MFILE_OUT';
+EOF
+
+cat << 'EOF'
+try
+{
+voronota_import("-file", params.input_pdb_file);
+voronota_assert_partial_success("Failed to import file");
+
+voronota_set_chain_names_by_guessing();
+voronota_assert_full_success("Failed to set chain IDs");
+
+voronota_export_atoms("-file", params.output_pdb_file, "-as-pdb", "-pdb-ter");
+voronota_assert_full_success("Failed to export atoms");
+}
+catch(error)
+{
+	log("Failed with '"+common_params.input_pdb_file+"': "+error);
+}
+EOF
+} \
+| voronota-js --no-setup-defaults
+
+	if [ -s "$MFILE_OUT" ]
+	then
+		echo "$MFILE_OUT"
+	fi
+done \
+> "$TMPLDIR/refined_list_of_generated_complexes.txt"
 
 {
 echo "ID"
-cat "$TMPLDIR/list_of_generated_complexes.txt" | xargs basename -s .pdb | sort
+cat "$TMPLDIR/refined_list_of_generated_complexes.txt" | xargs basename -s .pdb | sort
 }
 
