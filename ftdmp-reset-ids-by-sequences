@@ -173,7 +173,7 @@ voronota_delete_objects();
 voronota_import("-file", params.input_pdb_file);
 voronota_assert_partial_success("Failed to import file");
 
-if(detect_gly_linkers==="true")
+if(params.detect_gly_linkers==="true")
 {
 	voronota_sort_atoms_by_residue_id();
 	voronota_assert_full_success("Failed to sort atoms by residue ID file");
