@@ -15,6 +15,7 @@ Options:
     --require-all-chains      string     flag to require all chains according to stoichiometry, default is 'false'
     --detect-gly-linkers      string     flag to use long GLY linkers as separators between chains, default is 'false'
     --processors              number     number of processors for parallel running, default is 1
+    --long-to-short-names     string     file to save long names after shortening, default is ''
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -50,6 +51,7 @@ MIN_SEQ_IDENTITY="0.0"
 REQUIRE_ALL_CHAINS="false"
 DETECT_GLY_LINKERS="false"
 PROCESSORS="1"
+LONG_TO_SHORT_NAMES=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -88,6 +90,10 @@ do
 		;;
 	--processors)
 		PROCESSORS="$OPTARG"
+		shift
+		;;
+	--long-to-short-names)
+		LONG_TO_SHORT_NAMES="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -162,6 +168,22 @@ do
 done
 
 cat "$TMPLDIR/spaced_names" | sed 's|\s\+|__|g' > "$TMPLDIR/solid_names"
+
+if [ -n "$LONG_TO_SHORT_NAMES" ]
+then
+	cat "$TMPLDIR/input_list" \
+	| while read -r LONGNAME
+	do
+		SHORTNAME="$(echo ${LONGNAME} | md5sum | awk '{print $1 ".pdb"}')"
+		echo "$SHORTNAME $LONGNAME"
+	done \
+	> "$TMPLDIR/solid_names_long_to_short"
+	
+	cat "$TMPLDIR/solid_names_long_to_short" | awk '{print $1}' > "$TMPLDIR/solid_names"
+	
+	mkdir -p "$(dirname ${LONG_TO_SHORT_NAMES})"
+	cat "$TMPLDIR/solid_names_long_to_short" > "$LONG_TO_SHORT_NAMES"
+fi
 
 paste "$TMPLDIR/input_list" "$TMPLDIR/solid_names" | awk '{print $1 " " $2}' > "$TMPLDIR/paths_to_names"
 
