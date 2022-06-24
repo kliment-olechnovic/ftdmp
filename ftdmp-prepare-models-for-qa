@@ -180,9 +180,6 @@ then
 	> "$TMPLDIR/solid_names_long_to_short"
 	
 	cat "$TMPLDIR/solid_names_long_to_short" | awk '{print $1}' > "$TMPLDIR/solid_names"
-	
-	mkdir -p "$(dirname ${LONG_TO_SHORT_NAMES})"
-	cat "$TMPLDIR/solid_names_long_to_short" > "$LONG_TO_SHORT_NAMES"
 fi
 
 paste "$TMPLDIR/input_list" "$TMPLDIR/solid_names" | awk '{print $1 " " $2}' > "$TMPLDIR/paths_to_names"
@@ -224,3 +221,8 @@ do
 	fi
 done
 
+if [ -n "$LONG_TO_SHORT_NAMES" ]
+then
+	mkdir -p "$(dirname ${LONG_TO_SHORT_NAMES})"
+	cat "$TMPLDIR/solid_names_long_to_short" | grep -f <(ls ./${OUTDIR}) > "$LONG_TO_SHORT_NAMES"
+fi
