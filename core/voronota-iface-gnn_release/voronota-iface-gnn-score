@@ -20,6 +20,7 @@ Options:
     --run-faspr               string     flag to rebuild sidechains using FASPR, default is 'false'
     --processors              number     maximum number of processors to run in parallel, default is 1
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+    --stdin-file              string     input file path to replace stdin
     --local-column            string     flag to add per-residue scores to the global output table
     --cache-dir               string     cache directory path to store results of past calls
     --output-dir              string     output directory path for all results
@@ -56,6 +57,17 @@ function substitute_id_in_filename
 	| sed "s|-BASENAME-|${SUBSTITUTE_BASENAME}|"
 }
 
+function cat_stdin
+{
+	STDIN_SOURCE="$1"
+	if [ "$STDIN_SOURCE" == "_stream" ]
+	then
+		cat
+	else
+		cat "$STDIN_SOURCE"
+	fi
+}
+
 ################################################################################
 
 readonly ZEROARG=$0
@@ -89,6 +101,7 @@ FASPR_PATH=""
 RUN_FASPR="false"
 MAX_PROCESSORS="1"
 SBATCH_PARAMETERS=""
+STDIN_FILE="_stream"
 LOCAL_COLUMN="false"
 CACHE_DIR=""
 OUTDIR=""
@@ -155,6 +168,10 @@ do
 		SBATCH_PARAMETERS="$OPTARG"
 		shift
 		;;
+	--stdin-file)
+		STDIN_FILE="$OPTARG"
+		shift
+		;;
 	--local-column)
 		LOCAL_COLUMN="$OPTARG"
 		shift
@@ -203,6 +220,12 @@ fi
 if [ "$INFILE" != "_list" ] && [ ! -s "$INFILE" ]
 then
 	echo >&2 "Error: invalid input file '$INFILE'"
+	exit 1
+fi
+
+if [ "$STDIN_FILE" != "_stream" ] && [ ! -s "$STDIN_FILE" ]
+then
+	echo >&2 "Error: stdin replacement file '$STDIN_FILE' does not exist"
 	exit 1
 fi
 
@@ -515,7 +538,7 @@ done < "${TMPLDIR}/gnn_runs/list.txt"
 
 if [ "$INFILE" == "_list" ]
 then
-	cat | egrep . | sort | uniq > "$TMPLDIR/input_list"
+	cat_stdin "$STDIN_FILE" | egrep . | sort | uniq > "$TMPLDIR/input_list"
 	
 	if [ ! -s "$TMPLDIR/input_list" ]
 	then
@@ -525,10 +548,17 @@ then
 	
 	if [ -n "$SBATCH_PARAMETERS" ]
 	then
+		NUM_OF_INPUTS="$(cat $TMPLDIR/input_list | wc -l)"
+		SIZE_OF_PORTION="$(echo "a=$NUM_OF_INPUTS; b=$MAX_PROCESSORS; if(a%b) a/b+1 else a/b" | bc)"
+	
+		mkdir -p "$TMPLDIR/portions"
+	
+		split -l "$SIZE_OF_PORTION" "$TMPLDIR/input_list" "$TMPLDIR/portions/portion_"
+	
 		mkdir -p "$TMPLDIR/slurm_logs"
 		
-		cat "$TMPLDIR/input_list" \
-		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --output-dir "${TMPLDIR}/outdir" --input \
+		find $TMPLDIR/portions/ -type f -not -empty \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --sbatch-parameters '' --processors 1 --output-dir "${TMPLDIR}/outdir" --input _list --stdin-file \
 		| egrep '^Submitted batch job ' \
 		| awk '{print $4}' \
 		> "$TMPLDIR/slurm_job_ids"

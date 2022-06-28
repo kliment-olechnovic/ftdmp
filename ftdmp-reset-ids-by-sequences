@@ -192,9 +192,9 @@ voronota_summarize_linear_structure();
 voronota_assert_full_success("Failed to summarize linear structure");
 linear_structure_summary=voronota_last_output().results[0].output;
 
-if(linear_structure_summary.chains_all<2)
+if(linear_structure_summary.chains_all<1)
 {
-	throw ("Not a multimeric structure");
+	throw ("Not a multimeric or monomeric structure");
 }
 
 voronota_export_atoms("-file", params.output_pdb_file, "-as-pdb", "-pdb-ter");
