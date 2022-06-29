@@ -555,7 +555,7 @@ var result_clash_score=voronota_last_output().results[0].output.clash_score;
 
 if(result_clash_score>params.constraint_clashes)
 {
-	voronota_assert_full_success("Clash score is too high");
+	throw ("Clash score is too high");
 }
 
 voronota_print_time();
