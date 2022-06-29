@@ -14,6 +14,7 @@ Options:
     --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
     --constraints-required    string     query to check required contacts, default is ''
     --constraints-banned      string     query to check banned contacts, default is ''
+    --constraint-clashes      number     max allowed clash score, default is ''
     --rebuild-sidechains                 flag to rebuild sidechains using FASPR
     --blanket                            flag to run in blanket mode
     --score-symmetry          string     flag to score symmetry, default is 'false'
@@ -59,6 +60,7 @@ SBATCH_PARAMETERS=""
 SUBSELECT_CONTACTS="[]"
 CONSTRAINTS_REQUIRED=""
 CONSTRAINTS_BANNED=""
+CONSTRAINT_CLASHES=""
 COLNAMES_PREFIX="FIV_"
 USE_MONOMERS="false"
 ADJOIN="false"
@@ -109,6 +111,10 @@ do
 		;;
 	--constraints-banned)
 		CONSTRAINTS_BANNED="$OPTARG"
+		shift
+		;;
+	--constraint-clashes)
+		CONSTRAINT_CLASHES="$OPTARG"
 		shift
 		;;
 	--colnames-prefix)
@@ -214,6 +220,12 @@ if [ -n "$CONSTRAINTS_BANNED" ]
 then
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--constraints-banned")
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("$CONSTRAINTS_BANNED")
+fi
+
+if [ -n "$CONSTRAINT_CLASHES" ]
+then
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--constraint-clashes")
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("$CONSTRAINT_CLASHES")
 fi
 
 readonly TMPLDIR=$(mktemp -d)

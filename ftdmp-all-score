@@ -19,6 +19,7 @@ Options:
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --constraints-required    string     query to check required inter-chain contacts, default is ''
     --constraints-banned      string     query to check banned inter-chain contacts, default is ''
+    --constraint-clashes      number     max allowed clash score, default is ''
     --subselect-atoms-global  string     query to subselect atoms for global scores, default is '[]'
     --reference               string     input structure file to compute CAD-score with, default is ''
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
@@ -104,6 +105,7 @@ CONDA_ENV=""
 INTERFACE_SUBSELECTION="[]"
 CONSTRAINTS_REQUIRED=""
 CONSTRAINTS_BANNED=""
+CONSTRAINT_CLASHES=""
 SUBSELECT_ATOMS_FOR_GLOBAL="[]"
 REFERENCE_STRUCTURE_FILE_FOR_COMPARISON=""
 SCORING_PROCESSORS="8"
@@ -183,6 +185,10 @@ do
 		;;
 	--constraints-banned)
 		CONSTRAINTS_BANNED="$OPTARG"
+		shift
+		;;
+	--constraint-clashes)
+		CONSTRAINT_CLASHES="$OPTARG"
 		shift
 		;;
 	--subselect-atoms-global)
@@ -495,6 +501,7 @@ then
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$CONSTRAINTS_REQUIRED"
 	echo "$CONSTRAINTS_BANNED"
+	echo "$CONSTRAINT_CLASHES"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
@@ -507,7 +514,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" --constraint-clashes "$CONSTRAINT_CLASHES" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --score-symmetry "$SCORE_SYMMETRY" \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_" \
@@ -530,6 +537,7 @@ then
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$CONSTRAINTS_REQUIRED"
 	echo "$CONSTRAINTS_BANNED"
+	echo "$CONSTRAINT_CLASHES"
 	echo "$SCORE_SYMMETRY"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
@@ -542,7 +550,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" --constraint-clashes "$CONSTRAINT_CLASHES" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket \
 		  --score-symmetry "$SCORE_SYMMETRY" \
@@ -566,6 +574,7 @@ then
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$CONSTRAINTS_REQUIRED"
 	echo "$CONSTRAINTS_BANNED"
+	echo "$CONSTRAINT_CLASHES"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -577,7 +586,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" --constraint-clashes "$CONSTRAINT_CLASHES" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIV_sr_" \
@@ -600,6 +609,7 @@ then
 	echo "$INTERFACE_SUBSELECTION"
 	echo "$CONSTRAINTS_REQUIRED"
 	echo "$CONSTRAINTS_BANNED"
+	echo "$CONSTRAINT_CLASHES"
 	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
 	
 	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
@@ -611,7 +621,7 @@ then
 		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
 		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
 		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" \
+		  --constraints-required "$CONSTRAINTS_REQUIRED" --constraints-banned "$CONSTRAINTS_BANNED" --constraint-clashes "$CONSTRAINT_CLASHES" \
 		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
 		  --blanket --rebuild-sidechains \
 		  --colnames-prefix "${SCORENAME_PREFIX}FIVb_sr_" \
