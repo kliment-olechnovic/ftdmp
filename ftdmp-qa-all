@@ -289,10 +289,10 @@ do
 		echo >&2 "Error: no input file '$SINGLEINFILE'"
 		exit 1
 	fi
-	SINGLEINFILE_PATH_PREFIX="$(dirname $(head -n 1 $TMPLDIR/input_list))/"
+	SINGLEINFILE_PATH_PREFIX="$(dirname ${SINGLEINFILE})/"
 	if [ "$SINGLEINFILE_PATH_PREFIX" != "$INPUT_FILE_PATH_PREFIX" ]
 	then
-		echo >&2 "Error: input files fo not have the same path prefix"
+		echo >&2 "Error: input files do not have the same path prefix"
 		exit 1
 	fi
 done < "$TMPLDIR/input_list"
