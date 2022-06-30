@@ -341,7 +341,7 @@ then
 		echo "$HEX_SWAP_AND_REPEAT"
 		} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$DOCKING_HEX_RESULTS_FILE")" --dependent-file "$DOCKING_HEX_RESULTS_FILE"
 		
-		if [ ! -s "$DOCKING_HEX_RESULTS_FILE" ]
+		if [ ! -f "$DOCKING_HEX_RESULTS_FILE" ]
 		then
 			ftdmp-dock-two-monomers-with-hex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
 			  --job-name "${JOB_NAME}_" \
@@ -360,7 +360,7 @@ then
 			cat "$DOCKING_FTDOCK_RESULTS_FILE"
 		fi
 		
-		if [ "$USE_HEX" == "true" ]
+		if [ "$USE_HEX" == "true" ] && [ -s "$DOCKING_HEX_RESULTS_FILE" ]
 		then
 			if [ "$USE_FTDOCK" == "true" ]
 			then
