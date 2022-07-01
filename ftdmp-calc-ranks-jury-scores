@@ -164,6 +164,7 @@ voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -similarity-threshold $CLUSTERTHRESHOLD
 -use-max-value
 -symmetrize-similarities
+-average-ranks-in-clusters
 -several-max-values $SEVERAL_MAX_VALUES
 -scale-last-slice-value 0.1
 ");
