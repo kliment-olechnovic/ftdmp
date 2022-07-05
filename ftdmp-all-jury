@@ -278,7 +278,9 @@ cat "$PREV_SCORING_RESULTS_FILE" \
   --cluster "$SCORING_RANKS_JURY_CLUSTER" \
   --several-max-values "$SCORING_RANKS_JURY_MAX_VALUES" \
   --colnames-prefix "${SCORENAME_PREFIX}RJS_" \
-  --adjoin \
+> "${OUTPUT_PATH}/${SCORENAME_PREFIX}top_scoring_results_RJS_only.txt"
+
+ftdmp-join-tables "$PREV_SCORING_RESULTS_FILE" "${OUTPUT_PATH}/${SCORENAME_PREFIX}top_scoring_results_RJS_only.txt" \
 | ftdmp-sort-table \
   --columns "-${SCORENAME_PREFIX}RJS_rank" \
 | ftdmp-calc-redundancy-scores \
