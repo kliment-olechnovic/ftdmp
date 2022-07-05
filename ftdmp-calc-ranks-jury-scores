@@ -155,13 +155,15 @@ then
 	exit 1
 fi
 
+FIXED_CLUSTERTHRESHOLDS="$(echo ${CLUSTERTHRESHOLD} | tr ',' '.' | tr '\n' ' ')"
+
 {
 cat << EOF
 voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -input-ranks-file '$RANKSFILE'
 -output-file _stdout
 -top-slices $EXPANDED_TOPSLICES
--similarity-threshold $CLUSTERTHRESHOLD
+-similarity-threshold $FIXED_CLUSTERTHRESHOLDS
 -use-max-value
 -symmetrize-similarities
 -average-ranks-in-clusters
