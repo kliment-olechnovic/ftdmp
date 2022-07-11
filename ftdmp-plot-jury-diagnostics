@@ -1,0 +1,110 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'ftdmp-plot-jury-scores' plots jury scores from a scoring table
+
+Options:
+    --input-prefix            string  *  input file path prefix
+    --output-prefix           string  *  output plot file path prefix
+    --help | -h                          flag to display help message and exit
+
+Example:
+    ftdmp-plot-jury-diagnostics --input-prefix ./scores/scoring_diagnostic_ --output ./plot.png
+
+EOF
+exit 1
+}
+
+################################################################################
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+INPUT_PREFIX=""
+OUTPUT_PREFIX=""
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input-prefix)
+		INPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	--output-prefix)
+		OUTPUT_PREFIX="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INPUT_PREFIX" ]
+then
+	echo >&2 "Error: input file path prefix not specified"
+	exit 1
+fi
+
+if [ -z "$OUTPUT_PREFIX" ]
+then
+	echo >&2 "Error: output plot file prefix not specified"
+	exit 1
+fi
+
+command -v R &> /dev/null || { echo >&2 "Error: 'R' executable not in binaries path"; exit 1; }
+
+CLUSTER_COUNTS_FILE="${INPUT_PREFIX}cluster_counts_by_threshold.txt"
+
+if [ ! -s "$CLUSTER_COUNTS_FILE" ]
+then
+	echo >&2 "Error: missing input file '$CLUSTER_COUNTS_FILE'"
+	exit 1
+fi
+
+################################################################################
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+cp "$CLUSTER_COUNTS_FILE" "$TMPLDIR/cluster_counts.txt"
+
+cd "$TMPLDIR"
+
+R --vanilla > /dev/null << 'EOF'
+dt=read.table("cluster_counts.txt", header=FALSE, stringsAsFactors=FALSE);
+png("cluster_counts.png", width=1000, height=600, units="px", pointsize=14);
+plot(dt$V1, dt$V2, xlab="threshold", ylab="clusters", main="Cluster counts vs thresholds");
+dev.off();
+EOF
+
+if [ ! -s "${TMPLDIR}/cluster_counts.png" ]
+then
+	echo >&2 "Error: no output plot produced for '$CLUSTER_COUNTS_FILE'"
+	exit 1
+fi
+
+cd - &> /dev/null
+
+mkdir -p "$(dirname ${OUTPUT_PREFIX}suffix)"
+
+mv "${TMPLDIR}/cluster_counts.png" "${OUTPUT_PREFIX}cluster_counts.png"
+

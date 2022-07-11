@@ -32,6 +32,7 @@ Options:
     --jury-maxs                       number     number of max values to use for ranks jury scoring, default is 2
     --output-redundancy-threshold     number     minimal ordered redundancy value to accept, default is 0.90
     --plot-jury-scores                string     file path to output plot of jury scores, default is ''
+    --plot-jury-diagnostics           string     flag to plot jury diagnostics, default is 'false'
     --write-pdb-file                  string     file path template to output scores in PDB files, default is ''
     --write-pdb-mode                  string     mode for PDB scores output ('voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'voromqa_dark_and_gnn'
     --write-pdb-num                   number     number of top PDB files with scores to write, default is 5
@@ -98,6 +99,7 @@ SCORING_RANKS_JURY_CLUSTER="0.95"
 SCORING_RANKS_JURY_MAX_VALUES="2" 
 REDUNDANCY_THRESHOLD="0.90"
 PLOT_JURY_SCORES=""
+PLOT_JURY_DIAGNOSTICS="false"
 WRITE_SCORES_PDB_FILE=""
 WRITE_SCORES_PDB_MODE="voromqa_dark_and_gnn"
 WRITE_SCORES_PDB_NUM="5"
@@ -213,6 +215,10 @@ do
 		;;
 	--plot-jury-scores)
 		PLOT_JURY_SCORES="$OPTARG"
+		shift
+		;;
+	--plot-jury-diagnostics)
+		PLOT_JURY_DIAGNOSTICS="$OPTARG"
 		shift
 		;;
 	--write-pdb-file)
@@ -728,6 +734,13 @@ then
 		
 		mkdir -p "$(dirname ${PLOT_JURY_SCORES})"
 		cp "${OUTPUT_PATH}/raw_RJS_plot.png" "$PLOT_JURY_SCORES"
+	fi
+	
+	if [ "$PLOT_JURY_DIAGNOSTICS" == "true" ]
+	then
+		ftdmp-plot-jury-diagnostics \
+		  --input-prefix "${OUTPUT_PATH}/raw_top_scoring_results_RJS_diagnostic_" \
+		  --output-prefix "${OUTPUT_PATH}/raw_RJS_diagnostic_plot_"
 	fi
 	
 	PREV_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_scoring_results_RJS_nonredundant.txt"
