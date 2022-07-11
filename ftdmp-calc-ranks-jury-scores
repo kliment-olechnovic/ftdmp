@@ -13,6 +13,7 @@ Options:
     --cluster                 number     similarity threshold to select cluster representatives, default is 1.0
     --several-max-values      number     number of max values to use, default is 1
     --colnames-prefix         string     prefix for output column names, default is 'RJS_'
+    --diagnostic-output        string     path prefix to output diagnostic info files, default is ''
     --adjoin                             flag to output results joined with input
     --help | -h                          flag to display help message and exit
 
@@ -49,6 +50,7 @@ TOPSLICES="5 50"
 CLUSTERTHRESHOLD="1"
 SEVERAL_MAX_VALUES="1"
 COLNAMES_PREFIX="RJS_"
+DIAGNOSTIC_OUTPUT=""
 ADJOIN="false"
 HELP_MODE="false"
 while [[ $# > 0 ]]
@@ -79,6 +81,10 @@ do
 		;;
 	--colnames-prefix)
 		COLNAMES_PREFIX="$OPTARG"
+		shift
+		;;
+	--diagnostic-output)
+		DIAGNOSTIC_OUTPUT="$OPTARG"
 		shift
 		;;
 	--adjoin)
@@ -162,6 +168,7 @@ cat << EOF
 voronota_ranks_jury_score("-input-similarities-file '$SIMILARITIESFILE'
 -input-ranks-file '$RANKSFILE'
 -output-file _stdout
+-diagnostic-prefix '$DIAGNOSTIC_OUTPUT'
 -top-slices $EXPANDED_TOPSLICES
 -similarity-threshold $FIXED_CLUSTERTHRESHOLDS
 -use-max-value
