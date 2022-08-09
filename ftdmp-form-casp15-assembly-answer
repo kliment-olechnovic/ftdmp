@@ -20,8 +20,8 @@ Standard output:
 
 Example:
 
-    ftdmp-form-casp15-assembly-answer --model ./a.pdb --model ./b.pdb --model ./c.pdb \
-        --target-name 'T1999' --author-id '1234-5678-9000'
+    find ./selected_models/ -type f -name '*.pdb' | sort \
+    | ftdmp-form-casp15-assembly-answer --target-name 'T1999' --author-id '1234-5678-9000'
 
 EOF
 exit 1
@@ -45,10 +45,6 @@ do
 	OPTARG="$2"
 	shift
 	case $OPTION in
-	-m|--model)
-		MODELS="$MODELS $OPTARG"
-		shift
-		;;
 	--target-name)
 		TARGET_NAME="$OPTARG"
 		shift
