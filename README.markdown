@@ -332,17 +332,39 @@ Below is the breef description of 'ftdmp-relax-with-openmm' interface.
         ftdmp-relax-with-openmm --conda-path ~/anaconda3 --conda-env alphafold2 \
         --forcefield amber14-all -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
 
-## Example of relaxing multiple structures
+## Example of relaxing multiple protein structures
 
     find "./models/raw/" -type f -name '*.pdb' \
     | while read -r INFILE
     do
         OUTFILE="./models/relaxed/$(basename ${INFILE})"
-        ~/git/ftdmp/ftdmp-relax-with-openmm \
+        
+        ${HOME}/git/ftdmp/ftdmp-relax-with-openmm \
             --conda-path ${HOME}/miniconda3 \
             --conda-env '' \
             --force-cuda \
             --full-preparation \
+            --input "$INFILE" \
+            --output "$OUTFILE" \
+            --cache-dir ./workdir/relax_cache
+    done
+
+## Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)
+
+Using the 'amber14-all-no-water' forcefield, the example below works for protein-protein, protein-nucleic acid, and nucleic acid-nucleic acid interfaces.
+
+    find "./models/raw/" -type f -name '*.pdb' \
+    | while read -r INFILE
+    do
+        OUTFILE="./models/relaxed/$(basename ${INFILE})"
+        
+        ${HOME}/git/ftdmp/ftdmp-relax-with-openmm \
+            --conda-path ${HOME}/miniconda3 \
+            --conda-env '' \
+            --force-cuda \
+            --full-preparation \
+            --forcefield amber14-all-no-water \
+            --focus whole_interface \
             --input "$INFILE" \
             --output "$OUTFILE" \
             --cache-dir ./workdir/relax_cache
