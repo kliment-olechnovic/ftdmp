@@ -280,3 +280,71 @@ Below is the breef description of 'ftdmp-all' interface.
       --cache-dir ./cache
 
 
+# Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions
+
+## Installing OpenMM
+
+The easiest way to install OpenMM is to do it in a Miniconda Anaconda environment:
+
+    conda install -c conda-forge openmm
+
+## Command line user interface
+
+Relaxing is done with the 'ftdmp-relax-with-openmm' script.
+After relaxing, model structures can be rescored and reranked with the 'ftdmp-qa-all' script.
+It is advised to do it on a machine with a nice GPU.
+Below is the breef description of 'ftdmp-relax-with-openmm' interface.
+
+    'ftdmp-relax-with-openmm' script relaxes a molecular structure using OpenMM.
+
+    Options:
+        --input                   string  *  input file path
+        --output                  string  *  output file path, setting to '_same_as_input' will overwrite input file
+        --focus                   string     focus mode, default is 'whole_structure', others are: 'interface_side_chains', 'whole_interface', 'not_interface'
+        --focus-base              string     selection of atoms that can be in a partial structure focus, default is '[]'
+        --focus-first-sel         string     first selection of atoms to define interface not by chains, default is ''
+        --focus-second-sel        string     second selection of atoms to define interface not by chains, default is ''
+        --conda-path              string     conda installation path, default is ''
+        --conda-env               string     conda environment name, default is ''
+        --forcefield              string     forcefield combo name, default is 'amber99sb', others are: 'amber14-all', 'amber14-all-no-water', 'charmm36'
+        --main-forcefield         string     main forcefield name, default is defined by the combo name, some others are: 'amber99sb', 'amber14-all', 'charmm36'
+        --water-forcefield        string     water forcefiled name, default is defined by the combo name, some others are: '', 'amber99_obc', 'amber14/tip3pfb', 'charmm36/water'
+        --max-iterations          number     max number of iterations, default is 100
+        --score-at-end            string     mode for scoring interface at the end, default is '', others are: 'fast_iface', 'full_iface', 'full'
+        --scoring-params          string     additional parameters for scoring, default is ''
+        --multiple-tries          number     number of tries to generate and score interfaces, default is ''
+        --cache-dir               string     cache directory path to store results of past calls
+        --force-cuda                         flag to force the platform to be CUDA
+        --trim-output                        flag to restrict output to atoms of proteins and nucleic acids
+        --no-preparation                     flag to not run any preparation of input structure before simulations
+        --limit-preparation                  flag to only add solvent if needed in the preparation stage
+        --full-preparation                   flag to turn off all preparation disabling flags
+        --no-simulation                      flag to not run any simulations
+        --help | -h                          flag to display help message and exit
+
+    Standard output:
+        space-separated table of scores for both input and output
+        
+    Examples:
+
+        ftdmp-relax-with-openmm --input model.pdb --output relaxed_model.pdb
+        
+        ftdmp-relax-with-openmm --conda-path ~/anaconda3 --conda-env alphafold2 \
+        --forcefield amber14-all -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
+
+## Example of relaxing multiple structures
+
+    find "./models/raw/" -type f -name '*.pdb' \
+    | while read -r INFILE
+    do
+        OUTFILE="./models/relaxed/$(basename ${INFILE})"
+        ~/git/ftdmp/ftdmp-relax-with-openmm \
+            --conda-path ${HOME}/miniconda3 \
+            --conda-env '' \
+            --force-cuda \
+            --full-preparation \
+            --input "$INFILE" \
+            --output "$OUTFILE" \
+            --cache-dir ./workdir/relax_cache
+    done
+
