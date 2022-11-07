@@ -119,8 +119,8 @@ Example of scoring with rebuilding side-chains:
 Docking and scoring is done with the 'ftdmp-all' script.
 Below is the breef description of 'ftdmp-all' interface.
 
-'ftdmp-all' docks, scores and ranks complex structures of proteins or nucleic acids
-
+    'ftdmp-all' docks, scores and ranks complex structures of proteins or nucleic acids
+    
     Options:
         --job-name                string  *  job name
         --pre-docked-input-dir    string     pre-docked input directory path 
