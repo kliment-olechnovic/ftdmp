@@ -121,73 +121,73 @@ Below is the breef description of 'ftdmp-all' interface.
 
 'ftdmp-all' docks, scores and ranks complex structures of proteins or nucleic acids
 
-Options:
-    --job-name                string  *  job name
-    --pre-docked-input-dir    string     pre-docked input directory path 
-    --static-file             string     hetero docking static input file path
-    --static-sel              string     hetero docking query to restrict static atoms, default is '[]'
-    --static-chain            string     hetero docking chain name or chain renaming rule to apply for static atoms, default is ''
-    --mobile-file             string     hetero or homo docking mobile input file path
-    --mobile-sel              string     hetero or homo docking query to restrict mobile atoms, default is '[]'
-    --mobile-chain            string     hetero or homo docking chain name or chain renaming rule to apply for mobile atoms, default is ''
-    --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
-    --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
-    --constraints-required    string     query to check required inter-chain contacts, default is ''
-    --constraints-banned      string     query to check banned inter-chain contacts, default is ''
-    --constraint-clashes      number     max allowed clash score, default is ''
-    --reference               string     input structure file to compute CAD-score with, default is ''
-    --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
-    --ftdmp-root              string     ftdmp root path, default is '' (autodetected from the calling command)
-    --conda-path              string     conda installation path, default is ''
-    --conda-early             string     flag to activate conda as early as possible
-    --conda-env               string     conda main environment name, default is ''
-    --conda-env-for-gnn       string     conda GNN environment name, equals the main environment name if not set
-    --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
-    --use-ftdock              string     flag to use ftdock, default is 'true'
-    --use-hex                 string     flag to use HEX, default is 'false'
-    --ftdock-keep             number     ftdock keep parameter, default is 1
-    --ftdock-angle-step       number     ftdock angle step parameter, default is 9
-    --ftdock-min-grid-sep     number     minimum grid separation between same-rotation translations, default is 20
-    --hex-macro-mode          string     flag to enable HEX macro mode, default is 'true'
-    --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
-    --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
-    --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
-    --parallel-docking        number     number of processes to run when docking, default is 8
-    --parallel-scoring        number     number of processes to run when scoring, default is 8
-    --cache-dir               string     cache directory path to store results of past slower calculations
-    --sbatch-for-ftdock       string     sbatch parameters to run docking with ftdock in parallel, default is ''
-    --sbatch-for-hex-or-sam   string     sbatch parameters to run docking with HEX or SAM on cluster, default is ''
-    --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
-    --score-symmetry          string     flag to score symmetry, default is 'false'
-    --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
-    --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
-    --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 300
-    --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
-    --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
-    --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
-    --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 5
-    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
-    --build-complexes         number     number of top complexes to build, default is 0
-    --multiply-chains         string     options to multiply chains, default is ''
-    --relax-complexes         string     options to relax complexes, default is ''
-    --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is 'false'
-    --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
-    --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
-    --casp15-qa               string     flag to output CASP15 QA answer, default is 'false'
-    --casp15-qa-target        string     target name for outputting CASP15 QA answer, default is '_THETARGET_'
-    --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
-    --output-dir              string  *  output directory path
-    --help | -h                          flag to display help message and exit
-    
-Examples:
-    
-    ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
-      --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
-    
-    ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
-      --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+    Options:
+        --job-name                string  *  job name
+        --pre-docked-input-dir    string     pre-docked input directory path 
+        --static-file             string     hetero docking static input file path
+        --static-sel              string     hetero docking query to restrict static atoms, default is '[]'
+        --static-chain            string     hetero docking chain name or chain renaming rule to apply for static atoms, default is ''
+        --mobile-file             string     hetero or homo docking mobile input file path
+        --mobile-sel              string     hetero or homo docking query to restrict mobile atoms, default is '[]'
+        --mobile-chain            string     hetero or homo docking chain name or chain renaming rule to apply for mobile atoms, default is ''
+        --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
+        --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
+        --constraints-required    string     query to check required inter-chain contacts, default is ''
+        --constraints-banned      string     query to check banned inter-chain contacts, default is ''
+        --constraint-clashes      number     max allowed clash score, default is ''
+        --reference               string     input structure file to compute CAD-score with, default is ''
+        --openmm-forcefield       string     forcefield name for OpenMM-based operations, default is ''
+        --ftdmp-root              string     ftdmp root path, default is '' (autodetected from the calling command)
+        --conda-path              string     conda installation path, default is ''
+        --conda-early             string     flag to activate conda as early as possible
+        --conda-env               string     conda main environment name, default is ''
+        --conda-env-for-gnn       string     conda GNN environment name, equals the main environment name if not set
+        --sam-parameters          string     additional SAM parameters, default is '-top=8000 -show=2000 -clusters=2000'
+        --use-ftdock              string     flag to use ftdock, default is 'true'
+        --use-hex                 string     flag to use HEX, default is 'false'
+        --ftdock-keep             number     ftdock keep parameter, default is 1
+        --ftdock-angle-step       number     ftdock angle step parameter, default is 9
+        --ftdock-min-grid-sep     number     minimum grid separation between same-rotation translations, default is 20
+        --hex-macro-mode          string     flag to enable HEX macro mode, default is 'true'
+        --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
+        --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
+        --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
+        --parallel-docking        number     number of processes to run when docking, default is 8
+        --parallel-scoring        number     number of processes to run when scoring, default is 8
+        --cache-dir               string     cache directory path to store results of past slower calculations
+        --sbatch-for-ftdock       string     sbatch parameters to run docking with ftdock in parallel, default is ''
+        --sbatch-for-hex-or-sam   string     sbatch parameters to run docking with HEX or SAM on cluster, default is ''
+        --sbatch-scoring          string     sbatch parameters to run scoring in parallel, default is ''
+        --score-symmetry          string     flag to score symmetry, default is 'false'
+        --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
+        --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
+        --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
+        --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 300
+        --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
+        --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
+        --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
+        --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
+        --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 5
+        --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
+        --build-complexes         number     number of top complexes to build, default is 0
+        --multiply-chains         string     options to multiply chains, default is ''
+        --relax-complexes         string     options to relax complexes, default is ''
+        --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is 'false'
+        --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
+        --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
+        --casp15-qa               string     flag to output CASP15 QA answer, default is 'false'
+        --casp15-qa-target        string     target name for outputting CASP15 QA answer, default is '_THETARGET_'
+        --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
+        --output-dir              string  *  output directory path
+        --help | -h                          flag to display help message and exit
+        
+    Examples:
+        
+        ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
+        --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+        
+        ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
+        --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
 
 ## Example of protein-protein docking for running on cluster
 
