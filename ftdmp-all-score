@@ -86,6 +86,8 @@ then
 	print_help_and_exit
 fi
 
+echo >&2 "ftdpm-all-score: reading and checking options"
+
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -393,6 +395,8 @@ fi
 
 ################################################################################
 
+echo >&2 "ftdpm-all-score: reading input"
+
 mkdir -p "$OUTPUT_PATH"
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_input.txt"
@@ -461,6 +465,8 @@ trap "rm -r $TMPLDIR" EXIT
 
 if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
 then
+	echo >&2 "ftdpm-all-score: doing comparison with reference"
+	
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FICS.txt"
 	
 	{
@@ -494,6 +500,8 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in protein mode"
+
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV.txt"
 	
 	{
@@ -530,6 +538,8 @@ fi
 
 if [ "$SCORING_MODE_GENERIC" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in generic mode"
+	
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb.txt"
 	
 	{
@@ -567,6 +577,8 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in protein-rebuilt mode"
+	
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV_sr.txt"
 	
 	{
@@ -602,6 +614,8 @@ fi
 
 if [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in generic-rebuilt mode"
+
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb_sr.txt"
 
 	{
@@ -637,6 +651,8 @@ fi
 
 if [ -n "$SCORING_TOP_STAGE1_FOR_SLOW" ] && [ "$SCORING_TOP_STAGE1_FOR_SLOW" -lt "$SCORING_TOP_STAGE1" ]
 then
+	echo >&2 "ftdpm-all-score: filtering input for slower scoring"
+	
 	if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] || [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ] || [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
 	then
 		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
@@ -672,6 +688,8 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN_GNN" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in protein-GNN mode"
+	
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN.txt"
 	
 	{
@@ -706,6 +724,8 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in protein-rebuilt-GNN mode"
+
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN_sr.txt"
 	
 	{
@@ -740,6 +760,8 @@ fi
 
 if [ "$SCORING_MODE_PROTEIN_GLOBAL" == "true" ]
 then
+	echo >&2 "ftdpm-all-score: doing scoring in protein-global mode"
+	
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FGV.txt"
 	
 	{
@@ -768,6 +790,8 @@ then
 fi
 
 ################################################################################
+
+echo >&2 "ftdpm-all-score: joining scores before computing ranks"
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_without_ranks.txt"
 
@@ -828,6 +852,8 @@ mv "${TMPLDIR}/current_ids_with_scores.txt" "$NEXT_SCORING_RESULTS_FILE"
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 
 ################################################################################
+
+echo >&2 "ftdpm-all-score: computing ranks"
 
 NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_with_ranks.txt"
 

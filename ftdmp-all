@@ -85,6 +85,8 @@ then
 	print_help_and_exit
 fi
 
+echo >&2 "ftdpm-all: reading and checking options"
+
 JOB_NAME=""
 PRE_DOCKED_INPUT_DIR=""
 STATIC_STRUCTURE_FILE=""
@@ -730,6 +732,8 @@ INPUT_COMPLEX_SUFFIX=""
 
 if [ "$DOCKING_REGIME" == "hetero" ]
 then
+	echo >&2 "ftdpm-all: doing hetero docking"
+	
 	ftdmp-all-dock \
 	  --job-name                "$JOB_NAME" \
 	  --static-file             "$STATIC_STRUCTURE_FILE" \
@@ -761,6 +765,8 @@ fi
 
 if [ "$DOCKING_REGIME" == "homo" ]
 then
+	echo >&2 "ftdpm-all: doing homo docking"
+
 	ftdmp-all-dock \
 	  --job-name                "$JOB_NAME" \
 	  --mobile-file             "$MOBILE_STRUCTURE_FILE" \
@@ -780,6 +786,8 @@ fi
 
 if [ "$DOCKING_REGIME" == "pre-docked" ]
 then
+	echo >&2 "ftdpm-all: running in pre-docked mode"
+
 	mkdir -p "${OUTPUT_PATH}/${JOB_NAME}"
 	
 	{
@@ -805,6 +813,8 @@ then
 fi
 
 ################################################################################
+
+echo >&2 "ftdpm-all: scoring with ftdmp-all-score"
 
 ftdmp-all-score \
   --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
@@ -857,6 +867,8 @@ fi
 
 if [ -n "$DIVERSIFY" ]
 then
+	echo >&2 "ftdpm-all: diversifying with ftdmp-all-diversify"
+	
 	ftdmp-all-diversify \
 	  --input-scoring-table   "$PREV_SCORING_RESULTS_FILE" \
 	  --names-prefix          "raw_" \
@@ -869,6 +881,8 @@ then
 fi
 
 ################################################################################
+
+echo >&2 "ftdpm-all: running ftdmp-all-jury"
 
 ftdmp-all-jury \
   --input-scoring-table     "$PREV_SCORING_RESULTS_FILE" \
@@ -900,6 +914,8 @@ fi
 
 if [ "$CASP15QA" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] && [ "$LOCAL_COLUMNS" == "true" ]
 then
+	echo >&2 "ftdpm-all: writing answer with ftdmp-form-casp15-qa-answer"
+
 	ftdmp-form-casp15-qa-answer \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
 	  --prefix-for-gnn-scores 'raw_FIGNN' \
@@ -911,6 +927,8 @@ fi
 
 if [ "$PLOT_JURY_SCORES" == "true" ]
 then
+	echo >&2 "ftdpm-all: plotting with ftdmp-plot-jury-scores"
+	
 	ftdmp-plot-jury-scores \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
 	  --prefix-for-jury-scores 'raw_RJS' \
@@ -927,6 +945,8 @@ then
 	
 	if [ "$DOCKING_REGIME" == "hetero" ]
 	then
+		echo >&2 "ftdpm-all: building top hetero complexes"
+		
 		TOP_COMPLEXES_RAW_DIR="${OUTPUT_PATH}/raw_top_complexes_raw"
 		
 		{
@@ -966,6 +986,8 @@ then
 	
 	if [ "$DOCKING_REGIME" == "homo" ] || [ "$DOCKING_REGIME" == "pre-docked" ]
 	then
+		echo >&2 "ftdpm-all: copying top homo or pre-docked complexes"
+	
 		{
 		cat "$PREV_SCORING_RESULTS_FILE"
 		echo "$NUMBER_OF_COMPLEXES_TO_BUILD"
@@ -1003,6 +1025,8 @@ fi
 
 ################################################################################
 
+echo >&2 "ftdpm-all: relaxing complexes with ftdmp-relax-with-openmm"
+
 TOP_RELAXED_COMPLEXES_DIR="${OUTPUT_PATH}/relaxed_top_complexes"
 
 cat "$PREV_SCORING_RESULTS_FILE" \
@@ -1032,6 +1056,8 @@ then
 fi
 
 ################################################################################
+
+echo >&2 "ftdpm-all: scoring relaxed complexes with ftdmp-all-score"
 
 ftdmp-all-score \
   --input-from-table        "$PREV_SCORING_RESULTS_FILE" \
@@ -1073,6 +1099,8 @@ fi
 
 ################################################################################
 
+echo >&2 "ftdpm-all: running ftdmp-all-jury for scored relaxed complexes"
+
 RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^raw_/relaxed_/' | tr '\n' ' ')"
 
 ftdmp-all-jury \
@@ -1103,6 +1131,8 @@ fi
 
 if [ "$CASP15QA" == "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" == "true" ] && [ "$LOCAL_COLUMNS" == "true" ]
 then
+	echo >&2 "ftdpm-all: writing answer for relaxed complexes with ftdmp-form-casp15-qa-answer"
+
 	ftdmp-form-casp15-qa-answer \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
 	  --prefix-for-gnn-scores 'relaxed_FIGNN' \
@@ -1114,6 +1144,8 @@ fi
 
 if [ "$PLOT_JURY_SCORES" == "true" ]
 then
+	echo >&2 "ftdpm-all: plotting for relaxed complexes with ftdmp-plot-jury-scores"
+	
 	ftdmp-plot-jury-scores \
 	  --input-scoring-table "$PREV_SCORING_RESULTS_FILE" \
 	  --prefix-for-jury-scores 'relaxed_RJS' \
