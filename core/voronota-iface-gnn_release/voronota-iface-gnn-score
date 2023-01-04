@@ -253,7 +253,6 @@ then
 	} \
 	| sed '1 s|^|input_name |' \
 	| sed "2 s|^|${INFILENAME} |" \
-	| column -t \
 	| {
 		if [ -n "$OUTDIR" ]
 		then
@@ -581,8 +580,7 @@ then
 	find "${TMPLDIR}/outdir/" -type f -name '*__gnn_scores_global.txt' \
 	| xargs cat \
 	| awk '{if(NR==1 || $1!="input_name") print $0}' \
-	| voronota-js --no-setup-defaults "js:voronota_tournament_sort('-input-file _stdin -output-file _stdout -columns sum_of_gnn_scores -multipliers 1 -tolerances 0.0');" \
-	| column -t
+	| voronota-js --no-setup-defaults "js:voronota_tournament_sort('-input-file _stdin -output-file _stdout -columns sum_of_gnn_scores -multipliers 1 -tolerances 0.0');"
 	
 	if [ -n "$OUTDIR" ]
 	then
