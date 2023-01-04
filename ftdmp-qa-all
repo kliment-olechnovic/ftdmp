@@ -945,7 +945,6 @@ tail -n +2 "$TMPLDIR/restricted_table" \
 | sed 's/\.0\+\s/ /g' \
 | sed 's/\.0\+$//g'
 } \
-| column -t \
 > "${OUTPUT_PATH}/results_for_humans.txt"
 
 cat "${OUTPUT_PATH}/results_for_humans.txt"
