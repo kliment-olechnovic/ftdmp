@@ -21,6 +21,7 @@ Options:
     --processors                      number     number of processes to run when scoring, default is 8
     --sbatch                          string     sbatch parameters to run scoring in parallel, default is ''
     --score-symmetry                  string     flag to score symmetry, default is 'false'
+    --external-scores                 string     path to input file with external scores table, default is ''
     --remap-cadscore                  string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --crude-cadscore                  string     flag to use faster but crude mode for CAD-score
     --keep-top-fast                   number     number of top complexes to keep after full scoring stage, default is 9999999
@@ -89,6 +90,7 @@ CONDA_ENV=""
 SCORING_PROCESSORS="8"
 SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
+EXTERNAL_SCORES_FILE=""
 REMAP_CADSCORE="false"
 CRUDE_CADSCORE="false"
 KEEP_TOP_FAST="9999999"
@@ -173,6 +175,10 @@ do
 		;;
 	--score-symmetry)
 		SCORE_SYMMETRY="$OPTARG"
+		shift
+		;;
+	--external-scores)
+		EXTERNAL_SCORES_FILE="$OPTARG"
 		shift
 		;;
 	--remap-cadscore)
@@ -627,6 +633,11 @@ raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
 "
 fi
 
+if [[ $SCORING_RANKS == "file:"* ]]
+then
+	SCORING_RANKS="$(cat "$(echo ${SCORING_RANKS} | sed 's|^file:||')" | tr '\n' ' ')"
+fi
+
 SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
 
 SCORING_MODE_PROTEIN="false"
@@ -793,6 +804,7 @@ ftdmp-all-score \
   --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
   --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
   --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --external-scores         "$EXTERNAL_SCORES_FILE" \
   --conda-path              "$CONDA_PATH" \
   --conda-env               "$CONDA_ENV" \
   --score-symmetry          "$SCORE_SYMMETRY" \

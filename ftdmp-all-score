@@ -30,6 +30,7 @@ Options:
     --mode-protein-gnn        string     flag to score using GNN in protein mode
     --mode-protein-gnn-sr     string     flag to score using GNN in protein side chain-rebuilding mode
     --mode-protein-global     string     flag to score full protein structures
+    --external-scores         string     path to input file with external scores table, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
@@ -126,6 +127,7 @@ SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GNN="false"
 SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GLOBAL="false"
+EXTERNAL_SCORES_FILE=""
 OUTPUT_PATH=""
 HELP_MODE="false"
 
@@ -265,6 +267,10 @@ do
 		SCORING_MODE_PROTEIN_GLOBAL="$OPTARG"
 		shift
 		;;
+	--external-scores)
+		EXTERNAL_SCORES_FILE="$OPTARG"
+		shift
+		;;
 	--output-dir)
 		OUTPUT_PATH="$OPTARG"
 		shift
@@ -386,6 +392,12 @@ fi
 if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ]
 then
 	echo >&2 "Error: no scoring actions specified"
+	exit 1
+fi
+
+if [ -n "$EXTERNAL_SCORES_FILE" ] && [ ! -s "$EXTERNAL_SCORES_FILE" ]
+then
+	echo >&2 "Error: input external scores file '$EXTERNAL_SCORES_FILE' does not exist or is empty"
 	exit 1
 fi
 
@@ -847,6 +859,16 @@ then
 	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
 fi
 
+if [ -n "$EXTERNAL_SCORES_FILE" ]
+then
+	{
+		cat "$EXTERNAL_SCORES_FILE" | sed 's/^\s\+//' | tr '\t' ' ' | head -1 | sed "s|^\S\+|ID|" | sed "s|\s\(\S\+\)| ${SCORENAME_PREFIX}\1|g"
+		cat "$EXTERNAL_SCORES_FILE" | sed 's/^\s\+//' | tr '\t' ' ' | tail -n +2 \
+	} > "${OUTPUT_PATH}/${SCORENAME_PREFIX}external_scores.txt"
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}external_scores.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
 mv "${TMPLDIR}/current_ids_with_scores.txt" "$NEXT_SCORING_RESULTS_FILE"
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
@@ -1159,6 +1181,24 @@ then
 		fi
 	} \
 	> "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ -n "$EXTERNAL_SCORES_FILE" ]
+	then
+		head -1 "${OUTPUT_PATH}/${SCORENAME_PREFIX}external_scores.txt" \
+		| tr ' ' '\n' \
+		| egrep '.' \
+		| tail -n +2 \
+		| while read -r EXTERNAL_SCORE_NAME
+		do
+			cat "$NEXT_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table \
+			  --columns "${EXTERNAL_SCORE_NAME}" \
+			  --add-rank-column "${EXTERNAL_SCORE_NAME}_rank" \
+			> "${TMPLDIR}/augmented_scoring_results_with_ranks.txt"
+			
+			mv "${TMPLDIR}/augmented_scoring_results_with_ranks.txt" "$NEXT_SCORING_RESULTS_FILE"
+		done
+	fi
 fi
 
 PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
