@@ -863,7 +863,7 @@ if [ -n "$EXTERNAL_SCORES_FILE" ]
 then
 	{
 		cat "$EXTERNAL_SCORES_FILE" | sed 's/^\s\+//' | tr '\t' ' ' | head -1 | sed "s|^\S\+|ID|" | sed "s|\s\(\S\+\)| ${SCORENAME_PREFIX}\1|g"
-		cat "$EXTERNAL_SCORES_FILE" | sed 's/^\s\+//' | tr '\t' ' ' | tail -n +2 \
+		cat "$EXTERNAL_SCORES_FILE" | sed 's/^\s\+//' | tr '\t' ' ' | tail -n +2
 	} > "${OUTPUT_PATH}/${SCORENAME_PREFIX}external_scores.txt"
 	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}external_scores.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
 	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
