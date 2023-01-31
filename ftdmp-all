@@ -12,9 +12,11 @@ Options:
     --static-file             string     hetero docking static input file path
     --static-sel              string     hetero docking query to restrict static atoms, default is '[]'
     --static-chain            string     hetero docking chain name or chain renaming rule to apply for static atoms, default is ''
+    --static-rotation-seed    number     random seed to initially rotate static part, default is 1
     --mobile-file             string     hetero or homo docking mobile input file path
     --mobile-sel              string     hetero or homo docking query to restrict mobile atoms, default is '[]'
     --mobile-chain            string     hetero or homo docking chain name or chain renaming rule to apply for mobile atoms, default is ''
+    --mobile-rotation-seed    number     random seed to initially rotate mobile part, default is 2
     --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
     --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
     --constraints-required    string     query to check required inter-chain contacts, default is ''
@@ -47,7 +49,7 @@ Options:
     --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
-    --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 300
+    --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
@@ -92,9 +94,11 @@ PRE_DOCKED_INPUT_DIR=""
 STATIC_STRUCTURE_FILE=""
 STATIC_STRUCTURE_SELECTION="[]"
 STATIC_STRUCTURE_CHAIN=""
+STATIC_STRUCTURE_ROTATION_SEED="1"
 MOBILE_STRUCTURE_FILE=""
 MOBILE_STRUCTURE_SELECTION="[]"
 MOBILE_STRUCTURE_CHAIN=""
+MOBILE_STRUCTURE_ROTATION_SEED="2"
 SYMMETRY_DOCKING=""
 INTERFACE_SUBSELECTION="[]"
 CONSTRAINTS_REQUIRED=""
@@ -127,7 +131,7 @@ SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
 SCORING_TOP_STAGE1="1000"
-SCORING_TOP_STAGE1_FOR_SLOW="300"
+SCORING_TOP_STAGE1_FOR_SLOW="9999999"
 SCORING_RANKS=""
 SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="10 50" 
@@ -172,6 +176,10 @@ do
 		STATIC_STRUCTURE_CHAIN="$OPTARG"
 		shift
 		;;
+	--static-rotation-seed)
+		STATIC_STRUCTURE_ROTATION_SEED="$OPTARG"
+		shift
+		;;
 	--mobile-file)
 		MOBILE_STRUCTURE_FILE="$OPTARG"
 		shift
@@ -182,6 +190,10 @@ do
 		;;
 	--mobile-chain)
 		MOBILE_STRUCTURE_CHAIN="$OPTARG"
+		shift
+		;;
+	--mobile-rotation-seed)
+		MOBILE_STRUCTURE_ROTATION_SEED="$OPTARG"
 		shift
 		;;
 	--symmetry-docking)
@@ -601,6 +613,28 @@ raw_FIGNN_and_FGV_dark_tour_rank
 "
 fi
 
+if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_glob_no_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_rank
+raw_FIGNN_average_gnn_score_rank
+raw_FIGNN_gnn_scores_tour_rank
+raw_FIGNN_average_pcadscore_rank
+raw_FIGNN_weighted_average_pcadscore_rank
+raw_FIGNN_sum_of_gnn_scores_clash_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIV_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIV_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIV_energy_tour_rank
+raw_FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank
+raw_FIGNN_avg_gnn_score_FIVb_energy_tour_rank
+raw_FIGNN_wavg_pcadscore_FIVb_energy_tour_rank
+"
+fi
+
 if [ "$SCORING_RANKS" == "extended_for_protein_protein_only_sr" ]
 then
 	SCORING_RANKS="
@@ -739,9 +773,11 @@ then
 	  --static-file             "$STATIC_STRUCTURE_FILE" \
 	  --static-sel              "$STATIC_STRUCTURE_SELECTION" \
 	  --static-chain            "$STATIC_STRUCTURE_CHAIN" \
+	  --static-rotation-seed    "$STATIC_STRUCTURE_ROTATION_SEED" \
 	  --mobile-file             "$MOBILE_STRUCTURE_FILE" \
 	  --mobile-sel              "$MOBILE_STRUCTURE_SELECTION" \
 	  --mobile-chain            "$MOBILE_STRUCTURE_CHAIN" \
+	  --mobile-rotation-seed    "$MOBILE_STRUCTURE_ROTATION_SEED" \
 	  --openmm-forcefield       "$OPENMM_FORCEFIELD" \
 	  --conda-path              "$CONDA_PATH" \
 	  --conda-env               "$CONDA_ENV" \

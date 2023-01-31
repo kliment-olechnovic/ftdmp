@@ -173,7 +173,7 @@ fi
 
 if [ -z "$FTDOCK_ANGLE_STEP" ] || [ "$FTDOCK_ANGLE_STEP" -ne "$FTDOCK_ANGLE_STEP" ] || [ "$FTDOCK_ANGLE_STEP" -lt "9" ]
 then
-	echo >&2 "Error: invalid ftdock angle step parameter '$FTDOCK_ANGLE_STEP', must be an integer greater than 8"
+	echo >&2 "Error: invalid ftdock angle step parameter '$FTDOCK_ANGLE_STEP', must be an integer >=9 and a factor of 180"
 	exit 1
 fi
 

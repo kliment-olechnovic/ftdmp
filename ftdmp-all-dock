@@ -11,9 +11,11 @@ Options:
     --static-file             string  *  static input file path
     --static-sel              string     query to restrict static atoms, default is '[]'
     --static-chain            string     chain name or chain renaming rule to apply for static atoms, default is ''
+    --static-rotation-seed    number     random seed to initially rotate static part, default is 1
     --mobile-file             string  *  mobile input file path
     --mobile-sel              string     query to restrict mobile atoms, default is '[]'
     --mobile-chain            string     chain name or chain renaming rule to apply for mobile atoms, default is ''
+    --mobile-rotation-seed    number     random seed to initially rotate mobile part, default is 2
     --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
     --openmm-forcefield       string     forcefield name fo OpenMM-based operations, default is ''
     --conda-path              string     conda installation path, default is ''
@@ -60,9 +62,11 @@ JOB_NAME=""
 STATIC_STRUCTURE_FILE=""
 STATIC_STRUCTURE_SELECTION="[]"
 STATIC_STRUCTURE_CHAIN=""
+STATIC_STRUCTURE_ROTATION_SEED="1"
 MOBILE_STRUCTURE_FILE=""
 MOBILE_STRUCTURE_SELECTION="[]"
 MOBILE_STRUCTURE_CHAIN=""
+MOBILE_STRUCTURE_ROTATION_SEED="2"
 SYMMETRY_DOCKING=""
 OPENMM_FORCEFIELD=""
 CONDA_PATH=""
@@ -105,6 +109,10 @@ do
 		STATIC_STRUCTURE_CHAIN="$OPTARG"
 		shift
 		;;
+	--static-rotation-seed)
+		STATIC_STRUCTURE_ROTATION_SEED="$OPTARG"
+		shift
+		;;
 	--mobile-file)
 		MOBILE_STRUCTURE_FILE="$OPTARG"
 		shift
@@ -115,6 +123,10 @@ do
 		;;
 	--mobile-chain)
 		MOBILE_STRUCTURE_CHAIN="$OPTARG"
+		shift
+		;;
+	--mobile-rotation-seed)
+		MOBILE_STRUCTURE_ROTATION_SEED="$OPTARG"
 		shift
 		;;
 	--symmetry-docking)
@@ -236,6 +248,15 @@ then
 		echo >&2 "Error: no tool usage turned on for hetero docking"
 		exit 1
 	fi
+	
+	if [ "$USE_FTDOCK" == "true" ] && [ -n "$FTDOCK_ANGLE_STEP" ]
+	then
+		if [ "$FTDOCK_ANGLE_STEP" -ne "$FTDOCK_ANGLE_STEP" ] || [ "$FTDOCK_ANGLE_STEP" -lt "9" ]
+		then
+			echo >&2 "Error: invalid ftdock angle step parameter '$FTDOCK_ANGLE_STEP', must be an integer >=9 and a factor of 180"
+			exit 1
+		fi
+	fi
 fi
 
 [ -n "$OUTPUT_PATH" ] || { echo >&2 "Error: output path not provided"; exit 1;}
@@ -265,7 +286,7 @@ then
 	then
 		ftdmp-prepare-monomer --input "$STATIC_STRUCTURE_FILE" --output "$PREPARED_STATIC_STRUCTURE_FILE" \
 		  --restrict-input "$STATIC_STRUCTURE_SELECTION" --rename-chain "$STATIC_STRUCTURE_CHAIN" \
-		  --randomize --random-seed 1 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+		  --randomize --random-seed "$STATIC_STRUCTURE_ROTATION_SEED" --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
 	fi
 	
 	if [ ! -s "$PREPARED_STATIC_STRUCTURE_FILE" ]
@@ -290,7 +311,7 @@ if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
 then
 	ftdmp-prepare-monomer --input "$MOBILE_STRUCTURE_FILE" --output "$PREPARED_MOBILE_STRUCTURE_FILE" \
 	  --restrict-input "$MOBILE_STRUCTURE_SELECTION" --rename-chain "$MOBILE_STRUCTURE_CHAIN" \
-	  --randomize --random-seed 2 --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
+	  --randomize --random-seed "$MOBILE_STRUCTURE_ROTATION_SEED" --forcefield "$OPENMM_FORCEFIELD" --conda-path "$CONDA_PATH" --conda-env "$CONDA_ENV"
 fi
 
 if [ ! -s "$PREPARED_MOBILE_STRUCTURE_FILE" ]
