@@ -17,7 +17,7 @@ MOBILEFILE="./input/4UNG_A.pdb"
 
 rm -rf "./output/relaxing/relaxed_top_complexes"
 
-for RSEED in 10 20 30
+for RSEED in 10
 do
 	JOBNAME="job_seed_${RSEED}"
 	
@@ -37,10 +37,10 @@ do
 	  --use-hex 'false' \
 	  --constraint-clashes 0.9 \
 	  --ftdock-keep 5 \
-	  --ftdock-angle-step 9 \
+	  --ftdock-angle-step 4 \
 	  --scoring-rank-names 'extended_for_protein_protein_no_sr' \
-	  --scoring-full-top 1000 \
-	  --scoring-full-top-slow 500 \
+	  --scoring-full-top 3000 \
+	  --scoring-full-top-slow 1500 \
 	  --scoring-ranks-top 100 \
 	  --scoring-jury-maxs 1 \
 	  --scoring-jury-slices '5 20' \

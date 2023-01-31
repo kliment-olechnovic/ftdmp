@@ -67,9 +67,9 @@ struct Angle generate_global_angles( int angle_step ) {
 
   }
 
-  if( angle_step < 9 ) {
+  if( angle_step < 3 ) {
 
-    printf( "Sorry, but I refuse to do so many rotations (more than 70 thousand).  Think again.\nIf you insist then you will have to check the byte size of an integer on your machine and possibly change all my ints to longs\nDying\n\n" ) ;
+    printf( "Sorry, but I refuse to do so many rotations.  Think again.\nIf you insist then you will have to check the byte size of an integer on your machine and possibly change all my ints to longs\nDying\n\n" ) ;
     exit( EXIT_FAILURE ) ;
 
   }

@@ -37,8 +37,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /* These values directly below may be altered, and the programs rebuilt */
 
-#define MAX_ROTATIONS  100000
-#define NUMBER_TO_KEEP 100000
+#define MAX_ROTATIONS  2000000
+#define NUMBER_TO_KEEP 2000000
 #define NUMBER_OF_CONSTRAINTS 50
 #define SAVED_HEADER_LINES 1000
 

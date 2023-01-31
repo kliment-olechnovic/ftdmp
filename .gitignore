@@ -1,4 +1,4 @@
 /.project
 /tmp/
 /tests/*/cache/
-/tests/*/output/
+/tests/*/output*/
