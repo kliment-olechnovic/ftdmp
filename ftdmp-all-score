@@ -475,41 +475,6 @@ trap "rm -r $TMPLDIR" EXIT
 
 ################################################################################
 
-if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
-then
-	echo >&2 "ftdpm-all-score: doing comparison with reference"
-	
-	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FICS.txt"
-	
-	{
-	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
-	cat "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON"
-	echo "$INTERFACE_SUBSELECTION"
-	echo "$REMAP_CADSCORE"
-	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
-	
-	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
-	then
-		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
-		
-		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
-		| ftdmp-calc-interface-cadscore-for-reference \
-		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
-		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
-		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
-		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
-		  --remap-chains "$REMAP_CADSCORE" \
-		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
-		  --colnames-prefix "${SCORENAME_PREFIX}FICS_" \
-		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FICS_iface_cadscore" \
-		> "$NEXT_SCORING_RESULTS_FILE"
-	fi
-	
-	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
-fi
-
-################################################################################
-
 if [ "$SCORING_MODE_PROTEIN" == "true" ]
 then
 	echo >&2 "ftdpm-all-score: doing scoring in protein mode"
@@ -799,6 +764,41 @@ then
 	
 	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+fi
+
+################################################################################
+
+if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
+then
+	echo >&2 "ftdpm-all-score: doing comparison with reference"
+	
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FICS.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	cat "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON"
+	echo "$INTERFACE_SUBSELECTION"
+	echo "$REMAP_CADSCORE"
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
+		| ftdmp-calc-interface-cadscore-for-reference \
+		  --input-prefix "$INPUT_PREFIX" --input-suffix "$INPUT_SUFFIX" \
+		  --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" \
+		  --reference "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" \
+		  --subselect-contacts "$INTERFACE_SUBSELECTION" \
+		  --remap-chains "$REMAP_CADSCORE" \
+		  --parallel "$SCORING_PROCESSORS" --sbatch-parameters "$SCORING_SBATCH" \
+		  --colnames-prefix "${SCORENAME_PREFIX}FICS_" \
+		| ftdmp-sort-table --columns "${SCORENAME_PREFIX}FICS_iface_cadscore" \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 fi
 
 ################################################################################

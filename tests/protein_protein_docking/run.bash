@@ -44,5 +44,6 @@ ${FTDMPDIR}/ftdmp-all \
   --openmm-forcefield "amber99sb" \
   --relax-complexes "--max-iterations 0 --force-cuda --focus whole_interface" \
   --plot-jury-scores 'true' \
+  --reference "./input/4UNG_reference.pdb" \
   --cache-dir "./output/cache"
 
