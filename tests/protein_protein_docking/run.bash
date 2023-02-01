@@ -32,16 +32,17 @@ ${FTDMPDIR}/ftdmp-all \
   --constraint-clashes 0.5 \
   --ftdock-keep 5 \
   --ftdock-angle-step 5 \
-  --scoring-rank-names 'extended_for_protein_protein_no_sr' \
+  --scoring-rank-names 'file:custom_scoring_rank_names.txt' \
   --scoring-full-top 3000 \
-  --scoring-full-top-slow 1500 \
+  --scoring-full-top-slow 3000 \
   --scoring-ranks-top 100 \
   --scoring-jury-maxs 1 \
   --scoring-jury-slices '5 20' \
   --scoring-jury-cluster "$(seq 0.70 0.01 0.90)" \
   --redundancy-threshold 0.7 \
-  --build-complexes 30 \
+  --build-complexes 150 \
   --openmm-forcefield "amber99sb" \
   --relax-complexes "--max-iterations 0 --force-cuda --focus whole_interface" \
+  --plot-jury-scores 'true' \
   --cache-dir "./output/cache"
 

@@ -34,11 +34,12 @@ ${FTDMPDIR}/ftdmp-all \
   --scoring-full-top 3000 \
   --scoring-ranks-top 200 \
   --scoring-jury-maxs 1 \
-  --scoring-jury-slices '5 20' \
+  --scoring-jury-slices '5 50' \
   --scoring-jury-cluster "$(seq 0.70 0.01 0.90)" \
   --redundancy-threshold 0.7 \
-  --build-complexes 30 \
+  --build-complexes 200 \
   --openmm-forcefield "amber14-all-no-water" \
   --relax-complexes "--max-iterations 0 --force-cuda --focus whole_interface" \
+  --plot-jury-scores 'true' \
   --cache-dir "./output/docking/cache"
 

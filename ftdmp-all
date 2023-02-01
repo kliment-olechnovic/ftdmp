@@ -657,6 +657,11 @@ raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
 "
 fi
 
+if [[ $SCORING_RANKS == "file:"* ]]
+then
+	SCORING_RANKS="$(cat "$(echo ${SCORING_RANKS} | sed 's|^file:||')" | tr '\n' ' ')"
+fi
+
 SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
 
 SCORING_MODE_PROTEIN="false"
@@ -978,6 +983,17 @@ then
 	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/raw_top_built_results.txt"
 	
 	TOP_COMPLEXES_DIR="${OUTPUT_PATH}/raw_top_complexes"
+	
+	if [ -s "$NEXT_SCORING_RESULTS_FILE" ] && [ ! -d "$TOP_COMPLEXES_DIR" ]
+	then
+		rm "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	if [ -d "$TOP_COMPLEXES_DIR" ] && [ -s "$NEXT_SCORING_RESULTS_FILE" ] && [ "$(ls ${TOP_COMPLEXES_DIR} | wc -l)" -ne "$(cat ${NEXT_SCORING_RESULTS_FILE} | tail -n +2 | wc -l)" ]
+	then
+		rm -r "$TOP_COMPLEXES_DIR"
+		rm "$NEXT_SCORING_RESULTS_FILE"
+	fi
 	
 	if [ "$DOCKING_REGIME" == "hetero" ]
 	then

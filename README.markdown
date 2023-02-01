@@ -339,7 +339,7 @@ Example script:
       --scoring-full-top 3000 \
       --scoring-ranks-top 200 \
       --scoring-jury-maxs 1 \
-      --scoring-jury-slices '5 20' \
+      --scoring-jury-slices '5 50' \
       --scoring-jury-cluster "$(seq 0.70 0.01 0.90)" \
       --redundancy-threshold 0.7 \
       --build-complexes 200 \
