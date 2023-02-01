@@ -12,8 +12,8 @@ SCORING_CONDAENV=""
 OPENMM_CONDADIR="${HOME}/anaconda3"
 OPENMM_CONDAENV="alphafold2"
 
-STATICFILE="./input/4UNG_B.pdb"
-MOBILEFILE="./input/4UNG_A.pdb"
+STATICFILE="./input/6FPQ_A.pdb"
+MOBILEFILE="./input/6FPQ_B.pdb"
 
 JOBNAME="job1"
 
@@ -30,10 +30,10 @@ ${FTDMPDIR}/ftdmp-all \
   --mobile-file "$MOBILEFILE" \
   --use-ftdock 'true' \
   --use-hex 'false' \
-  --constraint-clashes 0.5 \
-  --ftdock-keep 3 \
-  --ftdock-angle-step 6 \
-  --scoring-rank-names 'extended_for_protein_protein_no_sr' \
+  --constraint-clashes 0.9 \
+  --ftdock-keep 5 \
+  --ftdock-angle-step 5 \
+  --scoring-rank-names 'standard_for_generic' \
   --scoring-full-top 3000 \
   --scoring-full-top-slow 1500 \
   --scoring-ranks-top 100 \
@@ -56,18 +56,20 @@ do
 	  --conda-env "$OPENMM_CONDAENV" \
 	  --force-cuda \
 	  --full-preparation \
-	  --forcefield "amber99sb" \
+	  --forcefield "amber14-all-no-water" \
 	  --input "$INFILE" \
 	  --output "$OUTFILE" \
 	  --cache-dir ./output/relaxing/cache
 done
+
+echo stsr
 
 find "./output/relaxing/relaxed_top_complexes/" -type f -name '*.pdb' \
 | ${FTDMPDIR}/ftdmp-qa-all \
   --workdir "./output/qa" \
   --conda-path "$SCORING_CONDADIR" \
   --conda-env "$SCORING_CONDAENV" \
-  --rank-names "protein_protein_voromqa_and_global_and_gnn_no_sr" \
+  --rank-names "generalized_voromqa" \
   --jury-slices "5 20" \
   --jury-cluster "$(seq 0.70 0.01 0.90)" \
   --jury-maxs "1" \
