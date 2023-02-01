@@ -52,10 +52,10 @@ Options:
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
+    --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
     --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
-    --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 5
-    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
+    --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 1
+    --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 0.9
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
@@ -134,11 +134,11 @@ SCORING_TOP_STAGE1="1000"
 SCORING_TOP_STAGE1_FOR_SLOW="9999999"
 SCORING_RANKS=""
 SCORING_TOP_STAGE2="100"
-SCORING_RANKS_JURY_SLICES="10 50" 
+SCORING_RANKS_JURY_SLICES="5 20" 
 SCORING_RANKS_JURY_CLUSTER="0.9" 
-SCORING_RANKS_JURY_MAX_VALUES="5" 
+SCORING_RANKS_JURY_MAX_VALUES="1" 
 NUMBER_OF_COMPLEXES_TO_BUILD="0"
-REDUNDANCY_THRESHOLD="1"
+REDUNDANCY_THRESHOLD="0.9"
 MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
 ONLY_DOCK_AND_SCORE="false"
@@ -1079,7 +1079,7 @@ do
 	if [ ! -s "$RELAXEDFILE" ]
 	then
 		echo "${UNRELAXEDFILE} ${RELAXEDFILE}" \
-		| awk -v relaxoptions="--forcefield '$OPENMM_FORCEFIELD' --conda-path '$CONDA_PATH' --conda-env '$CONDA_ENV' --no-preparation $RELAX_COMPLEXES" \
+		| awk -v relaxoptions="--forcefield '$OPENMM_FORCEFIELD' --conda-path '$CONDA_PATH' --conda-env '$CONDA_ENV' --cache-dir '$CACHE_DIR' --no-preparation $RELAX_COMPLEXES" \
 		  '{print "ftdmp-relax-with-openmm " relaxoptions " --input " $1 " --output " $2}' \
 		| bash
 	fi
