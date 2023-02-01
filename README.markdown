@@ -49,9 +49,9 @@ To, optionally, make FTDMP accessible without specifying full path, add the foll
 
 Download the Miniconda package:
 
-	cd ~/Downloads
-	wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
-	
+    cd ~/Downloads
+    wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
+    
 Install Miniconda:
 
     bash ./Miniconda3-py39_4.11.0-Linux-x86_64.sh
@@ -68,21 +68,87 @@ Activate Miniconda environment an install packages:
 
 # Using FTDMP for scoring and ranking multimeric models
 
+Scoring and ranking is done with the 'ftdmp-qa-all' script.
+Below is the breef description of 'ftdmp-qa-all' interface.
+
+## Command line user interface
+
+    'ftdmp-qa-all' scores and ranks multimeric structures of proteins or nucleic acids
+    
+    Options:
+        --workdir                         string  *  path to directory for caching and writing detailed results
+        --subselect-contacts              string     query to subselect inter-chain contacts for scoring, default is '[]'
+        --constraints-required            string     query to check required inter-chain contacts, default is ''
+        --constraints-banned              string     query to check banned inter-chain contacts, default is ''
+        --constraint-clashes              number     max allowed clash score, default is ''
+        --subselect-atoms-global          string     query to subselect atoms for global scores, default is '[]'
+        --reference                       string     input structure file to compute CAD-score with, default is ''
+        --ftdmp-root                      string     ftdmp root path, default is '' (autodetected from the calling command)
+        --conda-path                      string     conda installation path, default is ''
+        --conda-early                     string     flag to activate conda as early as possible
+        --conda-env                       string     conda main environment name, default is ''
+        --processors                      number     number of processes to run when scoring, default is 8
+        --sbatch                          string     sbatch parameters to run scoring in parallel, default is ''
+        --score-symmetry                  string     flag to score symmetry, default is 'false'
+        --external-scores                 string     path to input file with external scores table, default is ''
+        --remap-cadscore                  string     flag to use optimal chains remapping for CAD-score, default is 'false'
+        --crude-cadscore                  string     flag to use faster but crude mode for CAD-score
+        --keep-top-fast                   number     number of top complexes to keep after full scoring stage, default is 9999999
+        --keep-top-slow                   number     number of top complexes to keep before slow full scoring stage, default is 9999999
+        --limit-voromqa-light             number     minimal allowed VoroMQA-light whole-stricture score, default is ''
+        --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
+        --ranks-top                       number     number of top complexes to consider for each ranking, default is 9999999
+        --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
+        --jury-cluster                    number     clustering threshold for ranks jury scoring, default is 0.9
+        --jury-maxs                       number     number of max values to use for ranks jury scoring, default is 1
+        --output-redundancy-threshold     number     minimal ordered redundancy value to accept, default is 0.9
+        --plot-jury-scores                string     file path to output plot of jury scores, default is ''
+        --plot-jury-diagnostics           string     flag to plot jury diagnostics, default is 'false'
+        --write-pdb-file                  string     file path template to output scores in PDB files, default is ''
+        --write-pdb-mode                  string     mode for PDB scores output ('voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'voromqa_dark_and_gnn'
+        --write-pdb-num                   number     number of top PDB files with scores to write, default is 5
+        --write-full-table                string     file path to output full table, default is ''
+        --help | -h                                  flag to display help message and exit
+    
+    Standard input:
+        input file paths
+    
+    Standard output:
+        space-separated table of scores
+    
+    Examples:
+    
+        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr
+        
+        ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names protein_protein_voromqa_no_sr
+        
+        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
+            --write-pdb-file './output/scored_-RANK-_-BASENAME-' --write-pdb-mode 'voromqa_dark_and_gnn' --write-pdb-num 5
+    
+    Named collections of rank names:
+    
+        protein_protein_voromqa_and_global_and_gnn_no_sr
+        protein_protein_voromqa_and_global_and_gnn_with_sr
+        protein_protein_voromqa_no_sr
+        protein_protein_voromqa_with_sr
+        protein_protein_simplest_voromqa
+        generalized_voromqa
+
 ## Scoring and ranking multimeric protein models using all available scoring tools
 
-Example of scoring with rebuilding side-chains:
+Example of scoring using only interface-focused methods:
 
     ls ./*.pdb \
     | ftdmp-qa-all \
-      --rank-names extended_for_protein_protein \
+      --rank-names protein_protein_voromqa_and_gnn_no_sr \
       --conda-path ~/miniconda3 \
       --workdir './works'
     
-Example of scoring without rebuilding side-chains:
+Example of scoring using both interface-focused and whole-structure methods:
 
     ls ./*.pdb \
     | ftdmp-qa-all \
-      --rank-names extended_for_protein_protein_no_sr \
+      --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
       --conda-path ~/miniconda3 \
       --workdir './works'
 
@@ -92,23 +158,23 @@ Example of scoring with rebuilding side-chains:
 
     ls ./*.pdb \
     | ftdmp-qa-all \
-      --rank-names standard_for_protein_protein \
+      --rank-names protein_protein_voromqa_with_sr \
       --workdir './works'
     
 Example of scoring without rebuilding side-chains:
 
     ls ./*.pdb \
     | ftdmp-qa-all \
-      --rank-names standard_for_protein_protein_no_sr \
+      --rank-names protein_protein_voromqa_no_sr \
       --workdir './works'
 
 ## Scoring and ranking multimeric models that include RNA or DNA:
 
-Example of scoring with rebuilding side-chains:
+Example of scoring:
 
     ls ./*.pdb \
     | ftdmp-qa-all \
-      --rank-names standard_for_generic \
+      --rank-names generalized_voromqa \
       --workdir './works'
 
 
@@ -127,9 +193,11 @@ Below is the breef description of 'ftdmp-all' interface.
         --static-file             string     hetero docking static input file path
         --static-sel              string     hetero docking query to restrict static atoms, default is '[]'
         --static-chain            string     hetero docking chain name or chain renaming rule to apply for static atoms, default is ''
+        --static-rotation-seed    number     random seed to initially rotate static part, default is 1
         --mobile-file             string     hetero or homo docking mobile input file path
         --mobile-sel              string     hetero or homo docking query to restrict mobile atoms, default is '[]'
         --mobile-chain            string     hetero or homo docking chain name or chain renaming rule to apply for mobile atoms, default is ''
+        --mobile-rotation-seed    number     random seed to initially rotate mobile part, default is 2
         --symmetry-docking        string     homo docking symmetry to apply for the mobile input file, default is ''
         --subselect-contacts      string     query to subselect inter-chain contacts for scoring, default is '[]'
         --constraints-required    string     query to check required inter-chain contacts, default is ''
@@ -162,13 +230,13 @@ Below is the breef description of 'ftdmp-all' interface.
         --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
         --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
         --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
-        --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 300
+        --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
         --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
         --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
-        --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '10 50'
+        --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
         --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
-        --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 5
-        --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 1
+        --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 1
+        --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 0.9
         --build-complexes         number     number of top complexes to build, default is 0
         --multiply-chains         string     options to multiply chains, default is ''
         --relax-complexes         string     options to relax complexes, default is ''
@@ -180,16 +248,18 @@ Below is the breef description of 'ftdmp-all' interface.
         --casp15-qa-author-id     string     author ID for outputting CASP15 QA answer, default is '_THEAUTHOR_'
         --output-dir              string  *  output directory path
         --help | -h                          flag to display help message and exit
-        
+    
     Examples:
-        
+    
         ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
-        --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
-        
+          --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+    
         ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
-        --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+          --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
 
 ## Example of protein-protein docking for running on cluster
+
+Example script:
 
     #!/bin/bash
     
@@ -207,35 +277,35 @@ Below is the breef description of 'ftdmp-all' interface.
       --sbatch-for-ftdock '--job-name=ftdock --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8000' \
       --sbatch-for-hex-or-sam '--job-name=hexsam --partition=Cluster --ntasks=1 --cpus-per-task=8 --mem-per-cpu=8000' \
       --sbatch-scoring '--job-name=dscore --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8000' \
-      --openmm-forcefield '' \
-      --relax-complexes '' \
       --job-name "$JOBNAME" \
       --output-dir ./output \
       --static-file "$STATICFILE" \
       --static-sel '[]' \
+      --static-chain 'D=A,E=B' \
       --mobile-file "$MOBILEFILE" \
-      --mobile-chain 'C' \
       --mobile-sel '[]' \
+      --mobile-chain 'C' \
       --subselect-contacts '[-a1 [-chain A,B] -a2 [-chain C]]' \
       --use-ftdock 'true' \
       --use-hex 'false' \
-      --constraint-clashes 0.25 \
+      --constraint-clashes 0.5 \
       --ftdock-keep 5 \
-      --ftdock-angle-step 9 \
-      --hex-max-solutions 6000 \
-      --scoring-rank-names 'extended_for_protein_protein_no_glob' \
-      --scoring-full-top 1000 \
-      --scoring-full-top-slow 300 \
+      --ftdock-angle-step 5 \
+      --scoring-rank-names 'extended_for_protein_protein_no_sr' \
+      --scoring-full-top 3000 \
       --scoring-ranks-top 100 \
       --scoring-jury-maxs 1 \
-      --scoring-jury-slices '3 30' \
-      --scoring-jury-cluster "$(seq 0.65 0.01 0.75)" \
-      --plot-jury-scores "true" \
+      --scoring-jury-slices '5 20' \
+      --scoring-jury-cluster "$(seq 0.70 0.01 0.90)" \
       --redundancy-threshold 0.7 \
-      --build-complexes 100 \
+      --build-complexes 200 \
+      --openmm-forcefield 'amber99sb' \
+      --relax-complexes '--max-iterations 0 --focus whole_interface' \
       --cache-dir ./cache
 
 ## Example of protein-RNA docking for running on cluster
+
+Example script:
 
     #!/bin/bash
     
@@ -253,32 +323,37 @@ Below is the breef description of 'ftdmp-all' interface.
       --sbatch-for-ftdock '--job-name=ftdock --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8000' \
       --sbatch-for-hex-or-sam '--job-name=hexsam --partition=Cluster --ntasks=1 --cpus-per-task=8 --mem-per-cpu=8000' \
       --sbatch-scoring '--job-name=dscore --partition=Cluster --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8000' \
-      --openmm-forcefield '' \
-      --relax-complexes '' \
       --job-name "$JOBNAME" \
       --output-dir ./output \
       --static-file "$STATICFILE" \
       --static-sel '[]' \
       --mobile-file "$MOBILEFILE" \
       --mobile-sel '[]' \
+      --subselect-contacts '[-a1 [-chain A] -a2 [-chain B,C]]' \
       --use-ftdock 'true' \
       --use-hex 'false' \
-      --constraint-clashes 0.5 \
+      --constraint-clashes 0.9 \
       --ftdock-keep 5 \
-      --ftdock-angle-step 9 \
-      --hex-max-solutions 6000 \
-      --subselect-contacts '[-a1 [-chain A] -a2 [-chain B,C]]' \
+      --ftdock-angle-step 5 \
       --scoring-rank-names 'standard_for_generic' \
-      --scoring-full-top 1000 \
-      --scoring-full-top-slow 300 \
-      --scoring-ranks-top 100 \
+      --scoring-full-top 3000 \
+      --scoring-ranks-top 200 \
       --scoring-jury-maxs 1 \
-      --scoring-jury-slices '3 30' \
-      --scoring-jury-cluster "$(seq 0.65 0.01 0.75)" \
+      --scoring-jury-slices '5 20' \
+      --scoring-jury-cluster "$(seq 0.70 0.01 0.90)" \
       --redundancy-threshold 0.7 \
-      --build-complexes 100 \
+      --build-complexes 200 \
+      --openmm-forcefield 'amber14-all-no-water' \
+      --relax-complexes '--max-iterations 0 --focus whole_interface' \
       --cache-dir ./cache
 
+Main essential changes when compared with the protei-protein docking case:
+
+    --scoring-rank-names 'standard_for_generic'
+    
+    --openmm-forcefield 'amber14-all-no-water'
+    
+    
 
 # Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions
 
@@ -296,7 +371,7 @@ It is advised to do it on a machine with a nice GPU.
 Below is the breef description of 'ftdmp-relax-with-openmm' interface.
 
     'ftdmp-relax-with-openmm' script relaxes a molecular structure using OpenMM.
-
+    
     Options:
         --input                   string  *  input file path
         --output                  string  *  output file path, setting to '_same_as_input' will overwrite input file
@@ -321,33 +396,16 @@ Below is the breef description of 'ftdmp-relax-with-openmm' interface.
         --full-preparation                   flag to turn off all preparation disabling flags
         --no-simulation                      flag to not run any simulations
         --help | -h                          flag to display help message and exit
-
+    
     Standard output:
         space-separated table of scores for both input and output
         
     Examples:
-
+    
         ftdmp-relax-with-openmm --input model.pdb --output relaxed_model.pdb
         
         ftdmp-relax-with-openmm --conda-path ~/anaconda3 --conda-env alphafold2 \
-        --forcefield amber14-all -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
-
-## Example of relaxing multiple protein structures
-
-    find "./models/raw/" -type f -name '*.pdb' \
-    | while read -r INFILE
-    do
-        OUTFILE="./models/relaxed/$(basename ${INFILE})"
-        
-        ${HOME}/git/ftdmp/ftdmp-relax-with-openmm \
-            --conda-path ${HOME}/miniconda3 \
-            --conda-env '' \
-            --force-cuda \
-            --full-preparation \
-            --input "$INFILE" \
-            --output "$OUTFILE" \
-            --cache-dir ./workdir/relax_cache
-    done
+          --forcefield amber14-all -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
 
 ## Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)
 
@@ -364,7 +422,7 @@ Using the 'amber14-all-no-water' forcefield, the example below works for protein
             --force-cuda \
             --full-preparation \
             --forcefield amber14-all-no-water \
-            --focus whole_interface \
+            --focus "whole_interface" \
             --input "$INFILE" \
             --output "$OUTFILE" \
             --cache-dir ./workdir/relax_cache

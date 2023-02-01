@@ -710,7 +710,7 @@ fi
 
 ################################################################################
 
-if [ "$CONDA_EARLY" == "true" ]
+if [ "$CONDA_EARLY" == "true" ] && [ "$CONDA_ENV_FOR_GNN" == "$CONDA_ENV" ]
 then
 	if [ -z "$CONDA_DEFAULT_ENV" ]
 	then
