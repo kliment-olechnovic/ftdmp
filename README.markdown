@@ -303,7 +303,7 @@ Example script:
       --relax-complexes '--max-iterations 0 --focus whole_interface' \
       --cache-dir ./cache
 
-## Example of protein-RNA docking for running on cluster
+## Example of protein-DNA docking for running on cluster
 
 Example script:
 
@@ -327,8 +327,10 @@ Example script:
       --output-dir ./output \
       --static-file "$STATICFILE" \
       --static-sel '[]' \
+      --static-chain 'A' \
       --mobile-file "$MOBILEFILE" \
-      --mobile-sel '[]' \
+      --mobile-sel '(not [-rnum 1 -aname P,O1P,O2P])' \
+      --mobile-chain 'A=B,B=C' \
       --subselect-contacts '[-a1 [-chain A] -a2 [-chain B,C]]' \
       --use-ftdock 'true' \
       --use-hex 'false' \
@@ -344,7 +346,7 @@ Example script:
       --redundancy-threshold 0.7 \
       --build-complexes 200 \
       --openmm-forcefield 'amber14-all-no-water' \
-      --relax-complexes '--max-iterations 0 --focus whole_interface' \
+      --relax-complexes '--max-iterations 10 --focus whole_interface' \
       --cache-dir ./cache
 
 Main essential changes when compared with the protei-protein docking case:
