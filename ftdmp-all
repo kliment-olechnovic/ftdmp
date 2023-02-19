@@ -71,11 +71,21 @@ Options:
 Examples:
 
     ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
-      --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+      --scoring-rank-names 'protein_protein_voromqa_and_global_and_gnn_no_sr' --output-dir './results'
 
     ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
-      --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+      --scoring-rank-names 'protein_protein_voromqa_and_gnn_no_sr' --output-dir './results'
 
+Named collections of rank names, to be provided as a single string to '--scoring-rank-names':
+
+    protein_protein_voromqa_and_global_and_gnn_no_sr
+    protein_protein_voromqa_and_global_and_gnn_with_sr
+    protein_protein_voromqa_and_gnn_no_sr
+    protein_protein_voromqa_and_gnn_with_sr
+    protein_protein_voromqa_no_sr
+    protein_protein_voromqa_with_sr
+    protein_protein_simplest_voromqa
+    generalized_voromqa
 EOF
 exit 1
 }
@@ -457,7 +467,15 @@ fi
 
 ################################################################################
 
-if [ "$SCORING_RANKS" == "simple_for_protein_protein" ]
+if [ "$SCORING_RANKS" == "generalized_voromqa" ]
+then
+	SCORING_RANKS="
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "protein_protein_simplest_voromqa" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -465,7 +483,17 @@ raw_FIV_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_protein_protein" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_no_sr" ]
+then
+	SCORING_RANKS="
+raw_FIV_iface_energy_rank
+raw_FIV_energy_clash_tour_rank
+raw_FIVb_iface_energy_rank
+raw_FIVb_energy_clash_tour_rank
+"
+fi
+
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_with_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -479,35 +507,7 @@ raw_FIVb_sr_energy_clash_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "standard_for_protein_protein_no_sr" ]
-then
-	SCORING_RANKS="
-raw_FIV_iface_energy_rank
-raw_FIV_energy_clash_tour_rank
-raw_FIVb_iface_energy_rank
-raw_FIVb_energy_clash_tour_rank
-"
-fi
-
-if [ "$SCORING_RANKS" == "standard_for_protein_protein_only_sr" ]
-then
-	SCORING_RANKS="
-raw_FIV_sr_iface_energy_rank
-raw_FIV_sr_energy_clash_tour_rank
-raw_FIVb_sr_iface_energy_rank
-raw_FIVb_sr_energy_clash_tour_rank
-"
-fi
-
-if [ "$SCORING_RANKS" == "standard_for_generic" ]
-then
-	SCORING_RANKS="
-raw_FIVb_iface_energy_rank
-raw_FIVb_energy_clash_tour_rank
-"
-fi
-
-if [ "$SCORING_RANKS" == "extended_for_protein_protein" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_gnn_no_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -526,30 +526,10 @@ raw_FIGNN_wavg_pcadscore_FIV_energy_tour_rank
 raw_FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank
 raw_FIGNN_avg_gnn_score_FIVb_energy_tour_rank
 raw_FIGNN_wavg_pcadscore_FIVb_energy_tour_rank
-raw_FIV_and_FGV_light_tour_rank
-raw_FIV_and_FGV_dark_tour_rank
-raw_FIGNN_and_FGV_light_tour_rank
-raw_FIGNN_and_FGV_dark_tour_rank
-raw_FIV_sr_iface_energy_rank
-raw_FIV_sr_energy_clash_tour_rank
-raw_FIVb_sr_iface_energy_rank
-raw_FIVb_sr_energy_clash_tour_rank
-raw_FIGNN_sr_sum_of_gnn_scores_rank
-raw_FIGNN_sr_average_gnn_score_rank
-raw_FIGNN_sr_gnn_scores_tour_rank
-raw_FIGNN_sr_average_pcadscore_rank
-raw_FIGNN_sr_weighted_average_pcadscore_rank
-raw_FIGNN_sr_sum_of_gnn_scores_clash_tour_rank
-raw_FIGNN_sr_sum_of_gnn_scores_FIV_sr_energy_tour_rank
-raw_FIGNN_sr_avg_gnn_score_FIV_sr_energy_tour_rank
-raw_FIGNN_sr_wavg_pcadscore_FIV_sr_energy_tour_rank
-raw_FIGNN_sr_sum_of_gnn_scores_FIVb_sr_energy_tour_rank
-raw_FIGNN_sr_avg_gnn_score_FIVb_sr_energy_tour_rank
-raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_glob" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_gnn_with_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -587,7 +567,7 @@ raw_FIGNN_sr_wavg_pcadscore_FIVb_sr_energy_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_global_and_gnn_no_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -613,7 +593,7 @@ raw_FIGNN_and_FGV_dark_tour_rank
 "
 fi
 
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_no_glob_no_sr" ]
+if [ "$SCORING_RANKS" == "protein_protein_voromqa_and_global_and_gnn_with_sr" ]
 then
 	SCORING_RANKS="
 raw_FIV_iface_energy_rank
@@ -632,12 +612,10 @@ raw_FIGNN_wavg_pcadscore_FIV_energy_tour_rank
 raw_FIGNN_sum_of_gnn_scores_FIVb_energy_tour_rank
 raw_FIGNN_avg_gnn_score_FIVb_energy_tour_rank
 raw_FIGNN_wavg_pcadscore_FIVb_energy_tour_rank
-"
-fi
-
-if [ "$SCORING_RANKS" == "extended_for_protein_protein_only_sr" ]
-then
-	SCORING_RANKS="
+raw_FIV_and_FGV_light_tour_rank
+raw_FIV_and_FGV_dark_tour_rank
+raw_FIGNN_and_FGV_light_tour_rank
+raw_FIGNN_and_FGV_dark_tour_rank
 raw_FIV_sr_iface_energy_rank
 raw_FIV_sr_energy_clash_tour_rank
 raw_FIVb_sr_iface_energy_rank

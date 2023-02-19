@@ -4,20 +4,27 @@ FTDMP is a software system for running docking experiments and scoring/ranking m
 
 FTDMP has two main entry-point scripts:
 
-* "ftdmp-all" - script to perform docking and scoring/ranking.
-* "ftdmp-qa-all" - script to perform scoring/ranking only.
+* __ftdmp-all__ - script to perform docking and scoring/ranking.
+* __ftdmp-qa-all__ - script to perform scoring/ranking only.
 
 FTDMP uses several software tools that are included in the FTDMP package:
 
-* "voronota-js"
-* "voronota-js-voroif-gnn" (inter-chain interface scoring tool based on graph neural networks)
-* "ftdock" (a modified version of a popular rigid-body-docking software tool), it depends on "fftw-2.1.5" that is also included
-* "FASPR" (a fast tool for rebuilding sidechains in protein structures)
+* __Voronota__ with its expansion Voronota-JS, namely the following executable:
+    * __voronota-js__ (core engine that executes JavaScript scripts)
+    * __voronota-js-voromqa__ (wrapper to a voronota-js program for computing VoroMQA scores, both old and new (developed for CASP14))
+    * __voronota-js-only-global-voromqa__ (wrapper to a voronota-js program for computing only global VoroMQA scores with fast caching)
+    * __voronota-js-fast-iface-voromqa__ (wrapper to a voronota-js program for the very fast computation of the inter-chain interface VoroMQA energy)
+    * __voronota-js-fast-iface-cadscore__ (wrapper to a voronota-js program for the very fast computation of the inter-chain interface CAD-score)
+    * __voronota-js-fast-iface-cadscore-matrix__ (wrapper to a voronota-js program for the very fast computation of the inter-chain interface CAD-score matrix)
+    * __voronota-js-fast-iface-data-graph__ (wrapper to a voronota-js program for the computation of interface graphs used by the VoroIF-GNN method)
+    * __voronota-js-voroif-gnn__ (wrapper to a voronota-js program and GNN inference scripts that run the VoroIF-GNN method for scoring models of protein-protein complexes (developed for CASP15))
+* __FTDock__ (a modified version of a popular rigid-body-docking software tool), it depends on "fftw-2.1.5" that is also included
+* __FASPR__ (a fast tool for rebuilding sidechains in protein structures)
 
 FTDMP also can use non-open-source docking tools that are not included in the FTDMP package, but can be easily installed separately:
 
-* "HEX" (a rigid-body-docking software tool)
-* "SAM" (a symmetry-docking software tool)
+* __HEX__ (a rigid-body-docking software tool)
+* __SAM__ (a symmetry-docking software tool)
 
 Some features of FTDMP require aditional dependencies (that are easily available through "conda" package manager):
 
@@ -140,10 +147,12 @@ Below is the breef description of 'ftdmp-qa-all' interface.
         ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
             --write-pdb-file './output/scored_-RANK-_-BASENAME-' --write-pdb-mode 'voromqa_dark_and_gnn' --write-pdb-num 5
     
-    Named collections of rank names:
+    Named collections of rank names, to be provided as a single string to '--rank-names':
     
         protein_protein_voromqa_and_global_and_gnn_no_sr
         protein_protein_voromqa_and_global_and_gnn_with_sr
+        protein_protein_voromqa_and_gnn_no_sr
+        protein_protein_voromqa_and_gnn_with_sr
         protein_protein_voromqa_no_sr
         protein_protein_voromqa_with_sr
         protein_protein_simplest_voromqa
@@ -271,6 +280,17 @@ Below is the breef description of 'ftdmp-all' interface.
     
         ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
           --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+    
+    Named collections of rank names, to be provided as a single string to '--scoring-rank-names':
+
+        protein_protein_voromqa_and_global_and_gnn_no_sr
+        protein_protein_voromqa_and_global_and_gnn_with_sr
+        protein_protein_voromqa_and_gnn_no_sr
+        protein_protein_voromqa_and_gnn_with_sr
+        protein_protein_voromqa_no_sr
+        protein_protein_voromqa_with_sr
+        protein_protein_simplest_voromqa
+        generalized_voromqa
 
 ## Example of protein-protein docking for running on cluster
 
@@ -306,7 +326,7 @@ Example script:
       --constraint-clashes 0.5 \
       --ftdock-keep 5 \
       --ftdock-angle-step 5 \
-      --scoring-rank-names 'extended_for_protein_protein_no_sr' \
+      --scoring-rank-names 'protein_protein_voromqa_and_global_and_gnn_no_sr' \
       --scoring-full-top 3000 \
       --scoring-ranks-top 100 \
       --scoring-jury-maxs 1 \
@@ -352,7 +372,7 @@ Example script:
       --constraint-clashes 0.9 \
       --ftdock-keep 5 \
       --ftdock-angle-step 5 \
-      --scoring-rank-names 'standard_for_generic' \
+      --scoring-rank-names 'generalized_voromqa' \
       --scoring-full-top 3000 \
       --scoring-ranks-top 200 \
       --scoring-jury-maxs 1 \
@@ -366,11 +386,11 @@ Example script:
 
 Main essential changes when compared with the protei-protein docking case:
 
-    --scoring-rank-names 'standard_for_generic'
+    --scoring-rank-names 'generalized_voromqa'
     
-    --openmm-forcefield 'amber14-all-no-water'
-    
-    
+    --openmm-forcefield 'amber14-all-no-water'                        # now using a force field that is compatible with DNA and RNA
+    --relax-complexes '--max-iterations 10 --focus whole_interface'   # now using iterations limit to not overdo the relaxation in absence of water
+
 
 # Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions
 
@@ -432,7 +452,8 @@ Using the 'amber14-all-no-water' forcefield, the example below works for protein
             --conda-env '' \
             --force-cuda \
             --full-preparation \
-            --forcefield amber14-all-no-water \
+            --forcefield 'amber14-all-no-water' \
+            --max-iterations 10 \
             --focus "whole_interface" \
             --input "$INFILE" \
             --output "$OUTFILE" \

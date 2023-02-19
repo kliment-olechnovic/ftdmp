@@ -30,7 +30,7 @@ ${FTDMPDIR}/ftdmp-all \
   --constraint-clashes 0.9 \
   --ftdock-keep 5 \
   --ftdock-angle-step 5 \
-  --scoring-rank-names 'standard_for_generic' \
+  --scoring-rank-names 'generalized_voromqa' \
   --scoring-full-top 3000 \
   --scoring-ranks-top 200 \
   --scoring-jury-maxs 1 \

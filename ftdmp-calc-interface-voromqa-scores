@@ -197,7 +197,7 @@ then
 		exit 1
 	fi
 	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("--run-faspr")
-	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("${FTDMPDIR}/core/FASPR/FASPR")
+	MORE_FAST_IFACE_VOROMQA_PARAMETERS+=("${FTDMPDIR}/core/FASPR_data/dun2010bbdep.bin")
 fi
 
 if [ "$BLANKET" == "true" ]
