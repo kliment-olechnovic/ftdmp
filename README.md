@@ -2,10 +2,13 @@
 
 FTDMP is a software system for running docking experiments and scoring/ranking multimeric models.
 
+FTDMP was used in CASP15 by the "Venclovas" team (Vilnius University / Life Sciences Center / Institute of Biotechnology).
+The most novel and useful features of FTDMP are integrated __VoroIF-jury__ and __VoroIF-GNN__ methods.
+
 FTDMP has two main entry-point scripts:
 
 * __ftdmp-all__ - script to perform docking and scoring/ranking.
-* __ftdmp-qa-all__ - script to perform scoring/ranking only.
+* __ftdmp-qa-all__ - script to perform scoring/ranking only - for example, to score a mix of models from different sources (docking, AlphaFold, RoseTTAFold).
 
 FTDMP uses several software tools that are included in the FTDMP package:
 
