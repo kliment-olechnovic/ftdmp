@@ -6,9 +6,8 @@ cd ../..
 FTDMPDIR="$(pwd)"
 cd - > /dev/null
 
-CONDADIR="${HOME}/anaconda3"
-CONDAENV="alphafold2"
-CONDAENVFORGNN="gnncuda"
+CONDADIR="${HOME}/miniconda3"
+CONDAENV="base"
 
 STATICFILE="./input/4UNG_B.pdb"
 MOBILEFILE="./input/4UNG_A.pdb"
@@ -19,7 +18,6 @@ ${FTDMPDIR}/ftdmp-all \
   --ftdmp-root "$FTDMPDIR" \
   --conda-path "$CONDADIR" \
   --conda-env "$CONDAENV" \
-  --conda-env-for-gnn "$CONDAENVFORGNN" \
   --conda-early 'true' \
   --parallel-docking 8 \
   --parallel-scoring 8 \

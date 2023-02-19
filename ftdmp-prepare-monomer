@@ -37,7 +37,7 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
 command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }

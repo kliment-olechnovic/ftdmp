@@ -6,8 +6,8 @@ cd ../..
 FTDMPDIR="$(pwd)"
 cd - > /dev/null
 
-CONDADIR="${HOME}/anaconda3"
-CONDAENV="alphafold2"
+CONDADIR="${HOME}/miniconda3"
+CONDAENV="base"
 
 STATICFILE="./input/6FPQ_A.pdb"
 MOBILEFILE="./input/6FPQ_B.pdb"

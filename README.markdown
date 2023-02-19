@@ -10,7 +10,7 @@ FTDMP has two main entry-point scripts:
 FTDMP uses several software tools that are included in the FTDMP package:
 
 * "voronota-js"
-* "voronota-iface-gnn" (inter-chain interface scoring tool based on graph neural networks)
+* "voronota-js-voroif-gnn" (inter-chain interface scoring tool based on graph neural networks)
 * "ftdock" (a modified version of a popular rigid-body-docking software tool), it depends on "fftw-2.1.5" that is also included
 * "FASPR" (a fast tool for rebuilding sidechains in protein structures)
 
@@ -21,7 +21,7 @@ FTDMP also can use non-open-source docking tools that are not included in the FT
 
 Some features of FTDMP require aditional dependencies (that are easily available through "conda" package manager):
 
- * graph neural network-based scoring using "voronota-iface-gnn" requires "R", "PyTorch" and "PyTorch Geometric"
+ * graph neural network-based scoring using "voronota-js-voroif-gnn" requires "R", "PyTorch" and "PyTorch Geometric"
  * relaxing using molecular dynamics requires "OpenMM"
 
 # Obtaining and installing FTDMP
@@ -45,26 +45,41 @@ To, optionally, make FTDMP accessible without specifying full path, add the foll
 
     export PATH="/path/to/ftdmp:${PATH}"
 
-## Setting Miniconda for using graph neural network-based scoring
+## Setting Miniconda for using graph neural network-based scoring, and for using OpenMM
 
 Download the Miniconda package:
 
     cd ~/Downloads
-    wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     
 Install Miniconda:
 
-    bash ./Miniconda3-py39_4.11.0-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh
     
-Activate Miniconda environment an install packages:
+Activate Miniconda environment:
 
     source ~/miniconda3/bin/activate
-    
-    conda install r # may skip this if you have R already and do not want it in Miniconda
-    
-    conda install pytorch -c pytorch
-    conda install pyg -c pyg
 
+Install packages for using graph neural network-based scoring:
+
+    conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia # using instructions from 'https://pytorch.org/get-started/locally/'
+    conda install pyg -c pyg # using instructions from 'https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html'
+    conda install pandas
+    conda install r # may skip this if you have R already and do not want it in Miniconda
+
+Test PyTorch installation:
+
+    python -c "import torch; print(torch.__version__)"
+
+Install packages for using OpenMM:
+
+    conda install -c conda-forge libstdcxx-ng # needed for the compatible version of libstdc++
+    conda install -c conda-forge openmm
+    conda install -c conda-forge pdbfixer
+
+Test OpenMM installation:
+
+    python -m openmm.testInstallation
 
 # Using FTDMP for scoring and ranking multimeric models
 
@@ -359,12 +374,6 @@ Main essential changes when compared with the protei-protein docking case:
 
 # Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions
 
-## Installing OpenMM
-
-The easiest way to install OpenMM is to do it in a Miniconda Anaconda environment:
-
-    conda install -c conda-forge openmm
-
 ## Command line user interface
 
 Relaxing is done with the 'ftdmp-relax-with-openmm' script.
@@ -406,8 +415,8 @@ Below is the breef description of 'ftdmp-relax-with-openmm' interface.
     
         ftdmp-relax-with-openmm --input model.pdb --output relaxed_model.pdb
         
-        ftdmp-relax-with-openmm --conda-path ~/anaconda3 --conda-env alphafold2 \
-          --forcefield amber14-all -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
+        ftdmp-relax-with-openmm --conda-path ~/miniconda3 --forcefield amber14-all \
+          -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
 
 ## Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)
 

@@ -194,7 +194,7 @@ then
 	else
 		export FTDMPDIR="$FTDMP_ROOT"
 	fi
-	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
 ################################################################################

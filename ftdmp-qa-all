@@ -756,7 +756,7 @@ then
 	else
 		export FTDMPDIR="$FTDMP_ROOT"
 	fi
-	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 ################################################################################
@@ -941,10 +941,10 @@ then
 	then
 		cat "$TMPLDIR/pdb_files_for_writing_cores" \
 		| awk '{print " --input " $2 " --output-pdb-file " $2}' \
-		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-iface-gnn-score \
+		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-js-voroif-gnn \
 		  --conda-path "$CONDA_PATH" \
 		  --conda-env "$CONDA_ENV" \
-		  --gnn "${FTDMPDIR}/core/voronota-iface-gnn_release/gnn_packages/v1" \
+		  --gnn "${FTDMPDIR}/core/voronota/expansion_js/voroif/gnn_packages/v1" \
 		  --cache-dir "$CACHE_DIR" \
 		  --processors 1 \
 		  --output-pdb-mode "combine" \

@@ -1,26 +1,30 @@
 #!/bin/bash
 
-cd "$(dirname $0)"
+SCRIPTDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+################################################################################
+
+cd "${SCRIPTDIR}/fftw-2.1.5"
 pwd
-
-cd -
-cd "./fftw-2.1.5"
 make clean
-find ./ -type f -name 'Makefile' | xargs rm
-rm "./config.log" "./config.status"
+find ./ -type f -name 'Makefile' | while read MFILE
+do
+	rm "$MFILE"
+done
+rm -f "./config.log" "./config.status"
 
-cd -
-cd "./3D_Dock/progs/"
+################################################################################
+
+cd "${SCRIPTDIR}/3D_Dock/progs/"
+pwd
 make clean
 
-cd -
-cd "./FASPR"
-rm "./FASPR"
+################################################################################
 
-cd -
-cd "./voronota-js_release"
-rm "./voronota-js"
+cd "${SCRIPTDIR}/voronota/expansion_js"
+rm -f "./voronota-js"
+
+################################################################################
 
 exit 0
 

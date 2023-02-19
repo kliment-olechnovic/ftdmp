@@ -92,7 +92,7 @@ echo >&2 "ftdpm-all-score: reading and checking options"
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
 FROM_TABLE="_stdin"

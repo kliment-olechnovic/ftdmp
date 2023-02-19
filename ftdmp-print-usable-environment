@@ -42,7 +42,7 @@ then
 	else
 		export FTDMPDIR="$FTDMP_ROOT"
 	fi
-	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
 fi
 
 echo "FTDMP_ROOT = '${FTDMPDIR}'"

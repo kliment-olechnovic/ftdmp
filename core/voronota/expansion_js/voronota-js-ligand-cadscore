@@ -1,0 +1,513 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'voronota-js-ligand-cadscore' script computes receptor-ligand variation of CAD-score.
+
+Input options, basic:
+    --target-receptor             string  *  target receptor file path
+    --target-ligands              string  *  list of target ligand file paths
+    --target-ligand-ids           string  *  list of target ligand IDs
+    --model-receptor              string  *  model receptor file path
+    --model-ligands               string  *  list of model ligand file paths
+    --model-ligand-ids            string  *  list of model ligand IDs
+    --target-name                 string     target name to use for output, default is 'target_complex'
+    --model-name                  string     model name to use for output, default is 'model_complex'
+
+Input options, alternative:
+    --casp15-target               string  *  target data file in CASP15 format, alternative to --target-* options
+    --casp15-target-pose          string  *  pose number to select from the target data file in CASP15 format
+    --casp15-model                string  *  model data file in CASP15 format, alternative to --model-* options
+    --casp15-model-pose           string  *  pose number to select from the model data file in CASP15 format
+
+Other options:
+    --table-dir                   string     directory to output scores table file named '${TARGET_NAME}_vs_${MODEL_NAME}.txt'
+    --details-dir                 string     directory to output lists of contacts used for scoring
+    --drawing-dir                 string     directory to output files to visualize with pymol
+    --and-swap                    string     flag to compute everything after swapping target and model, default is 'false'
+    --help | -h                              display help message and exit
+    
+Standard output:
+    space-separated table of scores
+    
+Examples:
+
+    voronota-js-ligand-cadscore --casp15-target ./T1118v1LG035_1 --casp15-target-pose 1 --casp15-model ./T1118v1LG046_1 --casp15-model-pose 1
+    
+    voronota-js-ligand-cadscore \
+      --target-receptor ./t_protein.pdb --target-ligands './t_ligand1.mol ./t_ligand2.mol ./t_ligand3.mol' --target-ligand-ids 'a a b' \
+      --model-receptor ./m_protein.pdb --model-ligands './m_ligand1.mol ./m_ligand2.mol ./m_ligand3.mol' --model-ligand-ids 'a a b'
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd "$(dirname ${ZEROARG})"
+	export PATH="$(pwd):${PATH}"
+	cd - &> /dev/null
+fi
+
+export LC_ALL=C
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+TARGET_RECEPTOR=""
+TARGET_LIGANDS=""
+TARGET_LIGAND_IDS=""
+MODEL_RECEPTOR=""
+MODEL_LIGANDS=""
+MODEL_LIGAND_IDS=""
+TARGET_NAME="target_complex"
+MODEL_NAME="model_complex"
+CASP15_TARGET=""
+CASP15_TARGET_POSE=""
+CASP15_MODEL=""
+CASP15_MODEL_POSE=""
+TABLE_DIR=""
+DETAILS_DIR=""
+DRAWING_DIR=""
+AND_SWAP="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--target-receptor)
+		TARGET_RECEPTOR="$OPTARG"
+		shift
+		;;
+	--target-ligands)
+		TARGET_LIGANDS="$OPTARG"
+		shift
+		;;
+	--target-ligand-ids)
+		TARGET_LIGAND_IDS="$OPTARG"
+		shift
+		;;
+	--model-receptor)
+		MODEL_RECEPTOR="$OPTARG"
+		shift
+		;;
+	--model-ligands)
+		MODEL_LIGANDS="$OPTARG"
+		shift
+		;;
+	--model-ligand-ids)
+		MODEL_LIGAND_IDS="$OPTARG"
+		shift
+		;;
+	--target-name)
+		TARGET_NAME="$OPTARG"
+		shift
+		;;
+	--model-name)
+		MODEL_NAME="$OPTARG"
+		shift
+		;;
+	--casp15-target)
+		CASP15_TARGET="$OPTARG"
+		shift
+		;;
+	--casp15-target-pose)
+		CASP15_TARGET_POSE="$OPTARG"
+		shift
+		;;
+	--casp15-model)
+		CASP15_MODEL="$OPTARG"
+		shift
+		;;
+	--casp15-model-pose)
+		CASP15_MODEL_POSE="$OPTARG"
+		shift
+		;;
+    --table-dir)
+		TABLE_DIR="$OPTARG"
+		shift
+		;;
+	--details-dir)
+		DETAILS_DIR="$OPTARG"
+		shift
+		;;
+	--drawing-dir)
+		DRAWING_DIR="$OPTARG"
+		shift
+		;;
+	--and-swap)
+		AND_SWAP="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+INPUT_MODE=""
+
+if [ -n "$TARGET_RECEPTOR" ] && [ -n "$TARGET_LIGANDS" ] && [ -n "$TARGET_LIGAND_IDS" ] && [ -n "$MODEL_RECEPTOR" ] && [ -n "$MODEL_LIGANDS" ] && [ -n "$MODEL_LIGAND_IDS" ]
+then
+	INPUT_MODE="basic"
+fi
+
+if [ -n "$CASP15_TARGET" ] && [ -n "$CASP15_TARGET_POSE" ] && [ -n "$CASP15_MODEL" ] && [ -n "$CASP15_MODEL_POSE" ]
+then
+	INPUT_MODE="${INPUT_MODE}alt"
+fi
+
+if [ -z "$INPUT_MODE" ]
+then
+	echo >&2 "Error: incomplete set of input parameters"
+	exit 1
+fi
+
+if [ "$INPUT_MODE" != "basic" ] && [ "$INPUT_MODE" != "alt" ]
+then
+	echo >&2 "Error: conflicting set of input parameters, both basic and alternative parameters used"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+if [ "$INPUT_MODE" == "alt" ]
+then
+	cat "$CASP15_TARGET" | egrep '^ATOM' > "${TMPLDIR}/target_receptor.pdb"
+	
+	if [ ! -s "${TMPLDIR}/target_receptor.pdb" ]
+	then
+		echo >&2 "Error: no PDB ATOM records in '${CASP15_TARGET}'"
+		exit 1
+	fi
+	
+	cat "$CASP15_MODEL" | egrep '^ATOM' > "${TMPLDIR}/model_receptor.pdb"
+	
+	if [ ! -s "${TMPLDIR}/model_receptor.pdb" ]
+	then
+		echo >&2 "Error: no PDB ATOM records in '${CASP15_MODEL}'"
+		exit 1
+	fi
+
+	mkdir -p "${TMPLDIR}/target_ligands"
+	
+{
+cat << 'EOF'
+voronota_auto_assert_full_success=true;
+voronota_split_blocks_file('-input-file', '_INFILE', '-output-file', '_OUTFILE', '-block-start', 'LIGAND', '-block-substart', 'POSE', '-block-end', 'M  END', '-prefix', '_PREFIX', '-postfix', '.mol');
+EOF
+} \
+| sed "s|_INFILE|${CASP15_TARGET}|" \
+| sed "s|_OUTFILE|${TMPLDIR}/target_list_all|" \
+| sed "s|_PREFIX|${TMPLDIR}/target_ligands/|" \
+| voronota-js --no-setup-defaults
+
+	cat "${TMPLDIR}/target_list_all" | grep "_POSE_${CASP15_TARGET_POSE}.mol" > "${TMPLDIR}/target_list"
+	
+	if [ ! -s "${TMPLDIR}/target_list" ]
+	then
+		echo >&2 "Error: failed to read ligands from '${CASP15_TARGET}' with pose '${CASP15_TARGET_POSE}'"
+		exit 1
+	fi
+
+	mkdir -p "${TMPLDIR}/model_ligands"
+	
+{
+cat << 'EOF'
+voronota_auto_assert_full_success=true;
+voronota_split_blocks_file('-input-file', '_INFILE', '-output-file', '_OUTFILE', '-block-start', 'LIGAND', '-block-substart', 'POSE', '-block-end', 'M  END', '-prefix', '_PREFIX', '-postfix', '.mol');
+EOF
+} \
+| sed "s|_INFILE|${CASP15_MODEL}|" \
+| sed "s|_OUTFILE|${TMPLDIR}/model_list_all|" \
+| sed "s|_PREFIX|${TMPLDIR}/model_ligands/|" \
+| voronota-js --no-setup-defaults
+
+	cat "${TMPLDIR}/model_list_all" | grep "_POSE_${CASP15_MODEL_POSE}.mol" > "${TMPLDIR}/model_list"
+
+	if [ ! -s "${TMPLDIR}/model_list" ]
+	then
+		echo >&2 "Error: failed to read ligands from '${CASP15_MODEL}' with pose '${CASP15_MODEL_POSE}'"
+		exit 1
+	fi
+	
+	cat "${TMPLDIR}/target_list" | xargs -L 1 basename | sed 's/^.*LIGAND_\+[[:alnum:]]\+_\+\([[:alnum:]]\+\)_.*$/\1/' > "${TMPLDIR}/target_list_ids"
+	cat "${TMPLDIR}/model_list" | xargs -L 1 basename | sed 's/^.*LIGAND_\+[[:alnum:]]\+_\+\([[:alnum:]]\+\)_.*$/\1/' > "${TMPLDIR}/model_list_ids"
+		
+	voronota-js-ligand-cadscore \
+	  --target-receptor "${TMPLDIR}/target_receptor.pdb" --target-ligands "$(cat ${TMPLDIR}/target_list)" --target-ligand-ids "$(cat ${TMPLDIR}/target_list_ids)" \
+      --model-receptor "${TMPLDIR}/model_receptor.pdb" --model-ligands "$(cat ${TMPLDIR}/model_list)" --model-ligand-ids "$(cat ${TMPLDIR}/model_list_ids)" \
+      --target-name "$(basename ${CASP15_TARGET})_pose${CASP15_TARGET_POSE}" --model-name "$(basename ${CASP15_MODEL})_pose${CASP15_MODEL_POSE}" \
+      --table-dir "$TABLE_DIR" --details-dir "$DETAILS_DIR" --drawing-dir "$DRAWING_DIR" --and-swap "$AND_SWAP"
+	
+	exit 0
+fi
+
+if [ "$(echo ${TARGET_LIGANDS} | tr ' ' '\n' | egrep . | wc -l)" -ne "$(echo ${TARGET_LIGAND_IDS} | tr ' ' '\n' | egrep . | wc -l)" ]
+then
+	echo >&2 "Error: the number of target ligand IDs is not equal to the number of target ligand files"
+	exit 1
+fi
+
+if [ "$(echo ${MODEL_LIGANDS} | tr ' ' '\n' | egrep . | wc -l)" -ne "$(echo ${MODEL_LIGAND_IDS} | tr ' ' '\n' | egrep . | wc -l)" ]
+then
+	echo >&2 "Error: the number of model ligand IDs is not equal to the number of model ligand files"
+	exit 1
+fi
+
+while read LIGFILE
+do
+	if [ ! -s "$LIGFILE" ]
+	then
+		echo >&2 "Error: mising or empty target ligand file '$LIGFILE'"
+		exit 1
+	fi
+done < <(echo "${TARGET_LIGANDS}" | tr ' ' '\n' | egrep .)
+
+while read LIGFILE
+do
+	if [ ! -s "$LIGFILE" ]
+	then
+		echo >&2 "Error: mising or empty model ligand file '$LIGFILE'"
+		exit 1
+	fi
+done < <(echo "${MODEL_LIGANDS}" | tr ' ' '\n' | egrep .)
+
+if [ -z "$TARGET_NAME" ]
+then
+	TARGET_NAME="target_complex"
+fi
+
+if [ -z "$MODEL_NAME" ]
+then
+	MODEL_NAME="model_complex"
+fi
+
+if [ "$TARGET_NAME" == "$MODEL_NAME" ]
+then
+	echo >&2 "Error: target and model are named the same"
+	exit 1
+fi
+
+if [ -n "$TABLE_DIR" ]
+then
+	mkdir -p "$TABLE_DIR"
+	if [ ! -d "$TABLE_DIR" ]
+	then
+		echo >&2 "Error: failed to access or create table output directory '$TABLE_DIR'"
+		exit 1
+	fi
+fi
+
+if [ -n "$DETAILS_DIR" ]
+then
+	mkdir -p "$DETAILS_DIR"
+	if [ ! -d "$DETAILS_DIR" ]
+	then
+		echo >&2 "Error: failed to access or create details output directory '$DETAILS_DIR'"
+		exit 1
+	fi
+fi
+
+if [ -n "$DRAWING_DIR" ]
+then
+	mkdir -p "$DRAWING_DIR"
+	if [ ! -d "$DRAWING_DIR" ]
+	then
+		echo >&2 "Error: failed to access or create details output directory '$DRAWING_DIR'"
+		exit 1
+	fi
+fi
+
+{
+cat << EOF
+var params={}
+params.target_receptor='$TARGET_RECEPTOR';
+params.target_ligands=[];
+params.model_receptor='$MODEL_RECEPTOR';
+params.model_ligands=[];
+params.target_name='$TARGET_NAME';
+params.model_name='$MODEL_NAME';
+params.table_dir='$TABLE_DIR';
+params.table_dir=params.table_dir.trim();
+params.details_dir='$DETAILS_DIR';
+params.details_dir=params.details_dir.trim();
+params.drawing_dir='$DRAWING_DIR';
+params.drawing_dir=params.drawing_dir.trim();
+params.and_swap='$AND_SWAP';
+EOF
+
+paste <(echo ${TARGET_LIGANDS} | tr ' ' '\n' | egrep .) <(echo ${TARGET_LIGAND_IDS} | tr ' ' '\n' | egrep .) \
+| while read LIGFILE LIGID
+do
+cat << EOF
+params.target_ligands.push({"ligand_file": "$LIGFILE", "ligand_id": "$LIGID"});
+EOF
+done
+
+paste <(echo ${MODEL_LIGANDS} | tr ' ' '\n' | egrep .) <(echo ${MODEL_LIGAND_IDS} | tr ' ' '\n' | egrep .) \
+| while read LIGFILE LIGID
+do
+cat << EOF
+params.model_ligands.push({"ligand_file": "$LIGFILE", "ligand_id": "$LIGID"});
+EOF
+done
+
+cat << 'EOF'
+voronota_auto_assert_full_success=true;
+voronota_setup_defaults("-no-load-voromqa-potentials -no-load-alt-voromqa-potential -no-load-more-atom-types -no-load-mock-voromqa-potential");
+
+voronota_import('-file', params.target_receptor, '-title', 'target_receptor');
+voronota_import('-file', params.model_receptor, '-title', 'model_receptor');
+voronota_pick_objects();
+voronota_set_tag_of_atoms('-tag', 'receptor');
+voronota_unpick_objects();
+
+var target_object_names=['target_receptor'];
+for(var i=0;i<params.target_ligands.length;i++)
+{
+	voronota_import('-file', params.target_ligands[i].ligand_file, '-title', 'tlig'+i);
+	var object_name=voronota_last_output().results[0].output.object_names[0];
+	voronota_pick_objects(object_name);
+	voronota_set_chain_name('-chain-name', params.target_ligands[i].ligand_id);
+	voronota_set_tag_of_atoms('-tag', 'ligand');
+	voronota_unpick_objects();
+	target_object_names.push(object_name);
+}
+
+var model_object_names=['model_receptor'];
+for(var i=0;i<params.model_ligands.length;i++)
+{
+	voronota_import('-file', params.model_ligands[i].ligand_file, '-title', 'mlig'+i);
+	var object_name=voronota_last_output().results[0].output.object_names[0];
+	voronota_pick_objects(object_name);
+	voronota_set_chain_name('-chain-name', params.model_ligands[i].ligand_id);
+	voronota_set_tag_of_atoms('-tag', 'ligand');
+	voronota_unpick_objects();
+	model_object_names.push(object_name);
+}
+
+voronota_unpick_objects();
+
+voronota_merge_objects('-names', target_object_names, '-title', params.target_name);
+voronota_merge_objects('-names', model_object_names, '-title', params.model_name);
+
+voronota_pick_objects('-names', [params.target_name, params.model_name]);
+voronota_delete_objects('-not-picked');
+voronota_set_atom_serials();
+
+voronota_select_atoms_close_to_interchain_interface('-atoms-first', '[-t receptor]', '-atoms-second', '[-t ligand]', '-name', 'iface_atoms');
+voronota_select_atoms('-use', '[iface_atoms]', '-full-residues', '-name', 'iface_atoms');
+voronota_select_atoms_close_to_interchain_interface('-atoms-first', '[iface_atoms]', '-atoms-second', '(not [iface_atoms])', '-name', 'iface_atoms_neigbors');
+voronota_select_atoms('-use', '[iface_atoms_neigbors]', '-full-residues', '-name', 'iface_atoms_neigbors');
+voronota_select_atoms('-use', '([iface_atoms] or [iface_atoms_neigbors])', '-name', 'iface_atoms_plus');
+voronota_restrict_atoms('-use', '[iface_atoms_plus]');
+
+voronota_construct_contacts("-skip-sas -no-calculate-volumes -no-tag-peripherial");
+voronota_select_contacts('-use', '[-a1 [-t receptor] -a2 [-t ligand] -min-seq-sep 1]', '-name', 'iface');
+voronota_select_atoms('-use', '[-sel-of-contacts iface]', '-full-residues', '-name', 'iface_atoms');
+voronota_select_contacts('-use', '([-a1 [iface_atoms] -a2 [iface_atoms] -min-seq-sep 1] and (not [-a1 [-t ligand] -a2 [-t ligand]]))', '-name', 'adjacent_to_iface');
+
+voronota_cad_score('-target', params.target_name, '-model', params.model_name, '-t-sel', '[iface]', '-m-sel', '[iface]');
+iface_cadscore=voronota_last_output().results[0].output.residue_level_result;
+
+voronota_cad_score('-model', params.target_name, '-target', params.model_name, '-t-sel', '[iface]', '-m-sel', '[iface]');
+rev_iface_cadscore=voronota_last_output().results[0].output.residue_level_result;
+
+voronota_cad_score('-target', params.target_name, '-model', params.model_name, '-t-sel', '[adjacent_to_iface]', '-m-sel', '[adjacent_to_iface]');
+adjacent_to_iface_cadscore=voronota_last_output().results[0].output.residue_level_result;
+
+voronota_cad_score('-model', params.target_name, '-target', params.model_name, '-t-sel', '[adjacent_to_iface]', '-m-sel', '[adjacent_to_iface]');
+rev_adjacent_to_iface_cadscore=voronota_last_output().results[0].output.residue_level_result;
+
+iface_cadscore.target_name=params.target_name;
+iface_cadscore.model_name=params.model_name;
+iface_cadscore.contacts_set="interface";
+
+rev_iface_cadscore.target_name=params.model_name;
+rev_iface_cadscore.model_name=params.target_name;
+rev_iface_cadscore.contacts_set="interface";
+
+adjacent_to_iface_cadscore.target_name=params.target_name;
+adjacent_to_iface_cadscore.model_name=params.model_name;
+adjacent_to_iface_cadscore.contacts_set="interface_plus_adjacent";
+
+rev_adjacent_to_iface_cadscore.target_name=params.model_name;
+rev_adjacent_to_iface_cadscore.model_name=params.target_name;
+rev_adjacent_to_iface_cadscore.contacts_set="interface_plus_adjacent";
+
+var summary_objects=[iface_cadscore, adjacent_to_iface_cadscore];
+if(params.and_swap=='true')
+{
+	summary_objects.push(rev_iface_cadscore);
+	summary_objects.push(rev_adjacent_to_iface_cadscore);
+}
+
+var table="target model contacts_set CAD_score target_area model_area\n";
+
+for(var i=0;i<summary_objects.length;i++)
+{
+	var so=summary_objects[i];
+	var table_row=so.target_name+" "+so.model_name+" "+so.contacts_set+" "+so.score+" "+so.target_area_sum+" "+so.model_area_sum+"\n";
+	table+=table_row;
+}
+
+write(table);
+
+if(params.table_dir.length>0)
+{
+	fwrite(params.table_dir+'/'+params.target_name+'_vs_'+params.model_name+'.txt', table);
+}
+
+if(params.details_dir.length>0)
+{
+	voronota_export_adjuncts_of_contacts('-inter-residue', '-adjuncts', 'area', '-contacts-use', '[iface]', '-file', params.details_dir+'/${objectname}_interface_contacts.txt');
+	voronota_export_adjuncts_of_contacts('-inter-residue', '-adjuncts', 'area', '-contacts-use', '[adjacent_to_iface]', '-file', params.details_dir+'/${objectname}_interface_and_adjacent_contacts.txt');
+}
+
+if(params.drawing_dir.length>0)
+{
+	voronota_show_contacts('-use', '[adjacent_to_iface]');
+	//voronota_spectrum_contacts('-use', '[adjacent_to_iface]', '-by', 'residue-ids', '-scheme', 'random');
+	voronota_color_contacts('-use', '[adjacent_to_iface]', '-col', 'yellow');
+	voronota_color_contacts('-use', '[iface]', '-col', 'green');
+	voronota_export_contacts_as_pymol_cgo('-use', '[iface]', '-file', params.drawing_dir+'/draw_${objectname}_interface_contacts_in_pymol.py', '-name', '${objectname}_interface_contacts');
+	voronota_export_contacts_as_pymol_cgo('-use', '[adjacent_to_iface]', '-file', params.drawing_dir+'/draw_${objectname}_interface_and_adjacent_contacts_in_pymol.py', '-name', '${objectname}_interface_and_adjacent_contacts');
+	
+	var target_cutout_name=params.target_name+'_cutout';
+	var model_cutout_name=params.model_name+'_cutout';
+	voronota_copy_object(params.target_name, target_cutout_name);
+	voronota_copy_object(params.model_name, model_cutout_name);
+	voronota_pick_objects('-names', [target_cutout_name, model_cutout_name]);
+	voronota_restrict_atoms('-use', '[iface_atoms]');
+	voronota_set_chain_name('-use', '[-t ligand]', '-chain-name', 'l');
+	voronota_set_atom_serials();
+	voronota_export_atoms('-use', '[-t receptor]', '-full-residues', '-as-pdb', '-file', params.drawing_dir+'/${objectname}_interface_residues_receptor.pdb');
+	voronota_export_atoms('-use', '[-t ligand]', '-full-residues', '-as-pdb', '-file', params.drawing_dir+'/${objectname}_interface_residues_ligand.pdb');
+}
+
+EOF
+} \
+| voronota-js --no-setup-defaults
+

@@ -45,10 +45,10 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-iface-gnn_release:${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
-command -v voronota-iface-gnn-score &> /dev/null || { echo >&2 "Error: 'voronota-iface-gnn-score' executable not in binaries path"; exit 1; }
+command -v voronota-js-voroif-gnn &> /dev/null || { echo >&2 "Error: 'voronota-js-voroif-gnn' executable not in binaries path"; exit 1; }
 command -v voronota-js-fast-iface-data-graph &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-data-graph' executable not in binaries path"; exit 1; }
 
 INPUT_PREFIX=""
@@ -189,7 +189,7 @@ then
 	exit 1
 fi
 
-GNN_PACKAGES_PATH="${FTDMPDIR}/core/voronota-iface-gnn_release/gnn_packages/v1"
+GNN_PACKAGES_PATH="${FTDMPDIR}/core/voronota/expansion_js/voroif/gnn_packages/v1"
 
 if [ ! -d "${GNN_PACKAGES_PATH}" ]
 then
@@ -254,11 +254,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-iface-gnn-score --input _list --input-is-script 'true' "${MORE_IFACE_GNN_PARAMETERS[@]}"
+	| voronota-js-voroif-gnn --input _list --input-is-script 'true' "${MORE_IFACE_GNN_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-iface-gnn-score --input _list "${MORE_IFACE_GNN_PARAMETERS[@]}" \
+	| voronota-js-voroif-gnn --input _list "${MORE_IFACE_GNN_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX} /\1 /"
 fi
 } \

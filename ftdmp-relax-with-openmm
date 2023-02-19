@@ -56,7 +56,7 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota-js_release:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
 INFILE=""
@@ -441,9 +441,9 @@ then
 else
 	{
 cat << 'EOF'
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
 from pdbfixer import PDBFixer
 import random
 fixer = PDBFixer(filename='input.pdb')
@@ -566,9 +566,9 @@ EOF
 	
 	{
 cat << 'EOF'
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
 pdb = PDBFile('prepared.pdb')
 EOF
 

@@ -1,0 +1,385 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'voronota-js-ifeatures-voromqa' script computes multiple VoroMQA-based features of protein-protein complexes.
+
+Options:
+    --input | -i              string  *  input file path or '_list' to read file paths from stdin
+    --output-table-file       string     output table file path, default is '_stdout' to print to stdout
+    --processors              number     maximum number of processors to use, default is 1
+    --use-scwrl                          flag to use Scwrl4 to rebuild side-chains
+    --as-assembly                        flag to treat input file as biological assembly
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    space-separated table of scores
+    
+Examples:
+
+    voronota-js-ifeatures-voromqa --input model.pdb
+    
+    ls *.pdb | voronota-js-ifeatures-voromqa --input _list --processors 8 | column -t
+
+EOF
+exit 1
+}
+
+function substitute_id_in_filename
+{
+	SUBSTITUTE_BASENAME="$(basename "$1")"
+	SUBSTITUTE_TEMPLATE="$2"
+	
+	echo "$SUBSTITUTE_TEMPLATE" \
+	| sed "s|-BASENAME-|${SUBSTITUTE_BASENAME}|"
+}
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd "$(dirname ${ZEROARG})"
+	export PATH="$(pwd):${PATH}"
+	cd - &> /dev/null
+fi
+
+export LC_ALL=C
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+INFILE=""
+OUTPUT_TABLE_FILE="_stdout"
+MAX_PROCESSORS="1"
+USE_SCWRL="false"
+AS_ASSEMBLY="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-i|--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--output-table-file)
+		OUTPUT_TABLE_FILE="$OPTARG"
+		shift
+		;;
+	--processors)
+		MAX_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--use-scwrl)
+		USE_SCWRL="true"
+		;;
+	--as-assembly)
+		AS_ASSEMBLY="true"
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ -z "$INFILE" ] || [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ "$INFILE" != "_list" ] && [ "$INFILE" != "_stream" ] && [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+if [ "$INFILE" == "_stream" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	cat > "$TMPLDIR/input_stream"
+	
+	if [ ! -s "$TMPLDIR/input_stream" ]
+	then
+		echo >&2 "Error: no stdin data"
+		exit 1
+	fi
+	
+	"$ZEROARG" "${ALLARGS[@]}" --input "$TMPLDIR/input_stream"
+	
+	exit 0
+fi
+
+if [ "$INFILE" == "_list" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	cat | egrep . | sort | uniq > "$TMPLDIR/input_list"
+	
+	if [ ! -s "$TMPLDIR/input_list" ]
+	then
+		echo >&2 "Error: no stdin data"
+		exit 1
+	fi
+	
+	mkdir -p "$TMPLDIR/children_tables"
+	
+	cat "$TMPLDIR/input_list" \
+	| awk -v outdir="$TMPLDIR/children_tables" '{print "--input " $1 " --output-table-file " outdir "/" NR ".pdb"}' \
+	| xargs -L 1 -P "$MAX_PROCESSORS" "$ZEROARG" "${ALLARGS[@]}"
+	
+	find "$TMPLDIR/children_tables" -type f -not -empty \
+	| sort \
+	| xargs -L 1 cat \
+	| awk '{if(NR==1 || NR%2==0) print $0}' \
+	> "$TMPLDIR/table"
+	
+	cat "$TMPLDIR/table"
+	
+	exit 0
+fi
+
+INFILE_BASENAME="$(basename $INFILE)"
+OUTPUT_TABLE_FILE="$(substitute_id_in_filename "$INFILE" "$OUTPUT_TABLE_FILE")"
+
+{
+cat << EOF
+
+params={}
+
+params.input_file='$INFILE';
+params.input_file_name='$INFILE_BASENAME';
+params.input_as_assembly='$AS_ASSEMBLY';
+params.output_table_file='$OUTPUT_TABLE_FILE';
+params.use_scwrl='$USE_SCWRL';
+
+EOF
+
+cat << 'EOF'
+
+if(params.input_file===undefined || params.input_file==="")
+{
+	throw ("No input file");
+}
+
+if(params.input_as_assembly===undefined || params.input_as_assembly==="")
+{
+	params.input_as_assembly="false";
+}
+
+if(params.output_table_file===undefined || params.output_table_file==="")
+{
+	params.output_table_file="_stdout";
+}
+
+voronota_import("-file", params.input_file, "-as-assembly", params.input_as_assembly);
+voronota_assert_partial_success("Failed to import file");
+
+voronota_restrict_atoms("-use", "[-protein]");
+voronota_assert_full_success("Failed to restrict input atoms to protein only");
+
+if(params.use_scwrl==="true")
+{
+	voronota_scwrl();
+	voronota_assert_full_success("Failed to use Scwrl4");
+}
+
+voronota_construct_contacts();
+voronota_assert_full_success("Failed to construct contacts");
+
+voronota_select_contacts("-use", "[-inter-chain]", "-name", "inter_chain_contacts")
+voronota_assert_full_success("Failed to select inter-chain contacts");
+
+voronota_select_atoms("-use", "[-sel-of-contacts inter_chain_contacts]", "-name", "interface_atoms")
+voronota_assert_full_success("Failed to select interface atoms");
+
+voronota_select_contacts("-use", "[-a1 [interface_atoms] -solvent]", "-name", "interface_solvent_contacts")
+voronota_assert_full_success("Failed to select interface solvent contacts");
+
+voronota_select_contacts("-use", "([inter_chain_contacts] or [interface_solvent_contacts])", "-name", "all_interface_contacts")
+voronota_assert_full_success("Failed to select all interface contacts");
+
+voronota_summarize_linear_structure("-min-seq-identity", 0.9);
+voronota_assert_full_success("Failed to summarize linear structure");
+result_linear_structure=voronota_last_output().results[0].output;
+
+voronota_voromqa_global();
+voronota_assert_full_success("Failed to compute VoroMQA-light scores");
+result_voromqa_light_global=voronota_last_output().results[0].output;
+
+voronota_voromqa_local("-contacts", "[inter_chain_contacts]");
+voronota_assert_full_success("Failed to compute VoroMQA-light scores for inter-chain contacts");
+result_voromqa_light_local_inter_chain=voronota_last_output().results[0].output;
+
+voronota_voromqa_local("-contacts", "[all_interface_contacts]");
+voronota_assert_full_success("Failed to compute VoroMQA-light scores for all interface contacts");
+result_voromqa_light_local_all_interface=voronota_last_output().results[0].output;
+
+voronota_voromqa_local("-contacts", "[-solvent]");
+voronota_assert_full_success("Failed to compute VoroMQA-light scores for all solvent contacts");
+result_voromqa_light_local_all_solvent=voronota_last_output().results[0].output;
+
+voronota_voromqa_dark_global();
+voronota_assert_full_success("Failed to compute VoroMQA-dark scores");
+result_voromqa_dark_global=voronota_last_output().results[0].output;
+
+voronota_voromqa_dark_split();
+voronota_assert_full_success("Failed to compute VoroMQA-dark split scores");
+result_voromqa_dark_split=voronota_last_output().results[0].output;
+
+voronota_calculate_burial_depth("-name", "atom_burial_depth", "-min-seq-sep", 0, "-min-sas-area", 2, "-smoothing-iterations", 3);
+voronota_assert_full_success("Failed to calculate atom burial depths");
+
+voronota_set_adjunct_of_contacts_by_atom_adjuncts("-atoms", "[]", "-contacts", "[]", "-pooling-mode", "sum", "-source-name", "atom_burial_depth", "-destination-name", "contact_burial_depth");
+voronota_assert_full_success("Failed to calculate contact burial depths");
+
+voronota_voromqa_local("-contacts", "[inter_chain_contacts]", "-adj-contact-densities", "contact_burial_depth");
+voronota_assert_full_success("Failed to compute VoroMQA-light scores for inter-chain contacts with densities");
+result_voromqa_light_local_inter_chain_with_densities=voronota_last_output().results[0].output;
+
+voronota_voromqa_local("-contacts", "[all_interface_contacts]", "-adj-contact-densities", "contact_burial_depth");
+voronota_assert_full_success("Failed to compute VoroMQA-light scores for all interface contacts with densities");
+result_voromqa_light_local_all_interface_with_densities=voronota_last_output().results[0].output;
+
+summary={}
+
+summary.input_name=params.input_file_name;
+
+summary.glob_chains=result_linear_structure.chains_protein;
+summary.glob_unique_chains=result_linear_structure.unique_chains_protein;
+
+summary.glob_residues=result_voromqa_light_global.residues_count;
+summary.glob_atoms=result_voromqa_light_global.atoms_count;
+summary.glob_light_score=result_voromqa_light_global.quality_score;
+summary.glob_dark_score=result_voromqa_dark_global.global_score;
+summary.glob_area=result_voromqa_light_global.total_area;
+summary.glob_area_per_atom=(summary.glob_area/summary.glob_atoms);
+summary.glob_nonprotein_area=result_voromqa_light_global.strange_area;
+summary.glob_volume=result_voromqa_light_global.total_volume;
+summary.glob_volume_per_atom=(summary.glob_volume/summary.glob_atoms);
+summary.glob_energy=result_voromqa_light_global.pseudo_energy;
+summary.glob_energy_norm=(summary.glob_energy/summary.glob_area);
+summary.glob_energy_per_atom=(summary.glob_energy/summary.glob_atoms);
+
+summary.glob_sas_area=result_voromqa_light_local_all_solvent.contacts_result.area;
+summary.glob_sas_area_per_atom=(summary.glob_sas_area/summary.glob_atoms);
+summary.glob_sas_energy=result_voromqa_light_local_all_solvent.contacts_result.pseudo_energy;
+summary.glob_sas_energy_norm=(summary.glob_sas_energy/summary.glob_sas_area);
+summary.glob_sas_energy_per_atom=(summary.glob_sas_energy/summary.glob_atoms);
+
+summary.glob_nonsas_area=(summary.glob_area-summary.glob_sas_area);
+summary.glob_nonsas_area_per_atom=(summary.glob_nonsas_area/summary.glob_atoms);
+summary.glob_nonsas_energy=(summary.glob_energy-summary.glob_sas_energy);
+summary.glob_nonsas_energy_norm=(summary.glob_nonsas_energy/summary.glob_nonsas_area);
+summary.glob_nonsas_energy_per_atom=(summary.glob_nonsas_energy/summary.glob_atoms);
+
+summary.iface_atoms=result_voromqa_light_local_inter_chain.atoms_result.atoms_relevant;
+summary.iface_atoms_light_score=result_voromqa_light_local_inter_chain.atoms_result.quality_score;
+summary.iface_area=result_voromqa_light_local_inter_chain.contacts_result.area;
+summary.iface_energy=result_voromqa_light_local_inter_chain.contacts_result.pseudo_energy;
+summary.iface_energy_norm=(summary.iface_energy/summary.iface_area);
+summary.iface_energy_per_atom=(summary.iface_energy/summary.glob_atoms);
+summary.iface_shelled_energy=result_voromqa_light_local_inter_chain_with_densities.contacts_result.pseudo_energy;
+summary.iface_shelled_energy_norm=(summary.iface_shelled_energy/summary.iface_area);
+summary.iface_shelled_energy_per_atom=(summary.iface_shelled_energy/summary.glob_atoms);
+summary.iface_expanded_area=result_voromqa_light_local_all_interface.contacts_result.area;
+summary.iface_expanded_energy=result_voromqa_light_local_all_interface.contacts_result.pseudo_energy;
+summary.iface_expanded_energy_norm=(summary.iface_expanded_energy/summary.iface_expanded_area);
+summary.iface_expanded_energy_per_atom=(summary.iface_expanded_energy/summary.glob_atoms);
+summary.iface_expanded_shelled_energy=result_voromqa_light_local_all_interface_with_densities.contacts_result.pseudo_energy;
+summary.iface_expanded_shelled_energy_norm=(summary.iface_expanded_shelled_energy/summary.iface_expanded_area);
+summary.iface_expanded_shelled_energy_per_atom=(summary.iface_expanded_shelled_energy/summary.glob_atoms);
+
+summary.split_light_score=result_voromqa_dark_split.light_scores.quality_score;
+summary.split_dark_score=result_voromqa_dark_split.dark_scores.global_score;
+summary.split_area=result_voromqa_dark_split.light_scores.total_area;
+summary.split_area_per_atom=(summary.split_area/summary.glob_atoms);
+summary.split_volume=result_voromqa_dark_split.light_scores.total_volume;
+summary.split_volume_per_atom=(summary.split_volume/summary.glob_atoms);
+summary.split_energy=result_voromqa_dark_split.light_scores.pseudo_energy;
+summary.split_energy_norm=(summary.split_energy/summary.split_area);
+summary.split_energy_per_atom=(summary.split_energy/summary.glob_atoms);
+
+summary.split_sas_area=result_voromqa_dark_split.light_scores_local_sas.contacts_result.area;
+summary.split_sas_area_per_atom=(summary.split_sas_area/summary.glob_atoms);
+summary.split_sas_energy=result_voromqa_dark_split.light_scores_local_sas.contacts_result.pseudo_energy;
+summary.split_sas_energy_norm=(summary.split_sas_energy/summary.split_sas_area);
+summary.split_sas_energy_per_atom=(summary.split_sas_energy/summary.glob_atoms);
+
+summary.split_nonsas_area=(summary.split_area-summary.split_sas_area);
+summary.split_nonsas_area_per_atom=(summary.split_nonsas_area/summary.glob_atoms);
+summary.split_nonsas_energy=(summary.split_energy-summary.split_sas_energy);
+summary.split_nonsas_energy_norm=(summary.split_nonsas_energy/summary.split_nonsas_area);
+summary.split_nonsas_energy_per_atom=(summary.split_nonsas_energy/summary.glob_atoms);
+
+summary.diff_glob_light_score=(summary.glob_light_score-summary.split_light_score);
+summary.diff_glob_dark_score=(summary.glob_dark_score-summary.split_dark_score);
+summary.diff_glob_area=(summary.glob_area-summary.split_area);
+summary.diff_glob_area_per_atom=(summary.glob_area_per_atom-summary.split_area_per_atom);
+summary.diff_glob_energy=(summary.glob_energy-summary.split_energy);
+summary.diff_glob_energy_norm=(summary.glob_energy_norm-summary.split_energy_norm);
+summary.diff_glob_energy_per_atom=(summary.glob_energy_per_atom-summary.split_energy_per_atom);
+summary.diff_glob_volume=(summary.glob_volume-summary.split_volume);
+summary.diff_glob_volume_per_atom=(summary.glob_volume_per_atom-summary.split_volume_per_atom);
+
+summary.diff_sas_area=(summary.glob_sas_area-summary.split_sas_area);
+summary.diff_sas_area_per_atom=(summary.glob_sas_area_per_atom-summary.split_sas_area_per_atom);
+summary.diff_sas_energy=(summary.glob_sas_energy-summary.split_sas_energy);
+summary.diff_sas_energy_norm=(summary.glob_sas_energy_norm-summary.split_sas_energy_norm);
+summary.diff_sas_energy_per_atom=(summary.glob_sas_energy_per_atom-summary.split_sas_energy_per_atom);
+
+summary.diff_nonsas_area=(summary.glob_nonsas_area-summary.split_nonsas_area);
+summary.diff_nonsas_area_per_atom=(summary.glob_nonsas_area_per_atom-summary.split_nonsas_area_per_atom);
+summary.diff_nonsas_energy=(summary.glob_nonsas_energy-summary.split_nonsas_energy);
+summary.diff_nonsas_energy_norm=(summary.glob_nonsas_energy_norm-summary.split_nonsas_energy_norm);
+summary.diff_nonsas_energy_per_atom=(summary.glob_nonsas_energy_per_atom-summary.split_nonsas_energy_per_atom);
+
+var summary_table_header="";
+var summary_table_row="";
+
+Object.keys(summary).forEach(function(key)
+{
+		summary_table_header+=key+" ";
+});
+
+Object.keys(summary).forEach(function(key)
+{
+	value=summary[key];
+	if(typeof value === 'number')
+	{
+		summary_table_row+=parseFloat(value.toFixed(5))+" ";
+	}
+	else
+	{
+		summary_table_row+=value+" ";
+	}
+});
+
+var summary_table=summary_table_header.trim()+"\n"+summary_table_row.trim()+"\n";
+
+if(params.output_table_file!=="_stdout")
+{
+	shell('mkdir -p "$(dirname '+params.output_table_file+')"');
+	fwrite(params.output_table_file, summary_table);
+}
+else
+{
+	write(summary_table);
+}
+
+EOF
+
+} \
+| voronota-js
+
