@@ -8,6 +8,7 @@ Currently, the Voronota-JS package contains several executables:
 
  * "voronota-js" - core engine that executes JavaScript scripts.
  * "voronota-js-voromqa" - wrapper to a voronota-js program for computing VoroMQA scores, both old and new (developed for CASP14).
+ * "voronota-js-only-global-voromqa" - wrapper to a voronota-js program for computing only global VoroMQA scores with fast caching.
  * "voronota-js-membrane-voromqa" - wrapper to a voronota-js program for the VoroMQA-based analysis and assessment of membrane protein structural models.
  * "voronota-js-ifeatures-voromqa" - wrapper to a voronota-js program for the computation of multiple VoroMQA-based features of protein-protein complexes.
  * "voronota-js-fast-iface-voromqa" - wrapper to a voronota-js program for the very fast computation of the inter-chain interface VoroMQA energy.
@@ -16,6 +17,23 @@ Currently, the Voronota-JS package contains several executables:
  * "voronota-js-fast-iface-data-graph" - wrapper to a voronota-js program for the computation of interface graphs used by the VoroIF-GNN method.
  * "voronota-js-voroif-gnn" - wrapper to a voronota-js program and GNN inference scripts that run the VoroIF-GNN method for scoring models of protein-protein complexes (developed for CASP15).
  * "voronota-js-ligand-cadscore" - wrapper to a voronota-js program for the computation of protein-ligand variation of CAD-score (developed to analyze protein-ligand models from CASP15).
+
+## Usage of externally developed software
+
+Voronota-JS relies on several externally developed software projects (big thanks to their authors):
+
+* Duktape - [https://duktape.org/](https://duktape.org/)
+* PStreams - [https://github.com/jwakely/pstreams](https://github.com/jwakely/pstreams)
+* TM-align - [https://zhanggroup.org/TM-align/](https://zhanggroup.org/TM-align/)
+* FASPR - [https://zhanggroup.org/FASPR/](https://zhanggroup.org/FASPR/)
+* linenoise - [https://github.com/antirez/linenoise](https://github.com/antirez/linenoise)
+* PicoSHA2 - [https://github.com/okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
+* frugally-deep - [https://github.com/Dobiasd/frugally-deep](https://github.com/Dobiasd/frugally-deep)
+    * FunctionalPlus - [https://github.com/Dobiasd/FunctionalPlus](https://github.com/Dobiasd/FunctionalPlus)
+    * Eigen - [http://eigen.tuxfamily.org/](http://eigen.tuxfamily.org/)
+    * json  - [https://github.com/nlohmann/json](https://github.com/nlohmann/json)
+* tinf - [https://github.com/jibsen/tinf](https://github.com/jibsen/tinf)
+* LodePNG - [https://github.com/lvandeve/lodepng](https://github.com/lvandeve/lodepng)
 
 # Getting the latest version
 
@@ -193,6 +211,37 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
           --processors 8 \
           --select-contacts '[-a1 [-chain A -rnum 1:500] -a2 [-chain B -rnum 1:500]]' \
           --tour-sort '-columns full_dark_score sel_energy -multipliers 1 -1 -tolerances 0.02 0.0'
+    
+
+## VoroMQA for only global scores with fast caching
+
+'voronota-js-only-global-voromqa' script computes global VoroMQA scores and can use fast caching.
+
+### Script interface
+
+    
+    Options:
+        --input | -i              string  *  input file path or '_list' to read file paths from stdin
+        --restrict-input          string     query to restrict input atoms, default is '[]'
+        --output-table-file       string     output table file path, default is '_stdout' to print to stdout
+        --output-dark-pdb         string     output path for PDB file with VoroMQA-dark scores, default is ''
+        --output-light-pdb        string     output path for PDB file with VoroMQA-light scores, default is ''
+        --processors              number     maximum number of processors to run in parallel, default is 1
+        --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+        --cache-dir               string     cache directory path to store results of past calls
+        --run-faspr               string     path to FASPR binary to rebuild side-chains
+        --input-is-script                    flag to treat input file as vs script
+        --as-assembly                        flag to treat input file as biological assembly
+        --help | -h                          flag to display help message and exit
+    
+    Standard output:
+        space-separated table of scores
+        
+    Examples:
+    
+        voronota-js-only-global-voromqa --input model.pdb
+        
+        ls *.pdb | voronota-js-only-global-voromqa --input _list --processors 8 | column -t
     
 
 ## VoroMQA-based membrane protein structure assessment
