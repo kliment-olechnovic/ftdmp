@@ -46,8 +46,8 @@
 <p>FTDMP was used in CASP15 by the &quot;Venclovas&quot; team (Vilnius University / Life Sciences Center / Institute of Biotechnology). The most novel and useful features of FTDMP are integrated <strong>VoroIF-jury</strong> and <strong>VoroIF-GNN</strong> methods.</p>
 <p>FTDMP has two main entry-point scripts:</p>
 <ul>
-<li><strong>ftdmp-all</strong> - script to perform docking and scoring/ranking.</li>
-<li><strong>ftdmp-qa-all</strong> - script to perform scoring/ranking only - for example, to score a mix of models from different sources (docking, AlphaFold, RoseTTAFold).</li>
+<li><strong>ftdmp-all</strong> - script to perform docking with FTDock/HEX/SAM and subsequent scoring/ranking using VoroIF-jury.</li>
+<li><strong>ftdmp-qa-all</strong> - script to perform scoring/ranking using VoroIF-jury - for example, to score a mix of models from different sources (docking, AlphaFold, RoseTTAFold).</li>
 </ul>
 <p>FTDMP uses several software tools that are included in the FTDMP package:</p>
 <ul>
@@ -77,7 +77,7 @@
 </ul>
 <h1 id="obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</h1>
 <h2 id="getting-the-latest-version">Getting the latest version</h2>
-<p>The currently recommended way to obtain FTDMP is cloning the FTDMP git repository:</p>
+<p>The currently recommended way to obtain FTDMP is cloning the FTDMP git repository <a href="https://github.com/kliment-olechnovic/ftdmp" class="uri">https://github.com/kliment-olechnovic/ftdmp</a>:</p>
 <pre><code>git clone https://github.com/kliment-olechnovic/ftdmp.git
 cd ./ftdmp</code></pre>
 <h2 id="building-the-included-software">Building the included software</h2>

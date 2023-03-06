@@ -7,8 +7,8 @@ The most novel and useful features of FTDMP are integrated __VoroIF-jury__ and _
 
 FTDMP has two main entry-point scripts:
 
-* __ftdmp-all__ - script to perform docking and scoring/ranking.
-* __ftdmp-qa-all__ - script to perform scoring/ranking only - for example, to score a mix of models from different sources (docking, AlphaFold, RoseTTAFold).
+* __ftdmp-all__ - script to perform docking with FTDock/HEX/SAM and subsequent scoring/ranking using VoroIF-jury.
+* __ftdmp-qa-all__ - script to perform scoring/ranking using VoroIF-jury - for example, to score a mix of models from different sources (docking, AlphaFold, RoseTTAFold).
 
 FTDMP uses several software tools that are included in the FTDMP package:
 
@@ -38,7 +38,7 @@ Some features of FTDMP require aditional dependencies (that are easily available
 
 ## Getting the latest version
 
-The currently recommended way to obtain FTDMP is cloning the FTDMP git repository:
+The currently recommended way to obtain FTDMP is cloning the FTDMP git repository [https://github.com/kliment-olechnovic/ftdmp](https://github.com/kliment-olechnovic/ftdmp):
 
     git clone https://github.com/kliment-olechnovic/ftdmp.git
     cd ./ftdmp
