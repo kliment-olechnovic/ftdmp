@@ -27,9 +27,9 @@ Standard output:
     
 Examples:
 
-    voronota-js-fast-iface-cadscore --input target.pdb --model model.pdb
+    voronota-js-fast-iface-cadscore --target target.pdb --model model.pdb
     
-    ls *.pdb | voronota-js-fast-iface-cadscore --input target.pdb --model _list --processors 8 | column -t
+    ls *.pdb | voronota-js-fast-iface-cadscore --target target.pdb --model _list --processors 8 | column -t
 
 EOF
 exit 1
@@ -74,10 +74,13 @@ MAX_PROCESSORS="1"
 SBATCH_PARAMETERS=""
 STDIN_FILE="_stream"
 RUN_FASPR=""
+SHUFFLE_CHAINS=""
+INVERT_CASE_OF_CHAINS="false"
 TARGET_INPUT_IS_SCRIPT="false"
 MODEL_INPUT_IS_SCRIPT="false"
 AS_ASSEMBLY="false"
 REMAP_CHAINS="false"
+REMAP_CHAINS_LOGGING="false"
 TEST_COMMON_IDS="false"
 CRUDE_MODE="false"
 HELP_MODE="false"
@@ -124,6 +127,13 @@ do
 		RUN_FASPR="$OPTARG"
 		shift
 		;;
+	--shuffle-chains)
+		SHUFFLE_CHAINS="$OPTARG"
+		shift
+		;;
+	--invert-case-of-chains)
+		INVERT_CASE_OF_CHAINS="true"
+		;;
 	--target-input-is-script)
 		TARGET_INPUT_IS_SCRIPT="true"
 		;;
@@ -135,6 +145,9 @@ do
 		;;
 	--remap-chains)
 		REMAP_CHAINS="true"
+		;;
+	--remap-chains-logging)
+		REMAP_CHAINS_LOGGING="true"
 		;;
 	--test-common-ids)
 		TEST_COMMON_IDS="true"
@@ -171,7 +184,7 @@ fi
 
 if [ -n "$RUN_FASPR" ] && [ ! -s "$RUN_FASPR" ]
 then
-	echo >&2 "Error: FASPR binary executable file '$RUN_FASPR' does not exist"
+	echo >&2 "Error: FASPR binary file '$RUN_FASPR' does not exist"
 	exit 1
 fi
 
@@ -361,10 +374,14 @@ common_params.input_as_assembly='$AS_ASSEMBLY';
 common_params.restrict_input_atoms='$RESTRICT_INPUT';
 common_params.test_common_ids='$TEST_COMMON_IDS';
 common_params.contacts_subselection='$SUBSELECT_CONTACTS';
-common_params.run_faspr='$RUN_FASPR';
 common_params.remap_chains='$REMAP_CHAINS';
+common_params.remap_chains_logging='$REMAP_CHAINS_LOGGING';
 common_params.crude_mode='$CRUDE_MODE'
 common_params.output_table_file='$OUTPUT_TABLE_FILE';
+common_model_mod_params={}
+common_model_mod_params.run_faspr='$RUN_FASPR';
+common_model_mod_params.shuffle_chains='$SHUFFLE_CHAINS';
+common_model_mod_params.invert_case_of_chains='$INVERT_CASE_OF_CHAINS';
 var input_info_array=[];
 EOF
 
@@ -384,15 +401,34 @@ EOF
 done
 
 cat << 'EOF'
-prepare_atoms=function(params, run_faspr)
+prepare_atoms=function(params, model_mod_params)
 {
 	voronota_restrict_atoms("-use", params.restrict_input_atoms);
 	voronota_assert_full_success("Failed to restrict input atoms by the input query");
 	
-	if(run_faspr!="")
+	if(model_mod_params!==null)
 	{
-		voronota_faspr("-lib-file", run_faspr);
-		voronota_assert_full_success("Failed to run FASPR");
+		if(model_mod_params.run_faspr!="")
+		{
+			voronota_faspr("-lib-file", model_mod_params.run_faspr);
+			voronota_assert_full_success("Failed to run FASPR");
+		}
+		
+		if(model_mod_params.shuffle_chains!="")
+		{
+			voronota_setup_random_seed("-seed", model_mod_params.shuffle_chains);
+			voronota_assert_full_success("Failed to set random seed");
+			voronota_set_chain_name("_shuffle");
+			voronota_assert_full_success("Failed to shuffle chains");
+			voronota_order_atoms_by_residue_id();
+			voronota_assert_full_success("Failed reorder atoms by residue ids after shuffling chains");
+		}
+		
+		if(model_mod_params.invert_case_of_chains=="true")
+		{
+			voronota_set_chain_name("_invert_case");
+			voronota_assert_full_success("Failed to invert case of chains");
+		}
 	}
 	
 	if(params.crude_mode=="true")
@@ -440,7 +476,7 @@ prepare_contacts=function(params)
 
 analyze_interface=function(params, target_object, model_object, initial_summary)
 {
-	voronota_cad_score("-target", target_object, "-model", model_object, "-t-sel", "[inter_chain_contacts]", "-also-site-based", "-remap-chains", params.remap_chains);
+	voronota_cad_score("-target", target_object, "-model", model_object, "-t-sel", "[inter_chain_contacts]", "-also-site-based", "-remap-chains", params.remap_chains, "-remap-chains-logging", params.remap_chains_logging);
 	voronota_assert_full_success("Failed to compute CAD-score");
 	result_cadscore=voronota_last_output().results[0].output.residue_level_result;
 	result_cadscore_site_based=voronota_last_output().results[0].output.site_residue_level_result;
@@ -564,7 +600,7 @@ target_object=voronota_last_output().results[0].output.objects[0].name;
 
 voronota_pick_objects("-names", target_object);
 
-var target_initial_number_of_accepted_atoms=prepare_atoms(common_params, "");
+var target_initial_number_of_accepted_atoms=prepare_atoms(common_params, null);
 
 if(common_params.test_common_ids=="true")
 {
@@ -614,7 +650,7 @@ for(var i=0;i<input_info_array.length;i++)
 		
 		voronota_pick_objects("-names", model_object);
 		
-		var model_initial_number_of_accepted_atoms=prepare_atoms(common_params, common_params.run_faspr);
+		var model_initial_number_of_accepted_atoms=prepare_atoms(common_params, common_model_mod_params);
 		
 		if(common_params.test_common_ids=="true")
 		{

@@ -55,7 +55,51 @@ public:
 			throw std::runtime_error(std::string("No chain name or chain renaming rule provided."));
 		}
 
-		const std::map<std::string, std::string> renaming_map=read_renaming_map(chain_name);
+		std::map<std::string, std::string> renaming_map;
+		if(chain_name=="_shuffle")
+		{
+			std::set<std::string> set_of_chain_names;
+			for(std::size_t i=0;i<data_manager.atoms().size();i++)
+			{
+				set_of_chain_names.insert(data_manager.atoms()[i].crad.chainID);
+			}
+			std::vector<std::string> list_of_chain_names_original(set_of_chain_names.begin(), set_of_chain_names.end());
+			std::vector<std::string> list_of_chain_names_shuffled=list_of_chain_names_original;
+			std::random_shuffle(list_of_chain_names_shuffled.begin(), list_of_chain_names_shuffled.end());
+			for(std::size_t i=0;i<list_of_chain_names_original.size();i++)
+			{
+				renaming_map[list_of_chain_names_original[i]]=list_of_chain_names_shuffled[i];
+			}
+		}
+		else if(chain_name=="_invert_case")
+		{
+			std::set<std::string> set_of_chain_names;
+			for(std::size_t i=0;i<data_manager.atoms().size();i++)
+			{
+				set_of_chain_names.insert(data_manager.atoms()[i].crad.chainID);
+			}
+			for(std::set<std::string>::const_iterator it=set_of_chain_names.begin();it!=set_of_chain_names.end();++it)
+			{
+				std::string mod_str=(*it);
+				for(std::size_t i=0;i<mod_str.size();++i)
+				{
+					char& c=mod_str[i];
+					if(c>='A' && c<='Z')
+					{
+						c=(c-'A')+'a';
+					}
+					else if(c>='a' && c<='z')
+					{
+						c=(c-'a')+'A';
+					}
+				}
+				renaming_map[*it]=mod_str;
+			}
+		}
+		else
+		{
+			renaming_map=read_renaming_map(chain_name);
+		}
 
 		std::set<std::size_t> ids=data_manager.selection_manager().select_atoms(parameters_for_selecting);
 		if(ids.empty())

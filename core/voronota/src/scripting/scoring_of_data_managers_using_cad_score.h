@@ -23,6 +23,7 @@ public:
 		unsigned int smoothing_window;
 		bool also_site_based;
 		bool remap_chains;
+		bool remap_chains_logging;
 		std::string target_selection_expression;
 		std::string model_selection_expression;
 		std::vector<std::string> chain_renaming_pairs;
@@ -45,7 +46,8 @@ public:
 			depth(0),
 			smoothing_window(0),
 			also_site_based(false),
-			remap_chains(false)
+			remap_chains(false),
+			remap_chains_logging(false)
 		{
 		}
 	};
@@ -100,6 +102,7 @@ public:
 		}
 
 		parameters_for_cad_score.remap_chains=params.remap_chains;
+		parameters_for_cad_score.remap_chains_logging=params.remap_chains_logging;
 
 		if(!common::ConstructionOfCADScore::construct_bundle_of_cadscore_information(
 				parameters_for_cad_score,
@@ -112,6 +115,12 @@ public:
 
 		if(params.also_site_based)
 		{
+			if(params.remap_chains && !result.bundle.map_of_renamings_from_remapping.empty())
+			{
+				parameters_for_cad_score.map_of_renamings=result.bundle.map_of_renamings_from_remapping;
+				parameters_for_cad_score.remap_chains=false;
+			}
+
 			if(!common::ConstructionOfCADScore::construct_bundle_of_cadscore_information(
 					parameters_for_cad_score,
 					collect_map_of_contacts_summarized_by_first(target_dm.atoms(), target_dm.contacts(), target_contacts_ids),
