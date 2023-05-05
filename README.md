@@ -367,7 +367,7 @@ Example script:
       --static-sel '[]' \
       --static-chain 'A' \
       --mobile-file "$MOBILEFILE" \
-      --mobile-sel '(not [-rnum 1 -aname P,O1P,O2P])' \
+      --mobile-sel '(not [-rnum 1 -aname P,O1P,O2P,O3P,OP1,OP2,OP3])' \
       --mobile-chain 'A=B,B=C' \
       --subselect-contacts '[-a1 [-chain A] -a2 [-chain B,C]]' \
       --use-ftdock 'true' \
