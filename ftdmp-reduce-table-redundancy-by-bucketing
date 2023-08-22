@@ -8,7 +8,7 @@ cat >&2 << 'EOF'
 
 Options:
     --bucketing-columns       string  *  space-separated list of column names to analyze
-    --bucket-sizes            string  *  space-separated list of bucket sizes, one per bucketing column
+    --bucket-counts           string  *  space-separated list of bucket counts, one per bucketing column
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -18,7 +18,7 @@ Standard output:
     space-separated table
     
 Examples:    
-    cat scoring_results_table.txt | ftdmp-reduce-table-redundancy-by-bucketing --bucketing-columns "x y z a1 a2 a3" --bucket-sizes "20 20 20 2 2 2"
+    cat scoring_results_table.txt | ftdmp-reduce-table-redundancy-by-bucketing --bucketing-columns "x y z a1 a2 a3" --bucket-counts "20 20 20 20 20 20"
 
 EOF
 exit 1
@@ -38,7 +38,7 @@ fi
 command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
 
 COLUMNS=""
-BUCKETSIZES=""
+BUCKETCOUNTS=""
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -51,8 +51,8 @@ do
 		COLUMNS="$OPTARG"
 		shift
 		;;
-	--bucket-sizes)
-		BUCKETSIZES="$OPTARG"
+	--bucket-counts)
+		BUCKETCOUNTS="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -76,9 +76,9 @@ then
 	exit 1
 fi
 
-if [ -z "$BUCKETSIZES" ]
+if [ -z "$BUCKETCOUNTS" ]
 then
-	echo >&2 "Error: no bucket sizes specified"
+	echo >&2 "Error: no bucket counts specified"
 	exit 1
 fi
 
@@ -90,24 +90,24 @@ echo "$COLUMNS" | sed 's/\s/\n/g' | egrep '.' \
 
 N_COLUMNS="$(cat "${TMPLDIR}/columns_info" | wc -l)"
 
-echo "$BUCKETSIZES" | sed 's/\s/\n/g' | egrep '.' \
-> "${TMPLDIR}/bucketsizes_info"
+echo "$BUCKETCOUNTS" | sed 's/\s/\n/g' | egrep '.' \
+> "${TMPLDIR}/bucketcounts_info"
 
-N_BUCKETSIZES="$(cat "${TMPLDIR}/bucketsizes_info" | wc -l)"
+N_BUCKETCOUNTS="$(cat "${TMPLDIR}/bucketcounts_info" | wc -l)"
 
-if [ "$N_COLUMNS" -ne "$N_BUCKETSIZES" ]
+if [ "$N_COLUMNS" -ne "$N_BUCKETCOUNTS" ]
 then
-	echo >&2 "Error: numbers of columns and bucket sizes do not match"
+	echo >&2 "Error: numbers of columns and bucket counts do not match"
 	exit 1
 fi
 
-paste "${TMPLDIR}/columns_info" "${TMPLDIR}/bucketsizes_info" > "${TMPLDIR}/full_columns_info"
+paste "${TMPLDIR}/columns_info" "${TMPLDIR}/bucketcounts_info" > "${TMPLDIR}/full_columns_info"
 
 {
 	echo "voronota_reduce_table_redundancy_by_bucketing('-input-file _stdin -output-file _stdout"
 	echo "-bucket-columns"
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $1}'
-	echo "-bucket-sizes"
+	echo "-bucket-counts"
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $2}'
 	echo "');"
 	echo "voronota_assert_full_success('Failed to reduce table redundancy by bucketing');"
