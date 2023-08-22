@@ -28,8 +28,17 @@ public:
 			changed_contacts_tags_(false),
 			changed_atoms_adjuncts_(false),
 			changed_contacts_adjuncts_(false),
+			changed_atoms_display_states_marking_(false),
+			changed_atoms_display_states_coloring_(false),
+			changed_atoms_display_states_visibility_(false),
 			changed_atoms_display_states_(false),
+			changed_contacts_display_states_marking_(false),
+			changed_contacts_display_states_coloring_(false),
+			changed_contacts_display_states_visibility_(false),
 			changed_contacts_display_states_(false),
+			changed_figures_display_states_marking_(false),
+			changed_figures_display_states_coloring_(false),
+			changed_figures_display_states_visibility_(false),
 			changed_figures_display_states_(false)
 		{
 		}
@@ -41,8 +50,17 @@ public:
 		bool changed_contacts_tags() const { return changed_contacts_tags_; }
 		bool changed_atoms_adjuncts() const { return changed_atoms_adjuncts_; }
 		bool changed_contacts_adjuncts() const { return changed_contacts_adjuncts_; }
+		bool changed_atoms_display_states_marking() const { return changed_atoms_display_states_marking_; }
+		bool changed_atoms_display_states_coloring() const { return changed_atoms_display_states_coloring_; }
+		bool changed_atoms_display_states_visibility() const { return changed_atoms_display_states_visibility_; }
 		bool changed_atoms_display_states() const { return changed_atoms_display_states_; }
+		bool changed_contacts_display_states_marking() const { return changed_contacts_display_states_marking_; }
+		bool changed_contacts_display_states_coloring() const { return changed_contacts_display_states_coloring_; }
+		bool changed_contacts_display_states_visibility() const { return changed_contacts_display_states_visibility_; }
 		bool changed_contacts_display_states() const { return changed_contacts_display_states_; }
+		bool changed_figures_display_states_marking() const { return changed_figures_display_states_marking_; }
+		bool changed_figures_display_states_coloring() const { return changed_figures_display_states_coloring_; }
+		bool changed_figures_display_states_visibility() const { return changed_figures_display_states_visibility_; }
 		bool changed_figures_display_states() const { return changed_figures_display_states_; }
 
 		void set_changed_atoms(const bool value) { changed_atoms_=value; ensure_correctness(); }
@@ -52,9 +70,42 @@ public:
 		void set_changed_contacts_tags(const bool value) { changed_contacts_tags_=value; ensure_correctness(); }
 		void set_changed_atoms_adjuncts(const bool value) { changed_atoms_adjuncts_=value; ensure_correctness(); }
 		void set_changed_contacts_adjuncts(const bool value) { changed_contacts_adjuncts_=value; ensure_correctness(); }
+		void set_changed_atoms_display_states_marking(const bool value) { changed_atoms_display_states_marking_=value; ensure_correctness(); }
+		void set_changed_atoms_display_states_coloring(const bool value) { changed_atoms_display_states_coloring_=value; ensure_correctness(); }
+		void set_changed_atoms_display_states_visibility(const bool value) { changed_atoms_display_states_visibility_=value; ensure_correctness(); }
 		void set_changed_atoms_display_states(const bool value) { changed_atoms_display_states_=value; ensure_correctness(); }
+		void set_changed_contacts_display_states_marking(const bool value) { changed_contacts_display_states_marking_=value; ensure_correctness(); }
+		void set_changed_contacts_display_states_coloring(const bool value) { changed_contacts_display_states_coloring_=value; ensure_correctness(); }
+		void set_changed_contacts_display_states_visibility(const bool value) { changed_contacts_display_states_visibility_=value; ensure_correctness(); }
 		void set_changed_contacts_display_states(const bool value) { changed_contacts_display_states_=value; ensure_correctness(); }
+		void set_changed_figures_display_states_marking(const bool value) { changed_figures_display_states_marking_=value; ensure_correctness(); }
+		void set_changed_figures_display_states_coloring(const bool value) { changed_figures_display_states_coloring_=value; ensure_correctness(); }
+		void set_changed_figures_display_states_visibility(const bool value) { changed_figures_display_states_visibility_=value; ensure_correctness(); }
 		void set_changed_figures_display_states(const bool value) { changed_figures_display_states_=value; ensure_correctness(); }
+
+		void update_changed_atoms_display_states_info(const bool marking, const bool coloring, const bool visibility)
+		{
+			changed_atoms_display_states_marking_=(changed_atoms_display_states_marking_ || marking);
+			changed_atoms_display_states_coloring_=(changed_atoms_display_states_coloring_ || coloring);
+			changed_atoms_display_states_visibility_=(changed_atoms_display_states_visibility_ || visibility);
+			ensure_correctness();
+		}
+
+		void update_changed_contacts_display_states_info(const bool marking, const bool coloring, const bool visibility)
+		{
+			changed_contacts_display_states_marking_=(changed_contacts_display_states_marking_ || marking);
+			changed_contacts_display_states_coloring_=(changed_contacts_display_states_coloring_ || coloring);
+			changed_contacts_display_states_visibility_=(changed_contacts_display_states_visibility_ || visibility);
+			ensure_correctness();
+		}
+
+		void update_changed_figures_display_states_info(const bool marking, const bool coloring, const bool visibility)
+		{
+			changed_figures_display_states_marking_=(changed_figures_display_states_marking_ || marking);
+			changed_figures_display_states_coloring_=(changed_figures_display_states_coloring_ || coloring);
+			changed_figures_display_states_visibility_=(changed_figures_display_states_visibility_ || visibility);
+			ensure_correctness();
+		}
 
 		bool changed() const
 		{
@@ -65,9 +116,9 @@ public:
 					|| changed_contacts_tags_
 					|| changed_atoms_adjuncts_
 					|| changed_contacts_adjuncts_
-					|| changed_atoms_display_states_
-					|| changed_contacts_display_states_
-					|| changed_figures_display_states_);
+					|| changed_atoms_display_states_ || changed_atoms_display_states_marking_ || changed_atoms_display_states_coloring_ || changed_atoms_display_states_visibility_
+					|| changed_contacts_display_states_ || changed_contacts_display_states_marking_ || changed_contacts_display_states_coloring_ || changed_contacts_display_states_visibility_
+					|| changed_figures_display_states_ || changed_figures_display_states_marking_ || changed_figures_display_states_coloring_ || changed_figures_display_states_visibility_);
 		}
 
 	private:
@@ -78,9 +129,18 @@ public:
 			changed_contacts_tags_=(changed_contacts_tags_ || changed_contacts_);
 			changed_atoms_adjuncts_=(changed_atoms_adjuncts_ || changed_atoms_);
 			changed_contacts_adjuncts_=(changed_contacts_adjuncts_ || changed_contacts_);
-			changed_atoms_display_states_=(changed_atoms_display_states_ || changed_atoms_);
-			changed_contacts_display_states_=(changed_contacts_display_states_ || changed_contacts_);
-			changed_figures_display_states_=(changed_figures_display_states_ || changed_figures_);
+			changed_atoms_display_states_marking_=(changed_atoms_display_states_marking_ || changed_atoms_);
+			changed_atoms_display_states_coloring_=(changed_atoms_display_states_coloring_ || changed_atoms_);
+			changed_atoms_display_states_visibility_=(changed_atoms_display_states_visibility_ || changed_atoms_);
+			changed_atoms_display_states_=(changed_atoms_display_states_ || changed_atoms_ || changed_atoms_display_states_marking_ || changed_atoms_display_states_coloring_ || changed_atoms_display_states_visibility_);
+			changed_contacts_display_states_marking_=(changed_contacts_display_states_marking_ || changed_contacts_);
+			changed_contacts_display_states_coloring_=(changed_contacts_display_states_coloring_ || changed_contacts_);
+			changed_contacts_display_states_visibility_=(changed_contacts_display_states_visibility_ || changed_contacts_);
+			changed_contacts_display_states_=(changed_contacts_display_states_ || changed_contacts_ || changed_contacts_display_states_marking_ || changed_contacts_display_states_coloring_ || changed_contacts_display_states_visibility_);
+			changed_figures_display_states_marking_=(changed_figures_display_states_marking_ || changed_figures_);
+			changed_figures_display_states_coloring_=(changed_figures_display_states_coloring_ || changed_figures_);
+			changed_figures_display_states_visibility_=(changed_figures_display_states_visibility_ || changed_figures_);
+			changed_figures_display_states_=(changed_figures_display_states_ || changed_figures_ || changed_figures_display_states_marking_ || changed_figures_display_states_coloring_ || changed_figures_display_states_visibility_);
 		}
 
 		bool changed_atoms_;
@@ -90,8 +150,17 @@ public:
 		bool changed_contacts_tags_;
 		bool changed_atoms_adjuncts_;
 		bool changed_contacts_adjuncts_;
+		bool changed_atoms_display_states_marking_;
+		bool changed_atoms_display_states_coloring_;
+		bool changed_atoms_display_states_visibility_;
 		bool changed_atoms_display_states_;
+		bool changed_contacts_display_states_marking_;
+		bool changed_contacts_display_states_coloring_;
+		bool changed_contacts_display_states_visibility_;
 		bool changed_contacts_display_states_;
+		bool changed_figures_display_states_marking_;
+		bool changed_figures_display_states_coloring_;
+		bool changed_figures_display_states_visibility_;
 		bool changed_figures_display_states_;
 	};
 
@@ -250,10 +319,34 @@ public:
 	class DisplayStateUpdater
 	{
 	public:
+		struct UpdateStatus
+		{
+			bool updated_marking;
+			bool updated_coloring;
+			bool updated_visibility;
+
+			UpdateStatus() : updated_marking(false), updated_coloring(false), updated_visibility(false)
+			{
+			}
+
+			void add(const UpdateStatus& other)
+			{
+				updated_marking=(updated_marking || other.updated_marking);
+				updated_coloring=(updated_coloring || other.updated_coloring);
+				updated_visibility=(updated_visibility || other.updated_visibility);
+			}
+
+			bool updated() const
+			{
+				return (updated_marking || updated_coloring || updated_visibility);
+			}
+		};
+
 		bool mark;
 		bool unmark;
 		bool show;
 		bool hide;
+		bool additive_color;
 		auxiliaries::ColorUtilities::ColorInteger color;
 		std::set<std::size_t> visual_ids;
 
@@ -262,6 +355,7 @@ public:
 			unmark(false),
 			show(false),
 			hide(false),
+			additive_color(false),
 			color(auxiliaries::ColorUtilities::null_color())
 		{
 		}
@@ -320,14 +414,14 @@ public:
 			}
 		}
 
-		bool update_display_state(DisplayState& ds) const
+		UpdateStatus update_display_state(DisplayState& ds) const
 		{
-			bool updated=false;
+			UpdateStatus update_status;
 			if(show || hide || mark || unmark || color_valid())
 			{
 				if(mark || unmark)
 				{
-					updated=(updated || (ds.marked!=mark));
+					update_status.updated_marking=(update_status.updated_marking || (ds.marked!=mark));
 					ds.marked=mark;
 				}
 
@@ -338,10 +432,7 @@ public:
 						{
 							for(std::size_t i=0;i<ds.visuals.size();i++)
 							{
-								if(update_display_state_visual(ds.visuals[i]))
-								{
-									updated=true;
-								}
+								update_status.add(update_display_state_visual(ds.visuals[i]));
 							}
 						}
 						else
@@ -351,84 +442,87 @@ public:
 								const std::size_t visual_id=(*jt);
 								if(visual_id<ds.visuals.size())
 								{
-									if(update_display_state_visual(ds.visuals[visual_id]))
-									{
-										updated=true;
-									}
+									update_status.add(update_display_state_visual(ds.visuals[visual_id]));
 								}
 							}
 						}
 					}
 				}
 			}
-			return updated;
+			return update_status;
 		}
 
-		bool update_display_state(const std::size_t id, std::vector<DisplayState>& display_states) const
+		UpdateStatus update_display_state(const std::size_t id, std::vector<DisplayState>& display_states) const
 		{
 			assert_correctness();
-			bool updated=false;
-			if(id<display_states.size() && update_display_state(display_states[id]))
+			UpdateStatus update_status;
+			if(id<display_states.size())
 			{
-				updated=true;
+				update_status.add(update_display_state(display_states[id]));
 			}
-			return updated;
+			return update_status;
 		}
 
-		bool update_display_states(const std::set<std::size_t>& ids, std::vector<DisplayState>& display_states) const
+		UpdateStatus update_display_states(const std::set<std::size_t>& ids, std::vector<DisplayState>& display_states) const
 		{
 			assert_correctness();
-			bool updated=false;
+			UpdateStatus update_status;
 			if(show || hide || mark || unmark || color_valid())
 			{
 				for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
 				{
-					if((*it)<display_states.size() && update_display_state(display_states[*it]))
+					if((*it)<display_states.size())
 					{
-						updated=true;
+						update_status.add(update_display_state(display_states[*it]));
 					}
 				}
 			}
-			return updated;
+			return update_status;
 		}
 
-		bool update_display_states(std::vector<DisplayState>& display_states) const
+		UpdateStatus update_display_states(std::vector<DisplayState>& display_states) const
 		{
 			assert_correctness();
-			bool updated=false;
+			UpdateStatus update_status;
 			if(show || hide || mark || unmark || color_valid())
 			{
 				for(std::size_t i=0;i<display_states.size();i++)
 				{
-					if(update_display_state(display_states[i]))
-					{
-						updated=true;
-					}
+					update_status.add(update_display_state(display_states[i]));
 				}
 			}
-			return updated;
+			return update_status;
 		}
 
 	private:
-		bool update_display_state_visual(DisplayState::Visual& visual) const
+		UpdateStatus update_display_state_visual(DisplayState::Visual& visual) const
 		{
-			bool updated=false;
+			UpdateStatus update_status;
 
 			{
 				if(show || hide)
 				{
-					updated=(updated || (visual.visible!=show));
+					update_status.updated_visibility=(update_status.updated_visibility || (visual.visible!=show));
 					visual.visible=show;
 				}
 
 				if(color_valid())
 				{
-					updated=(updated || (visual.color!=color));
-					visual.color=color;
+					if(!additive_color)
+					{
+						update_status.updated_coloring=(update_status.updated_coloring || (visual.color!=color));
+						visual.color=color;
+					}
+					else
+					{
+						auxiliaries::ColorUtilities::ColorInteger sum_of_colors=auxiliaries::ColorUtilities::color_sum(visual.color, color);
+						update_status.updated_coloring=(update_status.updated_coloring || (visual.color!=sum_of_colors));
+						visual.color=sum_of_colors;
+					}
 				}
 			}
 
-			return updated;
+			return update_status;
 		}
 	};
 
@@ -1063,6 +1157,30 @@ public:
 		return result;
 	}
 
+	std::map< std::string, std::vector<std::size_t> > generate_ids_for_of_labels(const std::set<std::size_t>& atom_ids, const bool with_residue_info, const bool with_atom_info) const
+	{
+		std::map< std::string, std::vector<std::size_t> > map_of_ids;
+
+		for(std::set<std::size_t>::const_iterator it=atom_ids.begin();it!=atom_ids.end();++it)
+		{
+			const std::size_t atom_id=(*it);
+			const Atom& atom=atoms()[atom_id];
+			std::ostringstream idstream;
+			idstream << atom.crad.chainID;
+			if(with_residue_info)
+			{
+				idstream << "." << atom.crad.resSeq << atom.crad.iCode;
+			}
+			if(with_atom_info)
+			{
+				idstream << "." << atom.crad.name;
+			}
+			map_of_ids[idstream.str()].push_back(atom_id);
+		}
+
+		return map_of_ids;
+	}
+
 	SelectionManager& selection_manager()
 	{
 		return selection_manager_;
@@ -1129,73 +1247,82 @@ public:
 
 	void update_atoms_display_state(const DisplayStateUpdater& dsu, const std::size_t id)
 	{
-		if(dsu.update_display_state(id, atoms_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_state(id, atoms_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_atoms_display_states(true);
+			change_indicator_.update_changed_atoms_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_atoms_display_states(const DisplayStateUpdater& dsu, const std::set<std::size_t>& ids)
 	{
-		if(dsu.update_display_states(ids, atoms_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(ids, atoms_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_atoms_display_states(true);
+			change_indicator_.update_changed_atoms_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_atoms_display_states(const DisplayStateUpdater& dsu)
 	{
-		if(dsu.update_display_states(atoms_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(atoms_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_atoms_display_states(true);
+			change_indicator_.update_changed_atoms_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_contacts_display_state(const DisplayStateUpdater& dsu, const std::size_t id)
 	{
-		if(dsu.update_display_state(id, contacts_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_state(id, contacts_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_contacts_display_states(true);
+			change_indicator_.update_changed_contacts_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_contacts_display_states(const DisplayStateUpdater& dsu, const std::set<std::size_t>& ids)
 	{
-		if(dsu.update_display_states(ids, contacts_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(ids, contacts_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_contacts_display_states(true);
+			change_indicator_.update_changed_contacts_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_contacts_display_states(const DisplayStateUpdater& dsu)
 	{
-		if(dsu.update_display_states(contacts_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(contacts_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_contacts_display_states(true);
+			change_indicator_.update_changed_contacts_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_figures_display_state(const DisplayStateUpdater& dsu, const std::size_t id)
 	{
-		if(dsu.update_display_state(id, figures_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_state(id, figures_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_figures_display_states(true);
+			change_indicator_.update_changed_figures_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_figures_display_states(const DisplayStateUpdater& dsu, const std::set<std::size_t>& ids)
 	{
-		if(dsu.update_display_states(ids, figures_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(ids, figures_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_figures_display_states(true);
+			change_indicator_.update_changed_figures_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
 	void update_figures_display_states(const DisplayStateUpdater& dsu)
 	{
-		if(dsu.update_display_states(figures_display_states_))
+		const DisplayStateUpdater::UpdateStatus update_status=dsu.update_display_states(figures_display_states_);
+		if(update_status.updated())
 		{
-			change_indicator_.set_changed_figures_display_states(true);
+			change_indicator_.update_changed_figures_display_states_info(update_status.updated_marking, update_status.updated_coloring, update_status.updated_visibility);
 		}
 	}
 
@@ -1224,7 +1351,7 @@ public:
 
 	void reset_atoms_display_states()
 	{
-		change_indicator_.set_changed_atoms_display_states(true);
+		change_indicator_.update_changed_atoms_display_states_info(true, true, true);
 		atoms_display_states_.clear();
 		atoms_display_states_.resize(atoms_.size());
 		for(std::size_t i=0;i<atoms_display_states_.size();i++)
@@ -1286,6 +1413,25 @@ public:
 		}
 
 		restrict_atoms(ids);
+	}
+
+	void restrict_atoms_and_renumber_residues(const std::set<std::size_t>& atom_ids_to_keep, const std::map<std::size_t, int>& atom_ids_to_renumber)
+	{
+		if(atom_ids_to_keep.empty())
+		{
+			throw std::runtime_error(std::string("No atoms to keep after renumbering residues"));
+		}
+
+		for(std::map<std::size_t, int>::const_iterator it=atom_ids_to_renumber.begin();it!=atom_ids_to_renumber.end();++it)
+		{
+			const std::size_t atom_id=it->first;
+			if(atom_id<atoms_.size())
+			{
+				atoms_[atom_id].crad.resSeq=it->second;
+			}
+		}
+
+		restrict_atoms(atom_ids_to_keep);
 	}
 
 	void sort_atoms_by_residue_id()
@@ -1589,7 +1735,7 @@ public:
 
 	void reset_contacts_display_states()
 	{
-		change_indicator_.set_changed_contacts_display_states(true);
+		change_indicator_.update_changed_contacts_display_states_info(true, true, true);
 		contacts_display_states_.clear();
 		contacts_display_states_.resize(contacts_.size());
 		for(std::size_t i=0;i<contacts_display_states_.size();i++)
@@ -1714,7 +1860,7 @@ public:
 		{
 			throw std::runtime_error(std::string("No ids provided to remove figures."));
 		}
-		if(*ids.rbegin()>=atoms_.size())
+		if(*ids.rbegin()>=figures_.size())
 		{
 			throw std::runtime_error(std::string("Invalid ids provided to remove atoms."));
 		}
@@ -1765,7 +1911,7 @@ public:
 
 	void reset_figures_display_states()
 	{
-		change_indicator_.set_changed_figures_display_states(true);
+		change_indicator_.update_changed_figures_display_states_info(true, true, true);
 		figures_display_states_.clear();
 		figures_display_states_.resize(contacts_.size());
 		for(std::size_t i=0;i<figures_display_states_.size();i++)
@@ -2029,6 +2175,31 @@ public:
 				}
 			}
 		}
+
+		output << figures_.size() << "\n";
+		for(std::size_t i=0;i<figures_.size();i++)
+		{
+			output << figures_[i] << "\n";
+		}
+
+		{
+			std::map< DisplayState, std::vector<std::size_t> > map_of_figures_display_states;
+			for(std::size_t i=0;i<figures_display_states_.size();i++)
+			{
+				map_of_figures_display_states[figures_display_states_[i]].push_back(i);
+			}
+
+			output << map_of_figures_display_states.size() << "\n";
+			for(std::map< DisplayState, std::vector<std::size_t> >::const_iterator it=map_of_figures_display_states.begin();it!=map_of_figures_display_states.end();++it)
+			{
+				output << it->first << "\n";
+				output << it->second.size() << "\n";
+				for(std::size_t i=0;i<(it->second.size());i++)
+				{
+					output << it->second[i] << "\n";
+				}
+			}
+		}
 	}
 
 	void load_from_stream(std::istream& input)
@@ -2222,6 +2393,42 @@ public:
 			}
 		}
 
+		std::vector<Figure> figures;
+		{
+			int count=0;
+			input >> count;
+			for(int i=0;i<count;i++)
+			{
+				Figure figure;
+				input >> figure;
+				figures.push_back(figure);
+			}
+		}
+
+		std::map< DisplayState, std::vector<std::size_t> > map_of_figures_display_states;
+		{
+			int count=0;
+			input >> count;
+			for(int i=0;i<count;i++)
+			{
+				DisplayState ds;
+				input >> ds;
+				int ids_count=0;
+				input >> ids_count;
+				if(ids_count>0)
+				{
+					std::vector<std::size_t>& ids_vector=map_of_figures_display_states[ds];
+					ids_vector.reserve(ids_count);
+					for(int i=0;i<ids_count;i++)
+					{
+						std::size_t id_value=0;
+						input >> id_value;
+						ids_vector.push_back(id_value);
+					}
+				}
+			}
+		}
+
 		if(atoms.empty())
 		{
 			throw std::runtime_error(std::string("No atoms when loading from stream."));
@@ -2261,70 +2468,100 @@ public:
 			selection_manager_.set_atoms_selection(it->first, std::set<std::size_t>(it->second.begin(), it->second.end()));
 		}
 
-		if(contacts_params_constructing.empty())
+		if(!contacts_params_constructing.empty())
 		{
-			return;
-		}
+			reset_contacts_by_creating(contacts_params_constructing.back(), contacts_params_enhancing.back());
 
-		reset_contacts_by_creating(contacts_params_constructing.back(), contacts_params_enhancing.back());
-
-		std::map<std::pair<std::size_t, std::size_t>, std::size_t> map_of_pairs_to_contact_ids;
-		for(std::size_t i=0;i<contacts_.size();i++)
-		{
-			map_of_pairs_to_contact_ids[std::pair<std::size_t, std::size_t>(contacts_[i].ids[0], contacts_[i].ids[1])]=i;
-		}
-
-		for(std::map< common::ConstructionOfContacts::ParametersToDrawContacts, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_graphics_creating_parameters.begin();it!=map_of_contacts_graphics_creating_parameters.end();++it)
-		{
-			std::set<std::size_t> ids_for_params;
-			for(std::size_t i=0;i<(it->second.size());i++)
+			std::map<std::pair<std::size_t, std::size_t>, std::size_t> map_of_pairs_to_contact_ids;
+			for(std::size_t i=0;i<contacts_.size();i++)
 			{
-				std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
-				if(id_it!=map_of_pairs_to_contact_ids.end())
+				map_of_pairs_to_contact_ids[std::pair<std::size_t, std::size_t>(contacts_[i].ids[0], contacts_[i].ids[1])]=i;
+			}
+
+			for(std::map< common::ConstructionOfContacts::ParametersToDrawContacts, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_graphics_creating_parameters.begin();it!=map_of_contacts_graphics_creating_parameters.end();++it)
+			{
+				std::set<std::size_t> ids_for_params;
+				for(std::size_t i=0;i<(it->second.size());i++)
 				{
-					ids_for_params.insert(id_it->second);
+					std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
+					if(id_it!=map_of_pairs_to_contact_ids.end())
+					{
+						ids_for_params.insert(id_it->second);
+					}
+				}
+				reset_contacts_graphics_by_creating(it->first, ids_for_params, false);
+			}
+
+			for(std::map< common::PropertiesValue, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_properties.begin();it!=map_of_contacts_properties.end();++it)
+			{
+				for(std::size_t i=0;i<(it->second.size());i++)
+				{
+					std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
+					if(id_it!=map_of_pairs_to_contact_ids.end())
+					{
+						contacts_[id_it->second].value.props=it->first;
+					}
 				}
 			}
-			reset_contacts_graphics_by_creating(it->first, ids_for_params, false);
-		}
 
-		for(std::map< common::PropertiesValue, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_properties.begin();it!=map_of_contacts_properties.end();++it)
-		{
-			for(std::size_t i=0;i<(it->second.size());i++)
+			for(std::map< DisplayState, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_display_states.begin();it!=map_of_contacts_display_states.end();++it)
 			{
-				std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
-				if(id_it!=map_of_pairs_to_contact_ids.end())
+				for(std::size_t i=0;i<(it->second.size());i++)
 				{
-					contacts_[id_it->second].value.props=it->first;
+					std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
+					if(id_it!=map_of_pairs_to_contact_ids.end())
+					{
+						contacts_display_states_[id_it->second]=it->first;
+					}
 				}
+			}
+
+			for(std::map< std::string, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_selections.begin();it!=map_of_contacts_selections.end();++it)
+			{
+				std::vector<std::size_t> ids_vector;
+				ids_vector.reserve(it->second.size());
+				for(std::size_t i=0;i<(it->second.size());i++)
+				{
+					std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
+					if(id_it!=map_of_pairs_to_contact_ids.end())
+					{
+						ids_vector.push_back(id_it->second);
+					}
+				}
+				selection_manager_.set_contacts_selection(it->first, std::set<std::size_t>(ids_vector.begin(), ids_vector.end()));
 			}
 		}
 
-		for(std::map< DisplayState, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_display_states.begin();it!=map_of_contacts_display_states.end();++it)
+		if(!figures.empty())
 		{
-			for(std::size_t i=0;i<(it->second.size());i++)
+			for(std::size_t i=0;i<figures.size();i++)
 			{
-				std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
-				if(id_it!=map_of_pairs_to_contact_ids.end())
+				Figure& figure=figures[i];
+				if(figure.special_description_for_label.is_label)
 				{
-					contacts_display_states_[id_it->second]=it->first;
+					FigureOfText::init_figure_of_text(
+							figure.special_description_for_label.label_text,
+							figure.special_description_for_label.label_outline,
+							figure.special_description_for_label.label_origin,
+							figure.special_description_for_label.label_scale,
+							figure.special_description_for_label.label_centered,
+							figure);
 				}
 			}
-		}
 
-		for(std::map< std::string, std::vector< std::pair<std::size_t, std::size_t> > >::const_iterator it=map_of_contacts_selections.begin();it!=map_of_contacts_selections.end();++it)
-		{
-			std::vector<std::size_t> ids_vector;
-			ids_vector.reserve(it->second.size());
-			for(std::size_t i=0;i<(it->second.size());i++)
+			add_figures(figures);
+
+			for(std::map< DisplayState, std::vector<std::size_t> >::const_iterator it=map_of_figures_display_states.begin();it!=map_of_figures_display_states.end();++it)
 			{
-				std::map<std::pair<std::size_t, std::size_t>, std::size_t>::const_iterator id_it=map_of_pairs_to_contact_ids.find(it->second[i]);
-				if(id_it!=map_of_pairs_to_contact_ids.end())
+				for(std::size_t i=0;i<(it->second.size());i++)
 				{
-					ids_vector.push_back(id_it->second);
+					const std::size_t id=it->second[i];
+					if(id<figures_display_states_.size())
+					{
+						figures_display_states_[id]=it->first;
+					}
 				}
 			}
-			selection_manager_.set_contacts_selection(it->first, std::set<std::size_t>(ids_vector.begin(), ids_vector.end()));
 		}
 	}
 

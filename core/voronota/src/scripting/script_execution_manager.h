@@ -2,9 +2,11 @@
 #define SCRIPTING_SCRIPT_EXECUTION_MANAGER_H_
 
 #include "operators/add_figure.h"
+#include "operators/add_figures_of_labels.h"
 #include "operators/add_figure_of_convex_hull.h"
 #include "operators/add_figure_of_nth_order_cell.h"
 #include "operators/add_figure_of_2nd_order_cells_for_contacts.h"
+#include "operators/add_figure_of_text.h"
 #include "operators/add_figure_of_triangulation.h"
 #include "operators/add_figure_of_voxels_test.h"
 #include "operators/cad_score_many.h"
@@ -18,12 +20,14 @@
 #include "operators/color_atoms.h"
 #include "operators/color_contacts.h"
 #include "operators/color_figures.h"
+#include "operators/color_figures_of_labels.h"
 #include "operators/construct_contacts.h"
 #include "operators/construct_triangulation.h"
 #include "operators/copy_object.h"
 #include "operators/delete_adjuncts_of_atoms.h"
 #include "operators/delete_adjuncts_of_contacts.h"
 #include "operators/delete_figures.h"
+#include "operators/delete_figures_of_labels.h"
 #include "operators/delete_global_adjuncts.h"
 #include "operators/delete_objects.h"
 #include "operators/delete_selections_of_atoms.h"
@@ -32,6 +36,7 @@
 #include "operators/delete_tags_of_contacts.h"
 #include "operators/delete_virtual_files.h"
 #include "operators/describe_exposure.h"
+#include "operators/detect_any_contact_between_structures.h"
 #include "operators/distance.h"
 #include "operators/download_virtual_file.h"
 #include "operators/echo.h"
@@ -93,6 +98,7 @@
 #include "operators/print_triangulation.h"
 #include "operators/print_virtual_file.h"
 #include "operators/ranks_jury_score.h"
+#include "operators/reduce_table_redundancy_by_bucketing.h"
 #include "operators/redundancy_score.h"
 #include "operators/rename_global_adjunct.h"
 #include "operators/rename_object.h"
@@ -116,11 +122,13 @@
 #include "operators/set_adjunct_of_contacts_by_atom_adjuncts.h"
 #include "operators/set_adjunct_of_contacts_by_expression.h"
 #include "operators/set_adjunct_of_contacts.h"
+#include "operators/set_adjuncts_of_atoms_by_ufsr.h"
 #include "operators/set_alias.h"
 #include "operators/set_atom_serials.h"
 #include "operators/set_chain_name.h"
 #include "operators/set_chain_names_and_residue_numbers_by_sequences.h"
 #include "operators/set_chain_names_by_guessing.h"
+#include "operators/set_chain_residue_numbers_by_sequence.h"
 #include "operators/set_global_adjunct_by_pooling.h"
 #include "operators/set_global_adjunct.h"
 #include "operators/set_tag_of_atoms_by_secondary_structure.h"
@@ -134,6 +142,7 @@
 #include "operators/show_atoms.h"
 #include "operators/show_contacts.h"
 #include "operators/show_figures.h"
+#include "operators/show_figures_of_labels.h"
 #include "operators/show_next_picked_object.h"
 #include "operators/show_objects.h"
 #include "operators/smooth_adjacent_contact_adjunct_values.h"
@@ -223,9 +232,11 @@ public:
 		set_command_for_congregation_of_data_managers("import-objects", operators::ImportObjects());
 
 		set_command_for_data_manager("add-figure", operators::AddFigure(), true);
+		set_command_for_data_manager("add-figures-of-labels", operators::AddFiguresOfLabels(), true);
 		set_command_for_data_manager("add-figure-of-convex-hull", operators::AddFigureOfConvexHull(), true);
 		set_command_for_data_manager("add-figure-of-nth-order-cell", operators::AddFigureOfNthOrderCell(), true);
 		set_command_for_data_manager("add-figure-of-2nd-order-cells-for-contacts", operators::AddFigureOf2ndOrderCellsForContacts(), true);
+		set_command_for_data_manager("add-figure-of-text", operators::AddFigureOfText(), true);
 		set_command_for_data_manager("add-figure-of-triangulation", operators::AddFigureOfTriangulation(), true);
 		set_command_for_data_manager("add-figure-of-voxels-test", operators::AddFigureOfVoxelsTest(), true);
 		set_command_for_data_manager("calculate-betweenness", operators::CalculateBetweenness(), true);
@@ -236,11 +247,13 @@ public:
 		set_command_for_data_manager("color-atoms", operators::ColorAtoms(), true);
 		set_command_for_data_manager("color-contacts", operators::ColorContacts(), true);
 		set_command_for_data_manager("color-figures", operators::ColorFigures(), true);
+		set_command_for_data_manager("color-figures-of-labels", operators::ColorFiguresOfLabels(), true);
 		set_command_for_data_manager("construct-contacts", operators::ConstructContacts(), true);
 		set_command_for_data_manager("construct-triangulation", operators::ConstructTriangulation(), true);
 		set_command_for_data_manager("delete-adjuncts-of-atoms", operators::DeleteAdjunctsOfAtoms(), true);
 		set_command_for_data_manager("delete-adjuncts-of-contacts", operators::DeleteAdjunctsOfContacts(), true);
 		set_command_for_data_manager("delete-figures", operators::DeleteFigures(), true);
+		set_command_for_data_manager("delete-figures-of-labels", operators::DeleteFiguresOfLabels(), true);
 		set_command_for_data_manager("delete-global-adjuncts", operators::DeleteGlobalAdjuncts(), true);
 		set_command_for_data_manager("delete-selections-of-atoms", operators::DeleteSelectionsOfAtoms(), true);
 		set_command_for_data_manager("delete-selections-of-contacts", operators::DeleteSelectionsOfContacts(), true);
@@ -271,6 +284,7 @@ public:
 		set_command_for_data_manager("hide-atoms", operators::HideAtoms(), true);
 		set_command_for_data_manager("hide-contacts", operators::HideContacts(), true);
 		set_command_for_data_manager("hide-figures", operators::HideFigures(), true);
+		set_command_for_data_manager("hide-figures-of-labels", operators::HideFiguresOfLabels(), true);
 		set_command_for_data_manager("import-adjuncts-of-atoms", operators::ImportAdjunctsOfAtoms(), true);
 		set_command_for_data_manager("import-contacts", operators::ImportContacts(), false);
 		set_command_for_data_manager("import-figure-voxels", operators::ImportFigureVoxels(), false);
@@ -312,10 +326,12 @@ public:
 		set_command_for_data_manager("set-adjunct-of-contacts-by-atom-adjuncts", operators::SetAdjunctOfContactsByAtomAdjuncts(), true);
 		set_command_for_data_manager("set-adjunct-of-contacts-by-expression", operators::SetAdjunctOfContactsByExpression(), true);
 		set_command_for_data_manager("set-adjunct-of-contacts", operators::SetAdjunctOfContacts(), true);
+		set_command_for_data_manager("set-adjuncts-of-atoms-by-ufsr", operators::SetAdjunctsOfAtomsByTypeUFSR(), true);
 		set_command_for_data_manager("set-atom-serials", operators::SetAtomSerials(), true);
 		set_command_for_data_manager("set-chain-name", operators::SetChainName(), true);
 		set_command_for_data_manager("set-chain-names-and-residue-numbers-by-sequences", operators::SetChainNamesAndResidueNumbersBySequences(), true);
 		set_command_for_data_manager("set-chain-names-by-guessing", operators::SetChainNamesByGuessing(), true);
+		set_command_for_data_manager("set-chain-residue-numbers-by-sequence", operators::SetChainResidueNumbersBySequences(), true);
 		set_command_for_data_manager("set-global-adjunct-by-pooling", operators::SetGlobalAdjunctByPooling(), true);
 		set_command_for_data_manager("set-global-adjunct", operators::SetGlobalAdjunct(), true);
 		set_command_for_data_manager("set-tag-of-atoms-by-secondary-structure", operators::SetTagOfAtomsBySecondaryStructure(), true);
@@ -324,6 +340,7 @@ public:
 		set_command_for_data_manager("show-atoms", operators::ShowAtoms(), true);
 		set_command_for_data_manager("show-contacts", operators::ShowContacts(), true);
 		set_command_for_data_manager("show-figures", operators::ShowFigures(), true);
+		set_command_for_data_manager("show-figures-of-labels", operators::ShowFiguresOfLabels(), true);
 		set_command_for_data_manager("smooth-adjacent-contact-adjunct-values", operators::SmoothAdjacentContactAdjunctValues(), true);
 		set_command_for_data_manager("sort-atoms-by-residue-id", operators::SortAtomsByResidueID(), true);
 		set_command_for_data_manager("spectrum-atoms", operators::SpectrumAtoms(), true);
@@ -360,7 +377,9 @@ public:
 		set_command_for_extra_actions("split-pdb-file", operators::SplitPDBFile());
 		set_command_for_extra_actions("cat-files", operators::CatFiles());
 		set_command_for_extra_actions("ranks-jury-score", operators::RanksJuryScore());
+		set_command_for_extra_actions("reduce-table-redundancy-by-bucketing", operators::ReduceTableRedundancyByBucketing());
 		set_command_for_extra_actions("redundancy-score", operators::RedundancyScore());
+		set_command_for_extra_actions("detect-any-contact-between-structures", operators::DetectAnyContactBetweenStructures());
 	}
 
 	virtual ~ScriptExecutionManager()
@@ -612,6 +631,7 @@ private:
 		{
 			data_manager.reset_change_indicator();
 			data_manager.sync_selections_with_display_states_if_requested_in_string(input.get_canonical_input_command_string());
+			data_manager.selection_manager().reset_change_indicator();
 		}
 	};
 

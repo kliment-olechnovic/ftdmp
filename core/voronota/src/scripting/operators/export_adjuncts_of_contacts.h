@@ -34,11 +34,12 @@ public:
 	bool no_resName;
 	bool all;
 	bool inter_residue;
+	bool expand_ids;
 	std::vector<std::string> adjuncts;
 	std::string sep;
 	std::string adjacency_file;
 
-	ExportAdjunctsOfContacts() : no_serial(false), no_name(false), no_resSeq(false), no_resName(false), all(false), inter_residue(false), sep(" ")
+	ExportAdjunctsOfContacts() : no_serial(false), no_name(false), no_resSeq(false), no_resName(false), all(false), inter_residue(false), expand_ids(false), sep(" ")
 	{
 	}
 
@@ -54,6 +55,7 @@ public:
 		no_resName=input.get_flag("no-resName");
 		all=input.get_flag("all");
 		inter_residue=input.get_flag("inter-residue");
+		expand_ids=input.get_flag("expand-ids");
 		adjuncts=input.get_value_vector_or_default<std::string>("adjuncts", std::vector<std::string>());
 		sep=input.get_value_or_default<std::string>("sep", " ");
 		adjacency_file=input.get_value_or_default<std::string>("adjacency-file", "");
@@ -71,6 +73,7 @@ public:
 		doc.set_option_decription(CDOD("no-resName", CDOD::DATATYPE_BOOL, "flag to exclude residue names"));
 		doc.set_option_decription(CDOD("all", CDOD::DATATYPE_BOOL, "flag to export all adjuncts"));
 		doc.set_option_decription(CDOD("inter-residue", CDOD::DATATYPE_BOOL, "flag for simplified inter-residue output"));
+		doc.set_option_decription(CDOD("expand-ids", CDOD::DATATYPE_BOOL, "flag to output expanded IDs"));
 		doc.set_option_decription(CDOD("adjuncts", CDOD::DATATYPE_STRING_ARRAY, "adjunct names", ""));
 		doc.set_option_decription(CDOD("sep", CDOD::DATATYPE_STRING, "output separator string", " "));
 		doc.set_option_decription(CDOD("adjacency-file", CDOD::DATATYPE_STRING, "path to contact-contact adjacency output file", ""));
@@ -103,9 +106,9 @@ public:
 			throw std::runtime_error(std::string("No atoms selected."));
 		}
 
-		const std::set<std::size_t> contact_ids=data_manager.selection_manager().select_contacts_by_atoms_and_atoms(
-				data_manager.selection_manager().select_contacts(parameters_for_selecting_contacts),
-				atom_ids, atom_ids, false);
+		const std::set<std::size_t> contact_ids=(atom_ids.size()==data_manager.atoms().size()
+				? data_manager.selection_manager().select_contacts(parameters_for_selecting_contacts)
+				: data_manager.selection_manager().select_contacts_by_atoms_and_atoms(data_manager.selection_manager().select_contacts(parameters_for_selecting_contacts),	atom_ids, atom_ids, true, false, false));
 		if(contact_ids.empty())
 		{
 			throw std::runtime_error(std::string("No contacts selected."));
@@ -140,21 +143,30 @@ public:
 			throw std::runtime_error(std::string("No adjuncts specified."));
 		}
 
+		const std::set<std::string> adjuncts_filled_set(adjuncts_filled.begin(), adjuncts_filled.end());
+
 		std::map<std::size_t, std::size_t> map_of_contact_indices;
-		for(std::set<std::size_t>::const_iterator it=contact_ids.begin();it!=contact_ids.end();++it)
+		if(!adjacency_file.empty() || adjuncts_filled_set.count("contact_index")>0)
 		{
-			const std::size_t current_size=map_of_contact_indices.size();
-			map_of_contact_indices[*it]=current_size;
+			for(std::set<std::size_t>::const_iterator it=contact_ids.begin();it!=contact_ids.end();++it)
+			{
+				const std::size_t current_size=map_of_contact_indices.size();
+				map_of_contact_indices[*it]=current_size;
+			}
 		}
 
 		std::map<std::size_t, std::size_t> map_of_atom_indices;
-		for(std::set<std::size_t>::const_iterator it=atom_ids.begin();it!=atom_ids.end();++it)
+		if(adjuncts_filled_set.count("atom_index1")>0 || adjuncts_filled_set.count("atom_index2")>0)
 		{
-			const std::size_t current_size=map_of_atom_indices.size();
-			map_of_atom_indices[*it]=current_size;
+			for(std::set<std::size_t>::const_iterator it=atom_ids.begin();it!=atom_ids.end();++it)
+			{
+				const std::size_t current_size=map_of_atom_indices.size();
+				map_of_atom_indices[*it]=current_size;
+			}
 		}
 
 		std::map<std::size_t, std::size_t> map_of_inter_residue_contact_indices;
+		if(inter_residue || adjuncts_filled_set.count("ir_contact_index")>0)
 		{
 			std::set<common::ChainResidueAtomDescriptorsPair> set_of_inter_residue_contact_crads;
 			for(std::set<std::size_t>::const_iterator it=contact_ids.begin();it!=contact_ids.end();++it)
@@ -239,7 +251,7 @@ public:
 			std::ostream& output=output_selector.stream();
 			assert_io_stream(file, output);
 
-			output << "ID1" << sep << "ID2";
+			output << common::ChainResidueAtomDescriptor::str_header("ID1", expand_ids, "_", sep) << sep << common::ChainResidueAtomDescriptor::str_header("ID2", expand_ids, "_", sep);
 			for(std::size_t i=0;i<adjuncts_filled.size();i++)
 			{
 				output << sep << adjuncts_filled[i];
@@ -252,14 +264,14 @@ public:
 				{
 					{
 						const Contact& contact=data_manager.contacts()[it->first];
-						output << data_manager.atoms()[contact.ids[0]].crad.without_some_info(no_serial, no_name, no_resSeq, no_resName) << sep;
+						output << data_manager.atoms()[contact.ids[0]].crad.without_some_info(no_serial, no_name, no_resSeq, no_resName).str(expand_ids, sep) << sep;
 						if(contact.solvent())
 						{
-							output << common::ChainResidueAtomDescriptor::solvent();
+							output << common::ChainResidueAtomDescriptor::solvent().str(expand_ids, sep);
 						}
 						else
 						{
-							output << data_manager.atoms()[contact.ids[1]].crad.without_some_info(no_serial, no_name, no_resSeq, no_resName);
+							output << data_manager.atoms()[contact.ids[1]].crad.without_some_info(no_serial, no_name, no_resSeq, no_resName).str(expand_ids, sep);
 						}
 					}
 					const std::vector<double>& output_values=it->second;
@@ -316,14 +328,14 @@ public:
 				{
 					{
 						const Contact& contact=data_manager.contacts()[reverse_map_of_inter_residue_contact_indices[it->first]];
-						output << data_manager.atoms()[contact.ids[0]].crad.without_some_info(true, true, no_resSeq, no_resName) << sep;
+						output << data_manager.atoms()[contact.ids[0]].crad.without_some_info(true, true, no_resSeq, no_resName).str(expand_ids, sep) << sep;
 						if(contact.solvent())
 						{
-							output << common::ChainResidueAtomDescriptor::solvent();
+							output << common::ChainResidueAtomDescriptor::solvent().str(expand_ids, sep);
 						}
 						else
 						{
-							output << data_manager.atoms()[contact.ids[1]].crad.without_some_info(true, true, no_resSeq, no_resName);
+							output << data_manager.atoms()[contact.ids[1]].crad.without_some_info(true, true, no_resSeq, no_resName).str(expand_ids, sep);
 						}
 					}
 					const std::vector<double>& output_values=it->second;

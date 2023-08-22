@@ -3,6 +3,10 @@
 #include "viewer/application.h"
 #include "viewer/emscripten_utilities.h"
 
+#include "../../src/voronota_version.h"
+
+#include "uv/stocked_default_fonts.h"
+
 int main(const int argc, const char** argv)
 {
 	int return_status=1;
@@ -15,7 +19,7 @@ int main(const int argc, const char** argv)
 		app_init_parameters.suggested_window_width=command_args_input.get_value_or_default<int>("window-width", 1024);
 		app_init_parameters.suggested_window_height=command_args_input.get_value_or_default<int>("window-height", 768);
 		app_init_parameters.no_fps_limit=command_args_input.get_flag("no-fps-limit");
-		app_init_parameters.title=command_args_input.get_value_or_default<std::string>("title", "Voronota-GL");
+		app_init_parameters.title=command_args_input.get_value_or_default<std::string>("title", std::string("Voronota-GL ")+voronota::version());
 		app_init_parameters.shader_vertex_screen=command_args_input.get_value_or_default<std::string>("shader-vertex-screen", "_shader_vertex_screen");
 		app_init_parameters.shader_vertex=command_args_input.get_value_or_default<std::string>("shader-vertex", "_shader_vertex_simple");
 		app_init_parameters.shader_vertex_with_instancing=command_args_input.get_value_or_default<std::string>("shader-vertex-with-instancing", "_shader_vertex_with_instancing");
@@ -24,6 +28,8 @@ int main(const int argc, const char** argv)
 		app_init_parameters.shader_fragment=command_args_input.get_value_or_default<std::string>("shader-fragment", "_shader_fragment_simple");
 		app_init_parameters.shader_fragment_with_instancing=command_args_input.get_value_or_default<std::string>("shader-fragment-with-instancing", "_shader_fragment_simple");
 		app_init_parameters.shader_fragment_with_impostoring=command_args_input.get_value_or_default<std::string>("shader-fragment-with-impostoring", "_shader_fragment_with_impostoring");
+		app_init_parameters.verbose=command_args_input.get_flag("verbose");
+		app_init_parameters.hidden=command_args_input.get_flag("hidden");
 		const float gui_scaling=command_args_input.get_value_or_default<float>("gui-scaling", 1.0f);
 		const std::string custom_font_file=command_args_input.get_value_or_default<std::string>("custom-font-file", "");
 		const std::vector<std::string> files=command_args_input.get_value_vector_or_all_unused_unnamed_values("files");
@@ -42,9 +48,16 @@ int main(const int argc, const char** argv)
 			ImGuiIO& io=ImGui::GetIO();
 			io.Fonts->AddFontFromFileTTF(custom_font_file.c_str(), 13.0f*gui_scaling);
 		}
+		else
+		{
+			ImGuiIO& io=ImGui::GetIO();
+			static ImFontConfig font_config=ImFontConfig();
+			font_config.FontDataOwnedByAtlas=false;
+			io.Fonts->AddFontFromMemoryTTF(reinterpret_cast<void*>(voronota::uv::default_font_mono_regular_data()), voronota::uv::default_font_mono_regular_data_size(), 13.0f*gui_scaling, &font_config);
+		}
 
 		voronota::viewer::GUIStyleWrapper::initialized()=true;
-		voronota::viewer::GUIStyleWrapper::set_scale_factor(gui_scaling, custom_font_file.empty());
+		voronota::viewer::GUIStyleWrapper::set_scale_factor(gui_scaling, false);
 
 		voronota::viewer::Application::instance().enqueue_script("clear");
 		voronota::viewer::Application::instance().enqueue_script("setup-defaults");
@@ -158,14 +171,24 @@ EMSCRIPTEN_KEEPALIVE const char* voronota_viewer_get_last_script_output()
 	return voronota::viewer::Application::instance().get_last_script_output().c_str();
 }
 
-EMSCRIPTEN_KEEPALIVE void voronota_viewer_upload_file(const char* name, const char* data, const char* parameters)
+EMSCRIPTEN_KEEPALIVE void voronota_viewer_upload_file(const char* name, const char* data, const int length, const char* parameters)
 {
-	voronota::viewer::Application::instance().upload_file(name, data, parameters);
+	voronota::viewer::Application::instance().upload_file(name, std::string(data, static_cast<std::size_t>(length)), parameters);
+}
+
+EMSCRIPTEN_KEEPALIVE void voronota_viewer_upload_session(const char* data, const int length)
+{
+	voronota::viewer::Application::instance().upload_session(std::string(data, static_cast<std::size_t>(length)));
 }
 
 EMSCRIPTEN_KEEPALIVE void voronota_viewer_resize_window(const int width, const int height)
 {
 	voronota::viewer::Application::instance().set_window_size(width, height);
+}
+
+EMSCRIPTEN_KEEPALIVE void voronota_viewer_setup_js_bindings_to_all_api_functions()
+{
+	voronota::viewer::Application::instance().setup_js_bindings_to_all_api_functions();
 }
 
 }

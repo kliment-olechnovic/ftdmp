@@ -29,7 +29,7 @@ struct RemoteImportRequest
 	{
 	}
 
-	RemoteImportRequest(const std::string& url, const scripting::operators::ImportMany& import_many_operator) : url(url), import_many_operator(import_many_operator), download_started(false), download_finished(false), download_successful(false)
+	RemoteImportRequest(const std::string& url, const scripting::operators::ImportMany& import_many_operator) : url(url), import_many_operator(import_many_operator), download_started(false), download_finished(false), download_successful(false), fully_processed(false)
 	{
 	}
 
@@ -100,6 +100,18 @@ public:
 		requests_.push_back(request);
 		start_download(requests_.back());
 		return requests_.back();
+	}
+
+	bool check_if_any_request_not_downloaded() const
+	{
+		for(std::list<RemoteImportRequest>::const_iterator it=requests_.begin();it!=requests_.end();++it)
+		{
+			if(!it->download_finished)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool check_if_any_request_downloaded_and_not_fully_processed() const

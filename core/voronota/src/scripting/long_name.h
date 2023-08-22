@@ -46,6 +46,17 @@ public:
 	{
 	}
 
+	LongName(const std::vector<std::string>& subnames, const std::string& subname) : subnames_(subnames)
+	{
+		subnames_.push_back(subname);
+	}
+
+	LongName(const std::vector<std::string>& subnames, const std::string& subname1, const std::string& subname2) : subnames_(subnames)
+	{
+		subnames_.push_back(subname1);
+		subnames_.push_back(subname2);
+	}
+
 	bool valid() const
 	{
 		if(subnames_.empty())
@@ -75,6 +86,34 @@ public:
 	bool match(const LongName& longname) const
 	{
 		return match(longname.subnames());
+	}
+
+	friend std::ostream& operator<<(std::ostream& output, const LongName& ln)
+	{
+		output << ln.subnames().size();
+		for(std::size_t i=0;i<ln.subnames().size();i++)
+		{
+			output << " " << ln.subnames()[i];
+		}
+		output << "\n";
+		return output;
+	}
+
+	friend std::istream& operator>>(std::istream& input, LongName& ln)
+	{
+		std::vector<std::string> subnames;
+		int n=0;
+		input >> n;
+		if(n>0)
+		{
+			subnames.resize(n);
+			for(std::size_t i=0;i<subnames.size();i++)
+			{
+				input >> subnames[i];
+			}
+		}
+		ln=LongName(subnames);
+		return input;
 	}
 
 private:

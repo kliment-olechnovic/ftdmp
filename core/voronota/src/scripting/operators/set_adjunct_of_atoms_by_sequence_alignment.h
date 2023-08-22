@@ -21,12 +21,18 @@ public:
 	{
 		SummaryOfAtoms atoms_summary;
 		std::string sequence;
+		double sequence_identity;
+
+		Result() : sequence_identity(0.0)
+		{
+		}
 
 		void store(HeterogeneousStorage& heterostorage) const
 		{
 			VariantSerialization::write(atoms_summary, heterostorage.variant_object.object("atoms_summary"));
 			heterostorage.variant_object.value("sequence")=sequence;
 			heterostorage.variant_object.value("sequence_length")=sequence.size();
+			heterostorage.variant_object.value("sequence_identity")=sequence_identity;
 		}
 	};
 
@@ -34,8 +40,9 @@ public:
 	std::string name;
 	std::string sequence_file;
 	std::string alignment_file;
+	bool keep_dashes;
 
-	SetAdjunctOfAtomsBySequenceAlignment()
+	SetAdjunctOfAtomsBySequenceAlignment() : keep_dashes(false)
 	{
 	}
 
@@ -44,6 +51,7 @@ public:
 		parameters_for_selecting=OperatorsUtilities::read_generic_selecting_query(input);
 		name=input.get_value<std::string>("name");
 		sequence_file=input.get_value<std::string>("sequence-file");
+		keep_dashes=input.get_flag("keep-dashes");
 		alignment_file=input.get_value_or_default<std::string>("alignment-file", "");
 	}
 
@@ -53,6 +61,7 @@ public:
 		doc.set_option_decription(CDOD("name", CDOD::DATATYPE_STRING, "adjunct name"));
 		doc.set_option_decription(CDOD("sequence-file", CDOD::DATATYPE_STRING, "sequence input file"));
 		doc.set_option_decription(CDOD("alignment-file", CDOD::DATATYPE_STRING, "sequence alignment output file", ""));
+		doc.set_option_decription(CDOD("keep-dashes", CDOD::DATATYPE_BOOL, "flag to keep dashes in sequence before alignment"));
 	}
 
 	Result run(DataManager& data_manager) const
@@ -69,7 +78,7 @@ public:
 			throw std::runtime_error(std::string("Failed to read file '")+sequence_file+"'.");
 		}
 
-		const std::string sequence=common::SequenceUtilities::read_sequence_from_stream(finput);
+		const std::string sequence=common::SequenceUtilities::read_sequence_from_stream(finput, keep_dashes);
 
 		if(sequence.empty())
 		{
@@ -95,7 +104,8 @@ public:
 			residue_sequence_vector.push_back(data_manager.primary_structure_info().residues[*it].chain_residue_descriptor);
 		}
 
-		const std::map<common::ChainResidueAtomDescriptor, int> sequence_mapping=common::SequenceUtilities::construct_sequence_mapping(residue_sequence_vector, sequence, false, alignment_file);
+		double sequence_identity=0.0;
+		const std::map<common::ChainResidueAtomDescriptor, int> sequence_mapping=common::SequenceUtilities::construct_sequence_mapping(residue_sequence_vector, sequence, false, false, &sequence_identity, alignment_file);
 
 		for(std::set<std::size_t>::const_iterator it=atom_ids.begin();it!=atom_ids.end();++it)
 		{
@@ -113,6 +123,7 @@ public:
 		Result result;
 		result.atoms_summary=SummaryOfAtoms(data_manager.atoms(), atom_ids);
 		result.sequence=sequence;
+		result.sequence_identity=sequence_identity;
 
 		return result;
 	}

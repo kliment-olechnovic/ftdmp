@@ -41,6 +41,13 @@ public:
 
 	const std::string& execute_native_script(const std::string& script)
 	{
+		static std::string rejection_message("rejected");
+
+		if(need_to_wait_for_asynchronous_downloads_to_finish())
+		{
+			return rejection_message;
+		}
+
 		while(dequeue_job())
 		{
 		}
@@ -63,6 +70,24 @@ public:
 		scripting::VirtualFileStorage::set_file(virtual_file_name, data);
 		enqueue_script(std::string("import --file ")+virtual_file_name+" "+parameters+" ; delete-virtual-files "+virtual_file_name);
 	}
+
+	void upload_session(const std::string& data)
+	{
+		std::string virtual_file_name=std::string("_virtual/session.vses");
+		scripting::VirtualFileStorage::set_file(virtual_file_name, data);
+		enqueue_script(std::string("import-session --file ")+virtual_file_name+" ; delete-virtual-files "+virtual_file_name);
+	}
+
+#ifdef FOR_WEB
+	void setup_js_bindings_to_all_api_functions()
+	{
+		std::string script;
+		script+="raw_voronota=voronota_viewer_execute_native_script;\n";
+		script+="raw_voronota_last_output=voronota_viewer_get_last_script_output;\n";
+		script+=duktaper::BindingJavascript::generate_setup_script(script_execution_manager_.collection_of_command_documentations(), true);
+		EnscriptenUtilities::execute_javascript(script);
+	}
+#endif
 
 protected:
 	void on_after_init_success()
@@ -131,7 +156,7 @@ protected:
 			duktaper::DuktapeManager::set_output_director(DuktaperOutputDirector::instance());
 			duktaper::DuktapeManager::set_script_execution_manager(script_execution_manager_);
 			duktaper::DuktapeManager::flag_to_print_result_on_eval()=false;
-			duktaper::DuktapeManager::eval(duktaper::BindingJavascript::generate_setup_script(script_execution_manager_.collection_of_command_documentations()));
+			duktaper::DuktapeManager::eval(duktaper::BindingJavascript::generate_setup_script(script_execution_manager_.collection_of_command_documentations(), false));
 			duktaper::DuktapeManager::flag_to_print_result_on_eval()=true;
 		}
 	}
@@ -139,19 +164,19 @@ protected:
 	bool check_window_scroll_intercepted(double xoffset, double yoffset)
 	{
 		ImGui_ImplGlfw_ScrollCallback(window(), xoffset, yoffset);
-		return (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+		return (ImGui::GetIO().WantCaptureMouse || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
 	}
 
 	bool check_mouse_button_use_intercepted(int button, int action, int mods)
 	{
 		ImGui_ImplGlfw_MouseButtonCallback(window(), button, action, mods);
-		return (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+		return (ImGui::GetIO().WantCaptureMouse || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
 	}
 
 	bool check_mouse_cursor_move_intercepted(double xpos, double ypos)
 	{
 		ImGui_ImplGlfw_CursorPosCallback(window(), xpos, ypos);
-		return (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+		return (ImGui::GetIO().WantCaptureMouse || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
 	}
 
 	void on_mouse_cursor_moved(double xpos, double ypos)
@@ -167,7 +192,7 @@ protected:
 			{
 				if(hovered())
 				{
-					Console::instance().set_need_keyboard_focus_in_command_input(true);
+					console::Console::instance().text_interface_info().set_need_keyboard_focus_in_command_input(true);
 				}
 			}
 			else if(key==GLFW_KEY_ESCAPE && mods==0)
@@ -176,7 +201,7 @@ protected:
 			}
 			else if(key==GLFW_KEY_ESCAPE && mods==GLFW_MOD_SHIFT)
 			{
-				Console::instance().shrink_to_minimal_view();
+				console::Console::instance().shrink_to_minimal_view();
 			}
 		}
 
@@ -205,14 +230,14 @@ protected:
 		}
 
 		{
-			const std::string console_result=Console::instance().execute(0, 0, window_width()/5*3, 200, window_width()/4, window_width(), 40, window_height());
+			const std::string console_result=console::Console::instance().execute(0, 0, window_width()/5*3, 200, window_width()/4, window_width(), 40, window_height());
 			if(!console_result.empty())
 			{
 				const ScriptPrefixParsing::Bundle task=ScriptPrefixParsing::parse(console_result);
 				enqueue_script(task);
 				if(!task.prefix.empty() && task.mode!=ScriptPrefixParsing::MODE_NATIVE_BRIEF)
 				{
-					Console::instance().set_next_prefix(task.prefix+" ");
+					console::Console::instance().text_interface_info().set_next_prefix(task.prefix+" ");
 				}
 			}
 		}
@@ -239,18 +264,18 @@ protected:
 
 	void on_before_rendered_frame()
 	{
-		if(Console::instance().current_heigth()>0 && Console::instance().current_heigth()<(window_height()-1))
+		if(console::Console::instance().current_heigth()>0 && console::Console::instance().current_heigth()<(window_height()-1))
 		{
-			set_margin_top_fixed(Console::instance().current_heigth());
+			set_margin_top_fixed(console::Console::instance().current_heigth());
 		}
 		else
 		{
 			set_margin_top_fixed(0);
 		}
 
-		if(Console::instance().current_width()>0 && Console::instance().current_width()<(window_width()-1))
+		if(console::Console::instance().current_width()>0 && console::Console::instance().current_width()<(window_width()-1))
 		{
-			set_margin_right_fixed(window_width()-Console::instance().current_width());
+			set_margin_right_fixed(window_width()-console::Console::instance().current_width());
 		}
 		else
 		{
@@ -465,17 +490,17 @@ private:
 
 		void write_text(const std::string& str) const
 		{
-			Console::instance().add_output(str, 1.0f, 1.0f, 1.0f);
+			console::Console::instance().text_interface_info().add_output(str, 1.0f, 1.0f, 1.0f);
 		}
 
 		void write_error(const std::string& str) const
 		{
-			Console::instance().add_output(str, 1.0f, 0.5f, 0.5f);
+			console::Console::instance().text_interface_info().add_output(str, 1.0f, 0.5f, 0.5f);
 		}
 
 		void write_log(const std::string& str) const
 		{
-			Console::instance().add_output(str, 1.0f, 1.0f, 0.5f);
+			console::Console::instance().text_interface_info().add_output(str, 1.0f, 1.0f, 0.5f);
 		}
 	};
 
@@ -577,8 +602,18 @@ private:
 		return ((!job_queue_.empty() && (including_brief_jobs || !job_queue_.front().brief)) || RemoteImportDownloaderAdaptive::instance().check_if_any_request_downloaded_and_not_fully_processed());
 	}
 
+	bool need_to_wait_for_asynchronous_downloads_to_finish() const
+	{
+		return (!RemoteImportDownloaderAdaptive::instance().is_synchronous() && RemoteImportDownloaderAdaptive::instance().check_if_any_request_not_downloaded());
+	}
+
 	bool dequeue_job()
 	{
+		if(need_to_wait_for_asynchronous_downloads_to_finish())
+		{
+			return (!job_queue_.empty());
+		}
+
 		if(RemoteImportDownloaderAdaptive::instance().check_if_any_request_downloaded_and_not_fully_processed())
 		{
 			enqueue_job(Job("import-downloaded", Job::TYPE_NATIVE), true);

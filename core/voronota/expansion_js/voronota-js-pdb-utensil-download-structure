@@ -1,0 +1,129 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'voronota-js-pdb-utensil-download-structure' script downloads and outputs structure in PDB format.
+
+Options:
+    --id                      string  *  chain renaming rule
+    --assembly                number     biological assembly number (0 for asymmetric unit), default is 1
+    --help | -h                          flag to display help message and exit
+    
+Standard output:
+    structure in PDB format
+    
+Examples:
+    
+    voronota-js-pdb-utensil-download-structure 2zsk > "./assembly.pdb"
+    
+    voronota-js-pdb-utensil-download-structure 2ZSK > "./assembly.pdb"
+    
+    voronota-js-pdb-utensil-download-structure 2zsk --assembly 1 > "./assembly.pdb"
+    
+    voronota-js-pdb-utensil-download-structure 2zsk --assembly 0 > "./asymmetric_unit.pdb"
+    
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd "$(dirname ${ZEROARG})"
+	export PATH="$(pwd):${PATH}"
+	cd - &> /dev/null
+fi
+
+export LC_ALL=C
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+ENTRYID=""
+ENTRYID_READ="false"
+ASSEMBLY="1"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--id)
+		ENTRYID="$OPTARG"
+		ENTRYID_READ="true"
+		shift
+		;;
+	--assembly)
+		ASSEMBLY="$OPTARG"
+		shift
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		if [ "$ENTRYID_READ" == "false" ]
+		then
+			ENTRYID="$OPTION"
+			ENTRYID_READ="true";
+		else
+			echo >&2 "Error: invalid command line option '$OPTION'"
+			exit 1
+		fi
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$ENTRYID" ]
+then
+	echo >&2 "Error: no ID provided"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+{
+cat << EOF
+var params={}
+params.output_file='$TMPLDIR/output.pdb';
+params.entry_id='$ENTRYID';
+params.assembly=$ASSEMBLY;
+EOF
+
+cat << 'EOF'
+voronota_setup_defaults("-no-load-voromqa-potentials", "-no-load-more-atom-types", "-no-load-mock-voromqa-potential -include-heteroatoms");
+voronota_assert_full_success("Failed to setup defaults");
+
+voronota_fetch("-pdb-id", params.entry_id, "-assembly", params.assembly);
+voronota_assert_full_success("Failed to fetch structure");
+
+voronota_export_atoms("-as-pdb", "-file", params.output_file);
+voronota_assert_full_success("Failed to output structure");
+EOF
+
+} \
+| voronota-js --no-setup-defaults
+
+if [ ! -s "$TMPLDIR/output.pdb" ]
+then
+	echo >&2 "Error: no output produced for ID '$ENTRYID' assembly '$ASSEMBLY'"
+	exit 1
+fi
+
+cat "$TMPLDIR/output.pdb"
+

@@ -1,0 +1,698 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << 'EOF'
+
+'voronota-js-fast-iface-contacts' script rapidly computes contacts of inter-chain interface in a molecular complex.
+
+Options:
+    --input                   string  *  input file path or '_list' to read file paths from stdin
+    --restrict-input          string     query to restrict input atoms, default is '[]'
+    --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+    --output-contacts-file    string     output table file path, default is '_stdout' to print to stdout
+    --output-bsite-file       string     output binding site table file path, default is ''
+    --output-drawing-script   string     output PyMol drawing script file path, default is ''
+    --processors              number     maximum number of processors to run in parallel, default is 1
+    --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+    --stdin-file              string     input file path to replace stdin
+    --run-faspr               string     path to FASPR binary to rebuild side-chains
+    --custom-radii-file       string     path to file with van der Waals radii assignment rules
+    --with-sas-areas                     flag to also compute and output solvent-accessible areas of interface residue atoms
+    --coarse-grained                     flag to output inter-residue contacts
+    --input-is-script                    flag to treat input file as vs script
+    --as-assembly                        flag to treat input file as biological assembly
+    --use-hbplus                         flag to run 'hbplus' to tag H-bonds
+    --expand-ids                         flag to output expanded IDs
+    --og-pipeable                        flag to format output to be pipeable to 'voronota query-contacts'
+    --help | -h                          flag to display help message and exit
+
+Standard output:
+    tab-separated table of contacts
+    
+Examples:
+
+    voronota-js-fast-iface-contacts --input "./model.pdb" --expand-ids > "./contacts.tsv"
+    
+    voronota-js-fast-iface-contacts --input "./model.pdb" --with-sas-areas --coarse-grained --og-pipeable | voronota query-contacts --summarize-by-first
+    
+    cat "./model.pdb" | voronota-js-fast-iface-contacts --input _stream --with-sas-areas --coarse-grained --og-pipeable | voronota query-contacts --summarize
+    
+    ls *.pdb | voronota-js-fast-iface-contacts --input _list --processors 8 --output-contacts-file "./output/-BASENAME-.tsv"
+
+EOF
+exit 1
+}
+
+function cat_stdin
+{
+	STDIN_SOURCE="$1"
+	if [ "$STDIN_SOURCE" == "_stream" ]
+	then
+		cat
+	else
+		cat "$STDIN_SOURCE"
+	fi
+}
+
+function get_input_basename
+{
+	INPUT_MAIN_BASENAME="$(basename $1)"
+	INPUT_STDIN_FILE="$2"
+	if [ "$INPUT_MAIN_BASENAME" == "_stream" ] || [ "$INPUT_MAIN_BASENAME" == "_list" ]
+	then
+		if [ "$INPUT_STDIN_FILE" != "_stream" ] 
+		then
+			basename "$INPUT_STDIN_FILE"
+			return 0
+		fi
+	fi
+	echo "$INPUT_MAIN_BASENAME"
+}
+
+readonly ZEROARG=$0
+ALLARGS=("$@")
+
+if [ -z "$1" ]
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd "$(dirname ${ZEROARG})"
+	export PATH="$(pwd):${PATH}"
+	cd - &> /dev/null
+fi
+
+export LC_ALL=C
+
+command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executable not in binaries path"; exit 1; }
+
+INFILE=""
+RESTRICT_INPUT="[]"
+SUBSELECT_CONTACTS="[]"
+OUTPUT_CONTACTS_FILE="_stdout"
+OUTPUT_BSITE_FILE=""
+OUTPUT_DRAWING_SCRIPT=""
+MAX_PROCESSORS="1"
+SBATCH_PARAMETERS=""
+STDIN_FILE="_stream"
+RUN_FASPR=""
+CUSTOM_RADII_FILE=""
+WITH_SAS_AREAS="false"
+COARSE_GRAINED="false"
+INPUT_IS_SCRIPT="false"
+AS_ASSEMBLY="false"
+USE_HBPLUS="false"
+EXPAND_IDS="false"
+OG_PIPEABLE="false"
+HELP_MODE="false"
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--restrict-input)
+		RESTRICT_INPUT="$OPTARG"
+		shift
+		;;
+	--subselect-contacts)
+		SUBSELECT_CONTACTS="$OPTARG"
+		shift
+		;;
+	--output-contacts-file)
+		OUTPUT_CONTACTS_FILE="$OPTARG"
+		shift
+		;;
+	--output-bsite-file)
+		OUTPUT_BSITE_FILE="$OPTARG"
+		shift
+		;;
+	--output-drawing-script)
+		OUTPUT_DRAWING_SCRIPT="$OPTARG"
+		shift
+		;;
+	--processors)
+		MAX_PROCESSORS="$OPTARG"
+		shift
+		;;
+	--sbatch-parameters)
+		SBATCH_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--stdin-file)
+		STDIN_FILE="$OPTARG"
+		shift
+		;;
+	--run-faspr)
+		RUN_FASPR="$OPTARG"
+		shift
+		;;
+	--custom-radii-file)
+		CUSTOM_RADII_FILE="$OPTARG"
+		shift
+		;;
+	--with-sas-areas)
+		WITH_SAS_AREAS="true"
+		;;
+	--coarse-grained)
+		COARSE_GRAINED="true"
+		;;
+	--input-is-script)
+		INPUT_IS_SCRIPT="true"
+		;;
+	--as-assembly)
+		AS_ASSEMBLY="true"
+		;;
+	--use-hbplus)
+		USE_HBPLUS="true"
+		;;
+	--expand-ids)
+		EXPAND_IDS="true"
+		;;
+	--og-pipeable)
+		OG_PIPEABLE="true"
+		;;
+	-h|--help)
+		HELP_MODE="true"
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$HELP_MODE" == "true" ]
+then
+	print_help_and_exit
+fi
+
+if [ -z "$INFILE" ]
+then
+	echo >&2 "Error: input file not provided"
+	exit 1
+fi
+
+if [ "$USE_HBPLUS" == "true" ]
+then
+	command -v hbplus &> /dev/null || { echo >&2 "Warning: 'hbplus' executable not in binaries path, thus no 'hb' tags will be assigned"; USE_HBPLUS="false"; }
+fi
+
+if [ "$EXPAND_IDS" == "true" ] && [ "$OG_PIPEABLE" == "true" ]
+then
+	echo >&2 "Error: '--expand-ids' and '--og-pipeable' cannot be enabled together"
+	exit 1
+fi
+
+if [ -n "$RUN_FASPR" ] && [ ! -s "$RUN_FASPR" ]
+then
+	echo >&2 "Error: FASPR binary executable file '$RUN_FASPR' does not exist"
+	exit 1
+fi
+
+if [ -n "$CUSTOM_RADII_FILE" ] && [ ! -s "$CUSTOM_RADII_FILE" ]
+then
+	echo >&2 "Error: custom file '$CUSTOM_RADII_FILE' does not exist"
+	exit 1
+fi
+
+if [[ $INFILE == "_scriptline_"* ]]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	echo "$INFILE" | sed 's/^_scriptline_//' | sed 's/_-_/ /g' \
+	> "$TMPLDIR/_extracted_script_line"
+	
+	if [ ! -s "$TMPLDIR/_extracted_script_line" ]
+	then
+		echo >&2 "Error: no input string line extracted"
+		exit 1
+	fi
+	
+	"$ZEROARG" "${ALLARGS[@]}" --input-is-script --input "$TMPLDIR/_extracted_script_line"
+	
+	exit 0
+fi
+
+if [ -z "$MAX_PROCESSORS" ] || [ "$MAX_PROCESSORS" -ne "$MAX_PROCESSORS" ] || [ "$MAX_PROCESSORS" -lt "1" ]
+then
+	echo >&2 "Error: invalid number of processors '$MAX_PROCESSORS', must be a positive number"
+	exit 1
+fi
+
+if [ "$INFILE" == "_list" ]
+then
+	if [[ "$OUTPUT_CONTACTS_FILE" != *"-BASENAME-"* ]]
+	then
+		echo >&2 "Error: invalid output contacts file path for multi-file processing, must contain '-BASENAME-'"
+		exit 1
+	fi
+fi
+
+if [ "$INFILE" == "_list" ] && [ -n "$OUTPUT_DRAWING_SCRIPT" ]
+then
+	if [[ "$OUTPUT_DRAWING_SCRIPT" != *"-BASENAME-"* ]]
+	then
+		echo >&2 "Error: invalid output drawing script file path for multi-file processing, must contain '-BASENAME-'"
+		exit 1
+	fi
+fi
+
+if [ "$INFILE" == "_list" ] && [ -n "$OUTPUT_BSITE_FILE" ]
+then
+	if [[ "$OUTPUT_BSITE_FILE" != *"-BASENAME-"* ]]
+	then
+		echo >&2 "Error: invalid output binding site file path for multi-file processing, must contain '-BASENAME-'"
+		exit 1
+	fi
+fi
+
+if [ "$INFILE" != "_list" ] && [ "$INFILE" != "_stream" ] && [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file '$INFILE' does not exist"
+	exit 1
+fi
+
+if [ "$STDIN_FILE" != "_stream" ] && [ ! -s "$STDIN_FILE" ]
+then
+	echo >&2 "Error: stdin replacement file '$STDIN_FILE' does not exist"
+	exit 1
+fi
+
+if [ "$INFILE" == "_stream" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	cat_stdin "$STDIN_FILE" > "$TMPLDIR/_stream"
+	
+	if [ ! -s "$TMPLDIR/_stream" ]
+	then
+		echo >&2 "Error: no stdin data"
+		exit 1
+	fi
+	
+	"$ZEROARG" "${ALLARGS[@]}" --input "$TMPLDIR/_stream"
+	
+	exit 0
+fi
+
+if [ -n "$SBATCH_PARAMETERS" ]
+then
+	command -v sbatch &> /dev/null || { echo >&2 "Error: 'sbatch' executable not in binaries path"; exit 1; }
+	command -v squeue &> /dev/null || { echo >&2 "Error: 'squeue' executable not in binaries path"; exit 1; }
+	
+	if [ "$INFILE" != "_list" ]
+	then
+		echo >&2 "Error: sbatch usage requested, but input is not '_list'"
+		exit 1
+	fi
+	
+	if [ "$MAX_PROCESSORS" -lt "2" ]
+	then
+		echo >&2 "Error: sbatch usage requested, but requested number of processors is less than 2"
+		exit 1
+	fi
+fi
+
+if [ "$INFILE" == "_list" ] && [ "$MAX_PROCESSORS" -gt "1" ]
+then
+	readonly TMPLDIR=$(mktemp -d)
+	trap "rm -r $TMPLDIR" EXIT
+	
+	cat_stdin "$STDIN_FILE" | egrep . | sort | uniq > "$TMPLDIR/input_list"
+	
+	if [ ! -s "$TMPLDIR/input_list" ]
+	then
+		echo >&2 "Error: no stdin data"
+		exit 1
+	fi
+	
+	NUM_OF_INPUTS="$(cat $TMPLDIR/input_list | wc -l)"
+	SIZE_OF_PORTION="$(echo "a=$NUM_OF_INPUTS; b=$MAX_PROCESSORS; if(a%b) a/b+1 else a/b" | bc)"
+	
+	if [ "$SIZE_OF_PORTION" -gt "19997" ]
+	then
+		SIZE_OF_PORTION="19997"
+	fi
+	
+	mkdir -p "$TMPLDIR/portions"
+	
+	split -l "$SIZE_OF_PORTION" "$TMPLDIR/input_list" "$TMPLDIR/portions/portion_"
+	
+	if [ -n "$SBATCH_PARAMETERS" ]
+	then
+		mkdir -p "$TMPLDIR/slurm_logs"
+		
+		find $TMPLDIR/portions/ -type f -not -empty \
+		| awk '{print "--stdin-file " $1}' \
+		| xargs -L 1 sbatch -o "$TMPLDIR/slurm_logs/slurmjob-%j.out" -e "$TMPLDIR/slurm_logs/slurmjob-%j.err" $SBATCH_PARAMETERS "$ZEROARG" "${ALLARGS[@]}" --sbatch-parameters '' --processors 1 --input _list \
+		| egrep '^Submitted batch job ' \
+		| awk '{print $4}' \
+		> "$TMPLDIR/slurm_job_ids"
+		
+		sleep 1
+		REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		while [ "$REMAINING_SLURM_JOBS" -gt "0" ]
+		do
+			sleep 5
+			REMAINING_SLURM_JOBS="$(squeue | grep -f "$TMPLDIR/slurm_job_ids" | wc -l)"
+		done
+		
+		find "$TMPLDIR/slurm_logs/" -type f -not -empty | xargs -L 1 cat >&2
+	else
+		find $TMPLDIR/portions/ -type f -not -empty \
+		| awk '{print "--stdin-file " $1}' \
+		| xargs -L 1 -P "$MAX_PROCESSORS" "$ZEROARG" "${ALLARGS[@]}" --processors 1 --input _list
+	fi
+	
+	exit 0
+fi
+
+{
+cat << EOF
+var common_params={}
+common_params.input_is_script='$INPUT_IS_SCRIPT';
+common_params.input_as_assembly='$AS_ASSEMBLY';
+common_params.restrict_input_atoms='$RESTRICT_INPUT';
+common_params.contacts_subselection='$SUBSELECT_CONTACTS';
+common_params.run_faspr='$RUN_FASPR';
+common_params.custom_radii_file='$CUSTOM_RADII_FILE';
+common_params.use_hbplus='$USE_HBPLUS';
+common_params.with_sas_areas='$WITH_SAS_AREAS';
+common_params.coarse_grained='$COARSE_GRAINED';
+common_params.expand_ids='$EXPAND_IDS';
+common_params.og_pipeable='$OG_PIPEABLE';
+common_params.output_contacts_file='$OUTPUT_CONTACTS_FILE';
+common_params.output_bsite_file='$OUTPUT_BSITE_FILE';
+common_params.output_drawing_script='$OUTPUT_DRAWING_SCRIPT';
+var input_info_array=[];
+EOF
+
+{
+if [ "$INFILE" == "_list" ]
+then
+	cat_stdin "$STDIN_FILE" | egrep . | sort | uniq
+else
+	echo "$INFILE"
+fi
+} | while read -r SUBINFILE
+do
+SUBINFILE_BASENAME="$(get_input_basename $SUBINFILE $STDIN_FILE)"
+cat << EOF
+input_info_array.push({"input_file": "$SUBINFILE", "input_file_name": "$SUBINFILE_BASENAME"});
+EOF
+done
+
+cat << 'EOF'
+prepare_object=function(input_file, title)
+{
+	if(input_file===undefined || input_file==="")
+	{
+		throw ("No input file");
+	}
+	
+	if(title===undefined || title==="")
+	{
+		throw ("No object title");
+	}
+	
+	voronota_delete_objects();
+	voronota_delete_virtual_files();
+	
+	if(common_params.input_is_script=="true")
+	{
+		voronota_source("-file", input_file);
+		voronota_assert_partial_success("Failed when running provided input script");
+	}
+	else
+	{
+		voronota_import("-file", input_file, "-as-assembly", common_params.input_as_assembly);
+		voronota_assert_partial_success("Failed to import file");
+	}
+	
+	voronota_list_objects();
+	voronota_assert_full_success("Failed to list objects");
+	var num_of_objects=voronota_last_output().results[0].output.objects.length;
+	var loaded_object_title=voronota_last_output().results[0].output.objects[num_of_objects-1].name;
+	
+	voronota_rename_object("-original", loaded_object_title, "-new", title);
+	voronota_assert_full_success("Failed to rename object");
+	
+	voronota_pick_objects("-names", title);
+	voronota_assert_full_success("Failed to pick new object");
+	
+	voronota_restrict_atoms("-use", common_params.restrict_input_atoms);
+	voronota_assert_full_success("Failed to restrict input atoms by the input query");
+	
+	if(common_params.run_faspr!="")
+	{
+		voronota_restrict_atoms("-use", "[-protein]");
+		voronota_assert_full_success("Failed to restrict input atoms to protein only");
+	
+		voronota_faspr("-lib-file", common_params.run_faspr);
+		voronota_assert_full_success("Failed to run FASPR");
+	}
+	
+	if(common_params.use_hbplus=="true")
+	{
+		voronota_run_hbplus("-pairs-file", "_virtual/hbonds_"+title);
+		voronota_assert_full_success("Failed to run hbplus");
+	}
+}
+
+use_hbplus_if_needed=function(title)
+{
+	if(common_params.use_hbplus=="true")
+	{
+		voronota_import_selection_of_contacts("-file", "_virtual/hbonds_"+title, "-name", "hbonds");
+		voronota_assert_full_success("Failed to import hbonds selection");
+		
+		voronota_set_adjunct_of_contacts("-use", "[]", "-name", "hbond", "-value", 0);
+		voronota_assert_full_success("Failed to set all contacts adjunct values");
+		
+		voronota_set_adjunct_of_contacts("-use", "[hbonds]", "-name", "hbond", "-value", 1);
+		voronota_assert_full_success("Failed to set selected contacts adjunct values");
+		
+		voronota_set_tag_of_contacts("-use", "[hbonds]", "-tag", "hb");
+		voronota_assert_full_success("Failed to tag selected contacts");
+	}
+}
+
+process_object=function(title, output_file, output_bsite_file, output_drawing_script_file)
+{
+	if(title===undefined || title==="")
+	{
+		throw ("No object title");
+	}
+	
+	if(output_file===undefined || output_file==="")
+	{
+		throw ("No output file");
+	}
+	
+	voronota_pick_objects("-names", title);
+	voronota_assert_full_success("Failed to pick object");
+	
+	if(common_params.with_sas_areas!=="true")
+	{
+		voronota_select_atoms_close_to_interchain_interface("-name", "actii");
+		voronota_assert_full_success("Failed to select interface atoms");
+		
+		voronota_restrict_atoms("-use", "[actii]");
+		voronota_assert_full_success("Failed to restrict input atoms to interface atoms");
+		
+		voronota_construct_contacts("-probe 1.4 -skip-sas -skip-same-chain -no-calculate-volumes -no-tag-peripherial");
+		voronota_assert_full_success("Failed to construct inter-chain contacts");
+		
+		use_hbplus_if_needed(title);
+		
+		voronota_select_contacts("-use", "([-inter-chain] and "+common_params.contacts_subselection+")", "-name", "final_contacts");
+		voronota_assert_full_success("Failed to select inter-chain contacts");
+	}
+	else
+	{
+		voronota_select_atoms_close_to_interchain_interface("-name", "actiicoreraw");
+		voronota_assert_full_success("Failed to select interface atoms");
+		
+		voronota_select_atoms("-use", "[actiicoreraw]", "-full-residues", "-name", "actiicore");
+		voronota_assert_full_success("Failed to select interface residues atoms");
+		
+		voronota_set_tag_of_atoms("-use", "[actiicore]", "-tag", "probifaceres");
+		voronota_assert_full_success("Failed to tag probable interface residues atoms");
+		
+		voronota_select_atoms("-use", "(not [actiicore])", "-name", "notactiicore");
+		
+		if(voronota_last_output().results_summary.full_success!==true)
+		{
+			voronota_select_atoms("-use", "[actiicore]", "-name", "actii");
+			voronota_assert_full_success("Failed to select interface zone atoms");
+		}
+		else
+		{
+			voronota_select_atoms_close_to_interchain_interface("-atoms-first", "[actiicore]", "-atoms-second", "[notactiicore]", "-name", "actiibuf");
+			voronota_assert_full_success("Failed to select interface residues buffer atoms");
+			
+			voronota_select_atoms("-use", "(([actiibuf]) and ([notactiicore]))", "-name", "actiirim");
+			voronota_assert_full_success("Failed to select interface residues zone rim atoms");
+			
+			voronota_select_atoms("-use", "(([actiirim]) or ([actiicore]))", "-name", "actii");
+			voronota_assert_full_success("Failed to select interface zone atoms");
+		}
+		
+		voronota_restrict_atoms("-use", "[actii]");
+		voronota_assert_full_success("Failed to restrict input atoms to interface zone atoms");
+		
+		voronota_construct_contacts("-probe 1.4 -skip-sas -skip-same-chain -no-calculate-volumes -no-tag-peripherial -sas-mask-tag probifaceres");
+		voronota_assert_full_success("Failed to construct inter-chain contacts and related SAS contacts");
+		
+		use_hbplus_if_needed(title);
+		
+		voronota_select_contacts("-use", "([-inter-chain] and "+common_params.contacts_subselection+")", "-name", "inter_chain_contacts");
+		voronota_assert_full_success("Failed to select inter-chain contacts");
+		
+		voronota_select_atoms("[-sel-of-contacts inter_chain_contacts]", "-full-residues", "-name", "iface_residues_atoms");
+		voronota_assert_full_success("Failed to select interface atoms");
+		
+		voronota_select_contacts("-use", "([inter_chain_contacts] or [-a1 [iface_residues_atoms] -solvent])", "-name", "final_contacts")
+		voronota_assert_full_success("Failed to select inter-chain contacts and related SAS contacts");
+	}
+	
+	var adjuncts_to_export=["area", "distance"];
+	
+	if(common_params.use_hbplus=="true")
+	{
+		adjuncts_to_export.push("hbond");
+	}
+	
+	if(output_file!=="_stdout")
+	{
+		shell('mkdir -p "$(dirname '+output_file+')"');
+	}
+	
+	voronota_export_adjuncts_of_contacts("-contacts-use", "[final_contacts]", "-inter-residue", common_params.coarse_grained, "-adjuncts", adjuncts_to_export, "-file", "_virtual/contacts_table", "-expand-ids", common_params.expand_ids, "-no-serial", common_params.expand_ids!=="true", "-sep", '\t');
+	voronota_assert_full_success("Failed to export contacts data");
+	
+	if(common_params.og_pipeable=="true")
+	{
+		fwrite(output_file, spipe(fread("_virtual/contacts_table"), 'tail -n +2 | awk \'{print $0 "\\t0"}\' | awk \'{print $1 "\\t" $2 "\\t" $3 "\\t" $4 "\\thb" $5 "\\t."}\' | sed "s|\\shb0|\\t.|" | sed "s|\\shb.|\\thb|"').stdout);
+	}
+	else
+	{
+		voronota_cat_files("_virtual/contacts_table", output_file);
+		voronota_assert_full_success("Failed to write output contacts file");
+	}
+	
+	if(!(output_bsite_file===undefined || output_bsite_file===""))
+	{
+		shell('mkdir -p "$(dirname '+output_bsite_file+')"');
+		
+		voronota_select_contacts("-use", "([-inter-chain] and "+common_params.contacts_subselection+")", "-name", "bsite_contacts");
+		voronota_assert_full_success("Failed to select bounding site contacts");
+		
+		voronota_set_adjunct_of_atoms_by_contact_areas("-use", "[bsite_contacts]", "-name", "bsite_area");
+		voronota_assert_full_success("Failed to summarize bounding site contact areas per atom");
+		
+		var bsite_adjuncts_to_export=["bsite_area"];
+		
+		if(common_params.use_hbplus=="true")
+		{
+			voronota_set_adjunct_of_atoms_by_contact_adjuncts("-use", "[bsite_contacts]", "-pooling-mode", "max", "-source-name", "hbond", "-destination-name", "bsite_hbond");
+			voronota_assert_full_success("Failed to summarize bounding site contact hbonds per atom");
+			
+			bsite_adjuncts_to_export.push("bsite_hbond");
+		}
+		
+		voronota_export_adjuncts_of_atoms("-use", "[-v bsite_area]", "-adjuncts", bsite_adjuncts_to_export, "-file", output_bsite_file, "-expand-ids", common_params.expand_ids, "-no-serial", common_params.expand_ids!=="true", "-sep", '\t');
+		voronota_assert_full_success("Failed to export bounding site data");
+	}
+	
+	if(!(output_drawing_script_file===undefined || output_drawing_script_file===""))
+	{
+		shell('mkdir -p "$(dirname '+output_drawing_script_file+')"');
+		
+		voronota_show_contacts('-use', '[final_contacts]');
+		voronota_assert_full_success("Failed to visualize contacts");
+		
+		voronota_spectrum_contacts('-use', '[final_contacts]', '-by', 'residue-ids', '-scheme', 'random');
+		voronota_assert_full_success("Failed to color contacts");
+		
+		voronota_export_contacts_as_pymol_cgo('-use', '[final_contacts]', '-file', output_drawing_script_file, '-name', 'interface_contacts');
+		voronota_assert_full_success("Failed to export contacts graphics");
+	}
+}
+
+if(input_info_array.length<1)
+{
+	throw ("No input file paths");
+}
+
+if(common_params.input_is_script===undefined || common_params.input_is_script==="")
+{
+	common_params.input_is_script="false";
+}
+
+if(common_params.input_as_assembly===undefined || common_params.input_as_assembly==="")
+{
+	common_params.input_as_assembly="false";
+}
+
+if(common_params.restrict_input_atoms===undefined || common_params.restrict_input_atoms==="")
+{
+	common_params.restrict_input_atoms='[]';
+}
+
+if(common_params.contacts_subselection===undefined || common_params.contacts_subselection==="")
+{
+	common_params.contacts_subselection='[]';
+}
+
+if(common_params.run_faspr===undefined)
+{
+	common_params.run_faspr="";
+}
+
+if(common_params.custom_radii_file===undefined)
+{
+	common_params.custom_radii_file="";
+}
+
+if(common_params.output_contacts_file===undefined || common_params.output_contacts_file==="")
+{
+	common_params.output_contacts_file="_stdout";
+}
+
+voronota_setup_defaults("-no-load-voromqa-potentials", "-no-load-more-atom-types", "-no-load-mock-voromqa-potential", "-include-heteroatoms", "-radii-file", common_params.custom_radii_file);
+voronota_assert_full_success("Failed to setup defaults");
+
+for(var i=0;i<input_info_array.length;i++)
+{
+	var subinput=input_info_array[i];
+	
+	try
+	{
+		prepare_object(subinput.input_file, "model");
+		process_object("model", common_params.output_contacts_file.replace("-BASENAME-", subinput.input_file_name), common_params.output_bsite_file.replace("-BASENAME-", subinput.input_file_name), common_params.output_drawing_script.replace("-BASENAME-", subinput.input_file_name));
+	}
+	catch(error)
+	{
+		log("Failed with '"+subinput.input_file_name+"': "+error);
+	}
+	
+	voronota_delete_objects("-names", "model");
+}
+
+EOF
+
+} \
+| voronota-js --no-setup-defaults
+

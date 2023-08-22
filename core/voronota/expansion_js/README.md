@@ -14,6 +14,7 @@ Currently, the Voronota-JS package contains several executables:
  * "voronota-js-fast-iface-voromqa" - wrapper to a voronota-js program for the very fast computation of the inter-chain interface VoroMQA energy.
  * "voronota-js-fast-iface-cadscore" - wrapper to a voronota-js program for the very fast computation of the inter-chain interface CAD-score.
  * "voronota-js-fast-iface-cadscore-matrix" - wrapper to a voronota-js program for the very fast computation of the inter-chain interface CAD-score matrix.
+ * "voronota-js-fast-iface-contacts" - wrapper to a voronota-js program for the very fast computation of the inter-chain interface contact areas.
  * "voronota-js-fast-iface-data-graph" - wrapper to a voronota-js program for the computation of interface graphs used by the VoroIF-GNN method.
  * "voronota-js-voroif-gnn" - wrapper to a voronota-js program and GNN inference scripts that run the VoroIF-GNN method for scoring models of protein-protein complexes (developed for CASP15).
  * "voronota-js-ligand-cadscore" - wrapper to a voronota-js program for the computation of protein-ligand variation of CAD-score (developed to analyze protein-ligand models from CASP15).
@@ -26,6 +27,7 @@ Voronota-JS relies on several externally developed software projects (big thanks
 * PStreams - [https://github.com/jwakely/pstreams](https://github.com/jwakely/pstreams)
 * TM-align - [https://zhanggroup.org/TM-align/](https://zhanggroup.org/TM-align/)
 * FASPR - [https://zhanggroup.org/FASPR/](https://zhanggroup.org/FASPR/)
+* QCP - [https://theobald.brandeis.edu/qcp/](https://theobald.brandeis.edu/qcp/)
 * linenoise - [https://github.com/antirez/linenoise](https://github.com/antirez/linenoise)
 * PicoSHA2 - [https://github.com/okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
 * frugally-deep - [https://github.com/Dobiasd/frugally-deep](https://github.com/Dobiasd/frugally-deep)
@@ -76,7 +78,7 @@ the sources in "src" directory using GNU C++ compiler:
 
     g++ -std=c++14 -I"./src/dependencies" -O3 -o "./voronota-js" $(find ./src/ -name '*.cpp')
 
-    
+
 # More about protein-ligand variation of CAD-score
 
 The script 'voronota-js-ligand-cadscore' for the protein-ligand variation of CAD-score
@@ -355,6 +357,8 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         --run-faspr               string     path to FASPR binary to rebuild side-chains
         --as-assembly                        flag to treat input files as biological assemblies
         --remap-chains                       flag to calculate and use optimal chains remapping
+        --remap-chains-logging               flag to print log of chains remapping to stderr
+        --ignore-residue-names               flag to ignore residue names in residue identifiers
         --test-common-ids                    flag to fail quickly if there are no common residues
         --crude                              flag to enable very crude faster mode
         --help | -h                          flag to display help message and exit
@@ -385,6 +389,7 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         --stdin-file              string     input file path to replace stdin
         --as-assembly                        flag to treat input files as biological assemblies
         --remap-chains                       flag to calculate and use optimal chains remapping
+        --ignore-residue-names               flag to ignore residue names in residue identifiers
         --crude                              flag to enable very crude faster mode
         --help | -h                          flag to display help message and exit
     
@@ -394,6 +399,52 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
     Examples:
     
         ls *.pdb | voronota-js-fast-iface-cadscore-matrix | column -t
+        
+        find ./complexes/ -type f -name '*.pdb' | voronota-js-fast-iface-cadscore-matrix > "full_matrix.txt"
+        
+        (find ./group1/ -type f | awk '{print $1 " a"}' ; find ./group2/ -type f | awk '{print $1 " b"}') | voronota-js-fast-iface-cadscore-matrix > "itergroup_matrix.txt"
+    
+
+## Fast inter-chain interface contacts
+
+'voronota-js-fast-iface-contacts' script rapidly computes contacts of inter-chain interface in a molecular complex.
+
+### Script interface
+
+    
+    Options:
+        --input                   string  *  input file path or '_list' to read file paths from stdin
+        --restrict-input          string     query to restrict input atoms, default is '[]'
+        --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+        --output-contacts-file    string     output table file path, default is '_stdout' to print to stdout
+        --output-bsite-file       string     output binding site table file path, default is ''
+        --output-drawing-script   string     output PyMol drawing script file path, default is ''
+        --processors              number     maximum number of processors to run in parallel, default is 1
+        --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+        --stdin-file              string     input file path to replace stdin
+        --run-faspr               string     path to FASPR binary to rebuild side-chains
+        --custom-radii-file       string     path to file with van der Waals radii assignment rules
+        --with-sas-areas                     flag to also compute and output solvent-accessible areas of interface residue atoms
+        --coarse-grained                     flag to output inter-residue contacts
+        --input-is-script                    flag to treat input file as vs script
+        --as-assembly                        flag to treat input file as biological assembly
+        --use-hbplus                         flag to run 'hbplus' to tag H-bonds
+        --expand-ids                         flag to output expanded IDs
+        --og-pipeable                        flag to format output to be pipeable to 'voronota query-contacts'
+        --help | -h                          flag to display help message and exit
+    
+    Standard output:
+        tab-separated table of contacts
+        
+    Examples:
+    
+        voronota-js-fast-iface-contacts --input "./model.pdb" --expand-ids > "./contacts.tsv"
+        
+        voronota-js-fast-iface-contacts --input "./model.pdb" --with-sas-areas --coarse-grained --og-pipeable | voronota query-contacts --summarize-by-first
+        
+        cat "./model.pdb" | voronota-js-fast-iface-contacts --input _stream --with-sas-areas --coarse-grained --og-pipeable | voronota query-contacts --summarize
+        
+        ls *.pdb | voronota-js-fast-iface-contacts --input _list --processors 8 --output-contacts-file "./output/-BASENAME-.tsv"
     
 
 ## Computation of inter-chain interface graphs
@@ -511,6 +562,7 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         --details-dir                 string     directory to output lists of contacts used for scoring
         --drawing-dir                 string     directory to output files to visualize with pymol
         --and-swap                    string     flag to compute everything after swapping target and model, default is 'false'
+        --ignore-ligand-headers       string     flag to ignore title header in ligand files
         --help | -h                              display help message and exit
         
     Standard output:

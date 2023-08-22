@@ -4,7 +4,11 @@
 #include "../../../expansion_js/src/duktaper/script_execution_manager.h"
 
 #include "congregations_of_drawers_for_data_managers.h"
-#include "console.h"
+#include "console/console.h"
+
+#ifdef FOR_WEB
+#include "emscripten_utilities.h"
+#endif
 
 #include "operators/animate.h"
 #include "operators/antialiasing.h"
@@ -29,6 +33,7 @@
 #include "operators/export_session.h"
 #include "operators/import_session.h"
 #include "operators/hint_render_area_size.h"
+#include "operators/orient.h"
 
 namespace voronota
 {
@@ -59,7 +64,7 @@ public:
 		set_command_for_extra_actions("ortho", operators::Ortho());
 		set_command_for_extra_actions("perspective", operators::Perspective());
 		set_command_for_extra_actions("rotate", operators::Rotate());
-		set_command_for_extra_actions("screenshot", operators::Screenshot());
+		set_command_for_extra_actions("snap", operators::Screenshot());
 		set_command_for_extra_actions("setup-rendering", operators::SetupRendering());
 		set_command_for_extra_actions("sleep", operators::Sleep());
 		set_command_for_extra_actions("configure-gui-push", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_PUSH));
@@ -77,8 +82,10 @@ public:
 		set_command_for_extra_actions("configure-gui-json-write-level-6", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_JSON_WRITING_LEVEL).set_value_of_json_writing_level(6));
 		set_command_for_extra_actions("configure-gui-disable-sequence-view", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_DISABLE_SEQUENCE_VIEW));
 		set_command_for_extra_actions("configure-gui-enable-sequence-view", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_ENABLE_SEQUENCE_VIEW));
+		set_command_for_extra_actions("configure-gui-toggle-sequence-view", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_TOGGLE_SEQUENCE_VIEW));
 		set_command_for_extra_actions("configure-gui-disable-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_DISABLE_CONSOLE));
 		set_command_for_extra_actions("configure-gui-enable-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_ENABLE_CONSOLE));
+		set_command_for_extra_actions("configure-gui-toggle-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_TOGGLE_CONSOLE));
 		set_command_for_extra_actions("set-initial-atom-representation-to-cartoon", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_INITIAL_MAIN_REPRESENTATION).set_value_of_initial_main_represenation(GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_CARTOON));
 		set_command_for_extra_actions("set-initial-atom-representation-to-trace", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_INITIAL_MAIN_REPRESENTATION).set_value_of_initial_main_represenation(GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_TRACE));
 		set_command_for_extra_actions("clear", scripting::operators::Mock());
@@ -89,6 +96,8 @@ public:
 		set_command_for_extra_actions("animate-loop-picked-objects", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS));
 		set_command_for_extra_actions("animate-spin-left", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_LEFT));
 		set_command_for_extra_actions("animate-spin-right", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT));
+		set_command_for_extra_actions("animate-spin-on-z-left", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT));
+		set_command_for_extra_actions("animate-spin-on-z-right", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_RIGHT));
 		set_command_for_extra_actions("export-view", operators::ExportView());
 		set_command_for_extra_actions("import-view", operators::ImportView());
 		set_command_for_extra_actions("hint-render-area-size", operators::HintRenderAreaSize());
@@ -99,6 +108,7 @@ public:
 		set_command_for_congregation_of_data_managers("import-downloaded", operators::ImportDownloaded());
 		set_command_for_congregation_of_data_managers("export-session", operators::ExportSession());
 		set_command_for_congregation_of_data_managers("import-session", operators::ImportSession());
+		set_command_for_congregation_of_data_managers("orient", operators::Orient());
 
 #ifdef FOR_WEB
 		unset_command("exit");
@@ -274,6 +284,14 @@ public:
 				{
 					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), -0.01);
 				}
+				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT)
+				{
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), 0.01);
+				}
+				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_RIGHT)
+				{
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), -0.01);
+				}
 				animation_timer.reset();
 			}
 		}
@@ -391,9 +409,17 @@ protected:
 
 		insert_additional_script_if_requested(cr, congregation_of_data_managers);
 
+		initiate_files_forwarding_if_requested(cr);
+
 		if(ci.changed())
 		{
 			update_console_object_states();
+		}
+
+		if(ci.changed_objects_picks())
+		{
+			console::Console::instance().marking_info().atoms_marking_updated=true;
+			console::Console::instance().marking_info().contacts_marking_updated=true;
 		}
 	}
 
@@ -414,10 +440,30 @@ protected:
 				need_to_refresh_frame=true;
 			}
 
+			if(ci.changed_atoms_display_states_marking())
+			{
+				console::Console::instance().marking_info().atoms_marking_updated=true;
+			}
+
+			if(ci.changed_contacts_display_states_marking())
+			{
+				console::Console::instance().marking_info().contacts_marking_updated=true;
+			}
+
 			if(ci.changed_atoms_display_states())
 			{
 				update_console_object_sequence_info(data_manager);
 			}
+
+			if(ci.changed_contacts())
+			{
+				update_console_object_contacts_info(data_manager);
+			}
+		}
+
+		if(data_manager.selection_manager().change_indicator().changed())
+		{
+			update_console_named_selections_info(data_manager, data_manager.selection_manager().change_indicator().changed_atoms_selections(), data_manager.selection_manager().change_indicator().changed_contacts_selections());
 		}
 
 		if(zoom_if_requested(cr))
@@ -431,11 +477,42 @@ protected:
 		}
 
 		insert_additional_script_if_requested(cr, data_manager);
+
+		initiate_files_forwarding_if_requested(cr);
+	}
+
+	void on_after_command_for_extra_actions(const GenericCommandRecord& cr)
+	{
+		scripting::ScriptExecutionManagerWithVariantOutput::on_after_command_for_extra_actions(cr);
+
+		initiate_files_forwarding_if_requested(cr);
 	}
 
 	void on_after_script_with_output(const scripting::VariantObject&)
 	{
-		Console::instance().add_output_separator();
+		if(console::Console::instance().marking_info().atoms_marking_updated || console::Console::instance().marking_info().contacts_marking_updated)
+		{
+			scripting::CongregationOfDataManagers::ObjectQuery objects_query;
+			objects_query.picked=true;
+			const std::vector<scripting::DataManager*> data_managers=congregation_of_data_managers().get_objects(objects_query);
+			for(std::size_t i=0;i<data_managers.size();i++)
+			{
+				scripting::DataManager* data_manager=data_managers[i];
+				if(data_manager!=0)
+				{
+					if(console::Console::instance().marking_info().atoms_marking_updated && !console::Console::instance().marking_info().atoms_marking_present && data_manager->is_any_atom_marked())
+					{
+						console::Console::instance().marking_info().atoms_marking_present=true;
+					}
+					if(console::Console::instance().marking_info().contacts_marking_updated && !console::Console::instance().marking_info().contacts_marking_present && data_manager->is_any_contact_marked())
+					{
+						console::Console::instance().marking_info().contacts_marking_present=true;
+					}
+				}
+			}
+		}
+
+		console::Console::instance().text_interface_info().add_output_separator();
 		scripting::JSONWriter::Configuration json_writing_configuration(GUIConfiguration::instance().json_writing_level);
 		json_writing_configuration.value_string_length_limit=5000;
 		if(last_output().objects_arrays().count("results")>0)
@@ -449,19 +526,19 @@ protected:
 					const std::string command_name=result.value("command_name").value_as_string();
 					if(command_name=="clear")
 					{
-						Console::instance().clear_outputs();
+						console::Console::instance().text_interface_info().clear_outputs();
 					}
 					else if(command_name=="clear-last")
 					{
-						Console::instance().clear_last_output();
+						console::Console::instance().text_interface_info().clear_last_output();
 					}
 					else if(command_name=="history")
 					{
-						Console::instance().add_history_output(20);
+						console::Console::instance().text_interface_info().add_history_output(20);
 					}
 					else if(command_name=="history-all")
 					{
-						Console::instance().add_history_output(0);
+						console::Console::instance().text_interface_info().add_history_output(0);
 					}
 					else
 					{
@@ -470,23 +547,23 @@ protected:
 						result.erase("success");
 						if(success)
 						{
-							Console::instance().add_output(scripting::JSONWriter::write(json_writing_configuration, result), 0.5f, 1.0f, 1.0f);
+							console::Console::instance().text_interface_info().add_output(scripting::JSONWriter::write(json_writing_configuration, result), 0.5f, 1.0f, 1.0f);
 						}
 						else
 						{
-							Console::instance().add_output(scripting::JSONWriter::write(json_writing_configuration, result), 1.0f, 0.5f, 0.5f);
+							console::Console::instance().text_interface_info().add_output(scripting::JSONWriter::write(json_writing_configuration, result), 1.0f, 0.5f, 0.5f);
 						}
 					}
 				}
 				else
 				{
-					Console::instance().add_output(scripting::JSONWriter::write(json_writing_configuration, results[i]), 1.0f, 1.0f, 0.0f);
+					console::Console::instance().text_interface_info().add_output(scripting::JSONWriter::write(json_writing_configuration, results[i]), 1.0f, 1.0f, 0.0f);
 				}
 			}
 		}
 		else
 		{
-			Console::instance().add_output(scripting::JSONWriter::write(json_writing_configuration, last_output()), 1.0f, 1.0f, 1.0f);
+			console::Console::instance().text_interface_info().add_output(scripting::JSONWriter::write(json_writing_configuration, last_output()), 1.0f, 1.0f, 1.0f);
 		}
 	}
 
@@ -671,8 +748,29 @@ private:
 		}
 	}
 
-	template<typename CommandRecord>
-	bool zoom_if_requested(const CommandRecord& cr)
+	void initiate_files_forwarding_if_requested(const GenericCommandRecord& cr)
+	{
+#ifdef FOR_WEB
+		if(cr.successful)
+		{
+			std::map< std::string, std::vector<std::string> >::const_iterator it=cr.heterostorage.forwarding_strings.find("download");
+			if(it!=cr.heterostorage.forwarding_strings.end())
+			{
+				const std::vector<std::string>& filenames=it->second;
+				for(std::size_t i=0;i<filenames.size();i++)
+				{
+					const std::string& filename=filenames[i];
+					if(!filename.empty() && filename[0]!='_')
+					{
+						EnscriptenUtilities::execute_javascript(std::string("voronota_viewer_download_file('")+filename+"');");
+					}
+				}
+			}
+		}
+#endif
+	}
+
+	bool zoom_if_requested(const GenericCommandRecord& cr)
 	{
 		if(cr.successful && cr.heterostorage.summaries_of_atoms.count("zoomed")==1)
 		{
@@ -735,12 +833,12 @@ private:
 			reference[names[i]]=output.str();
 		}
 
-		Console::instance().set_documentation(reference);
+		console::Console::instance().documentation_info().documentation=reference;
 	}
 
 	void update_console_object_states()
 	{
-		std::vector<Console::ObjectsInfo::ObjectState> object_states;
+		std::vector<console::ObjectsInfo::ObjectState> object_states;
 		const std::vector<scripting::DataManager*> data_managers=congregation_of_data_managers().get_objects();
 		object_states.reserve(data_managers.size());
 		for(std::size_t i=0;i<data_managers.size();i++)
@@ -748,24 +846,36 @@ private:
 			const scripting::CongregationOfDataManagers::ObjectAttributes object_attributes=congregation_of_data_managers().get_object_attributes(data_managers[i]);
 			if(object_attributes.valid)
 			{
-				Console::ObjectsInfo::ObjectState object_state;
+				console::ObjectsInfo::ObjectState object_state;
 				object_state.name=object_attributes.name;
 				object_state.picked=object_attributes.picked;
 				object_state.visible=object_attributes.visible;
 				object_states.push_back(object_state);
 			}
 		}
-		Console::instance().objects_info().set_object_states(object_states, congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities());
+		console::Console::instance().objects_info().set_object_states(object_states, congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities());
 		for(std::size_t i=0;i<data_managers.size();i++)
 		{
 			const scripting::CongregationOfDataManagers::ObjectAttributes object_attributes=congregation_of_data_managers().get_object_attributes(data_managers[i]);
 			if(object_attributes.valid)
 			{
-				if(data_managers[i]->change_indicator().changed_atoms_display_states()
-						|| (!congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities() || !Console::instance().objects_info().object_has_details(object_attributes.name)))
+				if(data_managers[i]->change_indicator().changed_atoms_display_states() || (!congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities() || !console::Console::instance().objects_info().object_has_details(object_attributes.name)))
 				{
 					update_console_object_sequence_info(*data_managers[i]);
 				}
+
+				if(data_managers[i]->change_indicator().changed_contacts() || (!congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities() || !console::Console::instance().objects_info().object_has_details(object_attributes.name)))
+				{
+					update_console_object_contacts_info(*data_managers[i]);
+				}
+			}
+		}
+		if(!congregation_of_data_managers().change_indicator().only_changed_objects_picks_or_visibilities())
+		{
+			console::Console::instance().named_selections_info().reset();
+			for(std::size_t i=0;i<data_managers.size();i++)
+			{
+				update_console_named_selections_info(*data_managers[i], true, true);
 			}
 		}
 	}
@@ -776,17 +886,17 @@ private:
 		if(object_attributes.valid)
 		{
 			const common::ConstructionOfPrimaryStructure::BundleOfPrimaryStructure& bops=data_manager.primary_structure_info();
-			Console::ObjectsInfo::ObjectSequenceInfo sequence_info;
+			console::ObjectsInfo::ObjectSequenceInfo sequence_info;
 			sequence_info.chains.reserve(bops.chains.size());
 			for(std::size_t i=0;i<bops.chains.size();i++)
 			{
-				Console::ObjectsInfo::ObjectSequenceInfo::ChainInfo chain;
+				console::ObjectsInfo::ObjectSequenceInfo::ChainInfo chain;
 				chain.name=bops.chains[i].name;
 				chain.residues.reserve(bops.chains[i].residue_ids.size());
 				for(std::size_t j=0;j<bops.chains[i].residue_ids.size();j++)
 				{
 					const std::size_t residue_id=bops.chains[i].residue_ids[j];
-					Console::ObjectsInfo::ObjectSequenceInfo::ResidueInfo residue;
+					console::ObjectsInfo::ObjectSequenceInfo::ResidueInfo residue;
 					residue.name=bops.residues[residue_id].short_name;
 					if(residue.name.empty())
 					{
@@ -816,7 +926,7 @@ private:
 					std::size_t j=0;
 					while(j<chain.residues.size())
 					{
-						Console::ObjectsInfo::ObjectSequenceInfo::ResidueInfo& residue=chain.residues[j];
+						console::ObjectsInfo::ObjectSequenceInfo::ResidueInfo& residue=chain.residues[j];
 						if(residue.name.size()>1)
 						{
 							residue.num_label=std::to_string(residue.num);
@@ -853,7 +963,36 @@ private:
 				}
 				sequence_info.chains.push_back(chain);
 			}
-			Console::instance().objects_info().set_object_sequence_info(object_attributes.name, sequence_info);
+			console::Console::instance().objects_info().set_object_sequence_info(object_attributes.name, sequence_info);
+		}
+	}
+
+	void update_console_object_contacts_info(scripting::DataManager& data_manager)
+	{
+		const scripting::CongregationOfDataManagers::ObjectAttributes object_attributes=congregation_of_data_managers().get_object_attributes(&data_manager);
+		if(object_attributes.valid)
+		{
+			console::Console::instance().objects_info().set_object_contacts_status(object_attributes.name, !data_manager.contacts().empty());
+		}
+	}
+
+	void update_console_named_selections_info(scripting::DataManager& data_manager, const bool for_atoms, const bool for_contacts)
+	{
+		if(!(for_atoms || for_contacts))
+		{
+			return;
+		}
+		const scripting::CongregationOfDataManagers::ObjectAttributes object_attributes=congregation_of_data_managers().get_object_attributes(&data_manager);
+		if(object_attributes.valid)
+		{
+			if(for_atoms)
+			{
+				console::Console::instance().named_selections_info().atoms_mapping_of_names.set_mapping(object_attributes.name, data_manager.selection_manager().get_names_of_atoms_selections_excluding_underscored());
+			}
+			if(for_contacts)
+			{
+				console::Console::instance().named_selections_info().contacts_mapping_of_names.set_mapping(object_attributes.name, data_manager.selection_manager().get_names_of_contacts_selections_excluding_underscored());
+			}
 		}
 	}
 

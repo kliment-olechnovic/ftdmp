@@ -18,9 +18,13 @@
 #include "operators/music_background.h"
 #include "operators/nnport_predict.h"
 #include "operators/plot_contacts_map.h"
+#include "operators/qcprot.h"
 #include "operators/run_bff.h"
+#include "operators/run_hbplus.h"
 #include "operators/run_nolb.h"
+#include "operators/set_adjuncts_of_atoms_by_pca.h"
 #include "operators/setup_defaults.h"
+#include "operators/summarize_two_state_motion.h"
 #include "operators/tmalign_many.h"
 #include "operators/tmalign.h"
 #include "operators/voromqa_dark_global.h"
@@ -50,6 +54,8 @@ public:
 		set_command_for_data_manager("faspr", operators::FASPR(), true);
 		set_command_for_data_manager("plot-contacts-map", operators::PlotContactsMap(), true);
 		set_command_for_data_manager("run-bff", operators::RunBFF(), true);
+		set_command_for_data_manager("run-hbplus", operators::RunHBPlus(), true);
+		set_command_for_data_manager("set-adjuncts-of-atoms-by-pca", operators::SetAdjunctsOfAtomsByPCA(), true);
 		set_command_for_data_manager("voromqa-dark-global", operators::VoroMQADarkGlobal(), true);
 		set_command_for_data_manager("voromqa-dark-local", operators::VoroMQADarkLocal(), true);
 		set_command_for_data_manager("voromqa-dark-split", operators::VoroMQADarkSplit(), true);
@@ -60,7 +66,9 @@ public:
 		set_command_for_congregation_of_data_managers("fetch-afdb", operators::FetchAFDB(RemoteImportDownloaderSimple::instance()));
 		set_command_for_congregation_of_data_managers("import-cod-cif", operators::ImportCODCIF());
 		set_command_for_congregation_of_data_managers("import-url", operators::ImportUrl(RemoteImportDownloaderSimple::instance()));
+		set_command_for_congregation_of_data_managers("qcprot", operators::QCProt());
 		set_command_for_congregation_of_data_managers("run-nolb", operators::RunNolb());
+		set_command_for_congregation_of_data_managers("summarize-two-state-motion", operators::SummarizeTwoStateMotion());
 		set_command_for_congregation_of_data_managers("tmalign-many", operators::TMalignMany());
 		set_command_for_congregation_of_data_managers("tmalign", operators::TMalign());
 	}

@@ -15,6 +15,7 @@ Options:
     --stdin-file              string     input file path to replace stdin
     --as-assembly                        flag to treat input files as biological assemblies
     --remap-chains                       flag to calculate and use optimal chains remapping
+    --ignore-residue-names               flag to ignore residue names in residue identifiers
     --crude                              flag to enable very crude faster mode
     --help | -h                          flag to display help message and exit
 
@@ -24,6 +25,10 @@ Standard output:
 Examples:
 
     ls *.pdb | voronota-js-fast-iface-cadscore-matrix | column -t
+    
+    find ./complexes/ -type f -name '*.pdb' | voronota-js-fast-iface-cadscore-matrix > "full_matrix.txt"
+    
+    (find ./group1/ -type f | awk '{print $1 " a"}' ; find ./group2/ -type f | awk '{print $1 " b"}') | voronota-js-fast-iface-cadscore-matrix > "itergroup_matrix.txt"
 
 EOF
 exit 1
@@ -63,6 +68,7 @@ STDIN_FILE="_stream"
 MODEL_INPUT_IS_SCRIPT="false"
 AS_ASSEMBLY="false"
 REMAP_CHAINS="false"
+IGNORE_RESIDUE_NAMES="false"
 CRUDE_MODE="false"
 HELP_MODE="false"
 
@@ -105,6 +111,9 @@ do
 	--remap-chains)
 		REMAP_CHAINS="true"
 		;;
+	--ignore-residue-names)
+		IGNORE_RESIDUE_NAMES="true"
+		;;	
 	--crude)
 		CRUDE_MODE="true"
 		;;
@@ -154,35 +163,69 @@ then
 		exit 1
 	fi
 	
-	NUM_OF_SPLITS="$(echo $MAX_PROCESSORS | awk '{v=(1+(sqrt(1+8*$1)/2)); print int(v);}')"
-	NUM_OF_INPUTS="$(cat $TMPLDIR/input_list | wc -l)"
-	SIZE_OF_PORTION="$(echo "a=$NUM_OF_INPUTS; b=$NUM_OF_SPLITS; if(a%b) a/b+1 else a/b" | bc)"
-	
-	if [ "$SIZE_OF_PORTION" -gt "19997" ]
-	then
-		SIZE_OF_PORTION="19997"
-	fi
-	
 	mkdir -p "$TMPLDIR/portions"
-	
-	split -l "$SIZE_OF_PORTION" "$TMPLDIR/input_list" "$TMPLDIR/portions/portion_"
-	
 	mkdir -p "$TMPLDIR/portions_pairs"
 	
-	find $TMPLDIR/portions/ -type f -not -empty | sort | while read -r PORTIONFILE1
-	do
-		cat "$PORTIONFILE1" | awk '{print $1 " self"}' > "$TMPLDIR/portions_pairs/$(basename $PORTIONFILE1)_$(basename $PORTIONFILE1)"
-		find $TMPLDIR/portions/ -type f -not -empty | sort | while read -r PORTIONFILE2
+	NUM_OF_INPUT_GROUPS="$(cat $TMPLDIR/input_list | awk '{print $2}' | sort | uniq | egrep . | wc -l)"
+	
+	if [ "$NUM_OF_INPUT_GROUPS" == "0" ]
+	then
+		NUM_OF_SPLITS="$(echo $MAX_PROCESSORS | awk '{v=(1+(sqrt(1+8*$1)/2)); print int(v);}')"
+		
+		NUM_OF_INPUTS="$(cat $TMPLDIR/input_list | wc -l)"
+		
+		SIZE_OF_PORTION="$(echo "a=$NUM_OF_INPUTS; b=$NUM_OF_SPLITS; if(a%b) a/b+1 else a/b" | bc)"
+		
+		if [ "$SIZE_OF_PORTION" -gt "19997" ]
+		then
+			SIZE_OF_PORTION="19997"
+		fi
+		
+		split -l "$SIZE_OF_PORTION" "$TMPLDIR/input_list" "$TMPLDIR/portions/portion_"
+		
+		find $TMPLDIR/portions/ -type f -not -empty | sort | while read -r PORTIONFILE1
 		do
-			if [[ "$PORTIONFILE1" < "$PORTIONFILE2" ]]
-			then
-				{
-					cat "$PORTIONFILE1" | awk '{print $1 " a"}'
-					cat "$PORTIONFILE2" | awk '{print $1 " b"}'
-				} > "$TMPLDIR/portions_pairs/$(basename $PORTIONFILE1)_$(basename $PORTIONFILE2)"
-			fi
+			cat "$PORTIONFILE1" | awk '{print $1 " self"}' > "$TMPLDIR/portions_pairs/$(basename $PORTIONFILE1)_$(basename $PORTIONFILE1)"
+			find $TMPLDIR/portions/ -type f -not -empty | sort | while read -r PORTIONFILE2
+			do
+				if [[ "$PORTIONFILE1" < "$PORTIONFILE2" ]]
+				then
+					{
+						cat "$PORTIONFILE1" | awk '{print $1 " a"}'
+						cat "$PORTIONFILE2" | awk '{print $1 " b"}'
+					} > "$TMPLDIR/portions_pairs/$(basename $PORTIONFILE1)_$(basename $PORTIONFILE2)"
+				fi
+			done
 		done
-	done
+	else
+		cat "$TMPLDIR/input_list" | awk '{print $1 " _" $2 "_"}' > "$TMPLDIR/input_list_grouped"
+		mv "$TMPLDIR/input_list_grouped" "$TMPLDIR/input_list"
+		
+		SMALLEST_GROUP="$(cat $TMPLDIR/input_list | awk '{print $2}' | sort | uniq -c | sort | head -1 | awk '{print $2}')"
+		cat $TMPLDIR/input_list | awk -v sgroup="$SMALLEST_GROUP" '{if($2==sgroup){print $0}}' > $TMPLDIR/input_list_a
+		cat $TMPLDIR/input_list | awk -v sgroup="$SMALLEST_GROUP" '{if($2!=sgroup){print $0}}' > $TMPLDIR/input_list_b
+		
+		NUM_OF_SPLITS="$MAX_PROCESSORS"
+		
+		NUM_OF_INPUTS="$(cat $TMPLDIR/input_list_b | wc -l)"
+		
+		SIZE_OF_PORTION="$(echo "a=$NUM_OF_INPUTS; b=$NUM_OF_SPLITS; if(a%b) a/b+1 else a/b" | bc)"
+		
+		if [ "$SIZE_OF_PORTION" -gt "19997" ]
+		then
+			SIZE_OF_PORTION="19997"
+		fi
+		
+		split -l "$SIZE_OF_PORTION" "$TMPLDIR/input_list_b" "$TMPLDIR/portions/portion_"
+		
+		find $TMPLDIR/portions/ -type f -not -empty | sort | while read -r PORTIONFILE
+		do
+			{
+				cat "$TMPLDIR/input_list_a"
+				cat "$PORTIONFILE"
+			} > "$TMPLDIR/portions_pairs/grouped_$(basename $PORTIONFILE)"
+		done
+	fi
 	
 	mkdir -p "$TMPLDIR/children_tables"
 	
@@ -216,7 +259,7 @@ then
 	| sort \
 	| xargs -L 1 cat \
 	| awk '{if(NR==1 || $1!="target") print $0}' \
-	| voronota-js --no-setup-defaults "js:voronota_tournament_sort('-input-file _stdin -output-file _stdout -columns iface_cadscore iface_site_based_cadscore iface_ratio_of_areas -multipliers 1 1 1 -tolerances 0.0 0.0 0.0 -no-tournament');" \
+	| voronota-js --no-setup-defaults "js:voronota_tournament_sort('-input-file _stdin -output-file _stdout -columns iface_cadscore iface_site_based_cadscore iface_ratio_of_areas iface_model_area iface_target_area -multipliers 1 1 1 1 1 -tolerances 0.0 0.0 0.0 0.0 0.0 -no-tournament');" \
 	> "$TMPLDIR/full_output_table"
 	
 	if [ -n "$OUTPUT_TABLE_FILE" ] && [ "$OUTPUT_TABLE_FILE" != "_stdout" ]
@@ -238,6 +281,7 @@ common_params.input_as_assembly='$AS_ASSEMBLY';
 common_params.restrict_input_atoms='$RESTRICT_INPUT';
 common_params.contacts_subselection='$SUBSELECT_CONTACTS';
 common_params.remap_chains='$REMAP_CHAINS';
+common_params.ignore_residue_names='$IGNORE_RESIDUE_NAMES';
 common_params.crude_mode='$CRUDE_MODE';
 common_params.output_table_file='$OUTPUT_TABLE_FILE';
 var input_info_array=[];
@@ -255,7 +299,7 @@ done
 cat << 'EOF'
 analyze_interface=function(params, target_object, model_object, initial_summary)
 {
-	voronota_cad_score("-target", target_object, "-model", model_object, "-t-sel", "[inter_chain_contacts]", "-also-site-based", "-remap-chains", params.remap_chains);
+	voronota_cad_score("-target", target_object, "-model", model_object, "-t-sel", "[inter_chain_contacts]", "-also-site-based", "-remap-chains", params.remap_chains, "-ignore-residue-names", params.ignore_residue_names);
 	voronota_assert_full_success("Failed to compute CAD-score");
 	result_cadscore=voronota_last_output().results[0].output.residue_level_result;
 	result_cadscore_site_based=voronota_last_output().results[0].output.site_residue_level_result;
@@ -321,6 +365,11 @@ if(common_params.contacts_subselection===undefined || common_params.contacts_sub
 if(common_params.remap_chains===undefined || common_params.remap_chains==="")
 {
 	common_params.remap_chains="false";
+}
+
+if(common_params.ignore_residue_names===undefined || common_params.ignore_residue_names==="")
+{
+	common_params.ignore_residue_names="false";
 }
 
 if(common_params.output_table_file===undefined || common_params.output_table_file==="")
@@ -453,7 +502,7 @@ if(common_params.output_table_file!=="_stdout")
 	shell('mkdir -p "$(dirname '+common_params.output_table_file+')"');
 }
 
-voronota_tournament_sort('-input-file', '_virtual/summary', '-output-file', common_params.output_table_file, '-columns', ['iface_cadscore', 'iface_site_based_cadscore', 'iface_ratio_of_areas'], '-multipliers', [1, 1, 1], '-tolerances', [0.0, 0.0, 0.0], '-no-tournament');
+voronota_tournament_sort('-input-file', '_virtual/summary', '-output-file', common_params.output_table_file, '-columns', ['iface_cadscore', 'iface_site_based_cadscore', 'iface_ratio_of_areas', 'iface_model_area', 'iface_target_area'], '-multipliers', [1, 1, 1, 1, 1], '-tolerances', [0.0, 0.0, 0.0, 0.0, 0.0], '-no-tournament');
 
 EOF
 
