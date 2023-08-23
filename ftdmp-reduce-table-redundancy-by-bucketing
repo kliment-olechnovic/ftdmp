@@ -9,6 +9,7 @@ cat >&2 << 'EOF'
 Options:
     --bucketing-columns       string  *  space-separated list of column names to analyze
     --bucket-counts           string  *  space-separated list of bucket counts, one per bucketing column
+    --max-presence            number     max number of occurrences for a bucketed vector, default is 1
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -39,6 +40,7 @@ command -v voronota-js &> /dev/null || { echo >&2 "Error: 'voronota-js' executab
 
 COLUMNS=""
 BUCKETCOUNTS=""
+MAX_PRESENCE="1"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -53,6 +55,10 @@ do
 		;;
 	--bucket-counts)
 		BUCKETCOUNTS="$OPTARG"
+		shift
+		;;
+	--max-presence)
+		MAX_PRESENCE="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -109,6 +115,8 @@ paste "${TMPLDIR}/columns_info" "${TMPLDIR}/bucketcounts_info" > "${TMPLDIR}/ful
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $1}'
 	echo "-bucket-counts"
 	cat "${TMPLDIR}/full_columns_info" | awk '{print $2}'
+	echo "-max-presence"
+	echo "$MAX_PRESENCE"
 	echo "');"
 	echo "voronota_assert_full_success('Failed to reduce table redundancy by bucketing');"
 } \

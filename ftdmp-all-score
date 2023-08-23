@@ -33,6 +33,7 @@ Options:
     --external-scores         string     path to input file with external scores table, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table
+    --geom-hash-to-simplify   number     number of instances per rotation to keep after first scoring, default is 0 to not do it
     --keep-top                number     number of top complexes to keep after first full scoring stage, default is 1000
     --keep-top-for-slow       number     number of top complexes to keep before first slower scoring stage, default is 300
     --clash-tour-tolerance    number     tolerance value for clash score in tournament sorting, default is 0.05
@@ -117,6 +118,7 @@ SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
+GEOM_HASH_MAX_PRESENCE="0"
 SCORING_TOP_STAGE1="1000"
 SCORING_TOP_STAGE1_FOR_SLOW="300"
 CLASH_TOUR_TOLERANCE="0.05"
@@ -225,6 +227,10 @@ do
 		;;
 	--remap-cadscore)
 		REMAP_CADSCORE="$OPTARG"
+		shift
+		;;
+	--geom-hash-to-simplify)
+		GEOM_HASH_MAX_PRESENCE="$OPTARG"
 		shift
 		;;
 	--keep-top)
@@ -509,6 +515,37 @@ then
 	
 	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+
+	if [ "$GEOM_HASH_MAX_PRESENCE" -gt "0" ]
+	then
+		echo >&2 "ftdpm-all-score: trying to apply geometring hashing to reduce results after first scoring"
+	
+		{
+			ftdmp-join-tables "$INITIAL_SCORING_INPUT_FILE" "$PREV_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIV_iface_energy" \
+			| ftdmp-reduce-table-redundancy-by-bucketing \
+			  --bucketing-columns "a1 a2 a3 a4 a5 a6 a7 a8 a9" \
+			  --bucket-counts "9999 9999 9999 9999 9999 9999 9999 9999 9999" \
+			  --max-presence "$GEOM_HASH_MAX_PRESENCE" \
+			| awk '{print $1}'
+		} \
+		2> /dev/null \
+		> "${TMPLDIR}/geom_hash_reduced_ids.txt"
+	
+		if [ -s "${TMPLDIR}/geom_hash_reduced_ids.txt" ]
+		then
+			
+			NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIV_reduced_by_geom_hashing_of_docking_descriptors.txt"
+			
+			ftdmp-join-tables "${TMPLDIR}/geom_hash_reduced_ids.txt" "$PREV_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIV_iface_energy" \
+			> "$NEXT_SCORING_RESULTS_FILE"
+			
+			PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+		fi
+		
+		GEOM_HASH_MAX_PRESENCE="0"
+	fi
 fi
 
 ################################################################################
@@ -548,6 +585,37 @@ then
 	
 	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
 	HEAD_LINES_TO_KEEP="$((SCORING_TOP_STAGE1+1))"
+	
+	if [ "$GEOM_HASH_MAX_PRESENCE" -gt "0" ]
+	then
+		echo >&2 "ftdpm-all-score: trying to apply geometring hashing to reduce results after first scoring"
+	
+		{
+			ftdmp-join-tables "$INITIAL_SCORING_INPUT_FILE" "$PREV_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIVb_iface_energy" \
+			| ftdmp-reduce-table-redundancy-by-bucketing \
+			  --bucketing-columns "a1 a2 a3 a4 a5 a6 a7 a8 a9" \
+			  --bucket-counts "9999 9999 9999 9999 9999 9999 9999 9999 9999" \
+			  --max-presence "$GEOM_HASH_MAX_PRESENCE" \
+			| awk '{print $1}'
+		} \
+		2> /dev/null \
+		> "${TMPLDIR}/geom_hash_reduced_ids.txt"
+	
+		if [ -s "${TMPLDIR}/geom_hash_reduced_ids.txt" ]
+		then
+			
+			NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIVb_reduced_by_geom_hashing_of_docking_descriptors.txt"
+			
+			ftdmp-join-tables "${TMPLDIR}/geom_hash_reduced_ids.txt" "$PREV_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table --columns "-${SCORENAME_PREFIX}FIVb_iface_energy" \
+			> "$NEXT_SCORING_RESULTS_FILE"
+			
+			PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+		fi
+		
+		GEOM_HASH_MAX_PRESENCE="0"
+	fi
 fi
 
 ################################################################################

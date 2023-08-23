@@ -48,6 +48,7 @@ Options:
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
+    --geom-hash-to-simplify   number     number of instances per rotation to keep after first scoring, default is 0 to not do it
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
@@ -140,6 +141,7 @@ SCORING_SBATCH=""
 SCORE_SYMMETRY="false"
 LOCAL_COLUMNS="false"
 REMAP_CADSCORE="false"
+GEOM_HASH_MAX_PRESENCE="0"
 SCORING_TOP_STAGE1="1000"
 SCORING_TOP_STAGE1_FOR_SLOW="9999999"
 SCORING_RANKS=""
@@ -329,6 +331,10 @@ do
 		;;
 	--remap-cadscore)
 		REMAP_CADSCORE="$OPTARG"
+		shift
+		;;
+	--geom-hash-to-simplify)
+		GEOM_HASH_MAX_PRESENCE="$OPTARG"
 		shift
 		;;
 	--scoring-full-top)
@@ -858,6 +864,7 @@ ftdmp-all-score \
   --conda-env               "$CONDA_ENV_FOR_GNN" \
   --score-symmetry          "$SCORE_SYMMETRY" \
   --local-columns           "$LOCAL_COLUMNS" \
+  --geom-hash-to-simplify   "$GEOM_HASH_MAX_PRESENCE" \
   --keep-top                "$SCORING_TOP_STAGE1" \
   --keep-top-for-slow       "$SCORING_TOP_STAGE1_FOR_SLOW" \
   --clash-tour-tolerance    "0.05" \
