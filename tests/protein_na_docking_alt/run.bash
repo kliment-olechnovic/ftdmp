@@ -19,8 +19,8 @@ ${FTDMPDIR}/ftdmp-all \
   --conda-path "$CONDADIR" \
   --conda-env "$CONDAENV" \
   --conda-early 'true' \
-  --parallel-docking 16 \
-  --parallel-scoring 16 \
+  --parallel-docking 12 \
+  --parallel-scoring 12 \
   --job-name "$JOBNAME" \
   --output-dir "./output/docking" \
   --static-file "$STATICFILE" \
@@ -28,8 +28,8 @@ ${FTDMPDIR}/ftdmp-all \
   --use-ftdock 'true' \
   --use-hex 'false' \
   --constraint-clashes 0.9 \
-  --ftdock-keep 10 \
-  --ftdock-angle-step 9 \
+  --ftdock-keep 15 \
+  --ftdock-angle-step 6 \
   --scoring-rank-names 'generalized_voromqa' \
   --geom-hash-to-simplify 1 \
   --scoring-full-top 3000 \
