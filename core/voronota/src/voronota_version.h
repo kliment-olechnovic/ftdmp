@@ -8,7 +8,7 @@ namespace voronota
 
 inline std::string version()
 {
-	static const std::string version_str="1.27.3831";
+	static const std::string version_str="1.27.3834";
 	return version_str;
 }
 
