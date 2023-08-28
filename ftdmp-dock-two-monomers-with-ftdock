@@ -220,7 +220,7 @@ then
 	
 	{
 	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 head -n 1 | sort | uniq | awk '{print "ID " $0}'
-	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk -v jobname="$JOBNAME" '{print jobname "ftd" NR " " $0}'
+	find "$OUTDIR" -type f -name 'part_results_table.txt' | xargs -L 1 -P 1 tail -n +2 | sort -n -k 1 | tac | awk -v jobname="$JOBNAME" '{print jobname "ftd" $1 "scalevalue" $2 "p" $3 "p" $4 "p" $5 "p" $6 "p" $7 "p" $8 " " $0}' | sed 's|scalevalue\([0-9]\+\)\.|s\1d|' | sed 's|p-|n|g'
 	} \
 	> "${OUTDIR}/all_parts_results_table.txt"
 	
