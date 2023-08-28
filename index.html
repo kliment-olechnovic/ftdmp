@@ -249,6 +249,7 @@ Options:
     --score-symmetry          string     flag to score symmetry, default is &#39;false&#39;
     --local-columns           string     flag to add per-residue scores to the global output table, default is &#39;false&#39;
     --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is &#39;false&#39;
+    --geom-hash-to-simplify   number     number of instances per rotation to keep after first scoring, default is 0 to not do it
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
@@ -272,10 +273,10 @@ Options:
 Examples:
 
     ftdmp-all --job-name &#39;j1&#39; --static-file &#39;./chainA.pdb&#39; --mobile-file &#39;./chainB.pdb&#39; \
-      --scoring-rank-names &#39;standard_for_protein_protein&#39; --output-dir &#39;./results&#39;
+      --scoring-rank-names &#39;protein_protein_voromqa_and_global_and_gnn_no_sr&#39; --output-dir &#39;./results&#39;
 
     ftdmp-all --job-name &#39;j2&#39; --pre-docked-input-dir &#39;./predocked&#39; \
-      --scoring-rank-names &#39;standard_for_protein_protein&#39; --output-dir &#39;./results&#39;
+      --scoring-rank-names &#39;protein_protein_voromqa_and_gnn_no_sr&#39; --output-dir &#39;./results&#39;
 
 Named collections of rank names, to be provided as a single string to &#39;--scoring-rank-names&#39;:
 
@@ -317,8 +318,9 @@ ${HOME}/git/ftdmp/ftdmp-all \
   --use-ftdock &#39;true&#39; \
   --use-hex &#39;false&#39; \
   --constraint-clashes 0.5 \
-  --ftdock-keep 5 \
-  --ftdock-angle-step 5 \
+  --ftdock-keep 10 \
+  --ftdock-angle-step 6 \
+  --geom-hash-to-simplify 1 \
   --scoring-rank-names &#39;protein_protein_voromqa_and_global_and_gnn_no_sr&#39; \
   --scoring-full-top 3000 \
   --scoring-ranks-top 100 \
@@ -360,8 +362,9 @@ ${HOME}/git/ftdmp/ftdmp-all \
   --use-ftdock &#39;true&#39; \
   --use-hex &#39;false&#39; \
   --constraint-clashes 0.9 \
-  --ftdock-keep 5 \
-  --ftdock-angle-step 5 \
+  --ftdock-keep 10 \
+  --ftdock-angle-step 6 \
+  --geom-hash-to-simplify 1 \
   --scoring-rank-names &#39;generalized_voromqa&#39; \
   --scoring-full-top 3000 \
   --scoring-ranks-top 200 \

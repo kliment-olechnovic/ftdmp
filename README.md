@@ -256,6 +256,7 @@ Below is the breef description of 'ftdmp-all' interface.
         --score-symmetry          string     flag to score symmetry, default is 'false'
         --local-columns           string     flag to add per-residue scores to the global output table, default is 'false'
         --remap-cadscore          string     flag to use optimal chains remapping for CAD-score, default is 'false'
+        --geom-hash-to-simplify   number     number of instances per rotation to keep after first scoring, default is 0 to not do it
         --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
         --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
         --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
@@ -279,13 +280,13 @@ Below is the breef description of 'ftdmp-all' interface.
     Examples:
     
         ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
-          --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+          --scoring-rank-names 'protein_protein_voromqa_and_global_and_gnn_no_sr' --output-dir './results'
     
         ftdmp-all --job-name 'j2' --pre-docked-input-dir './predocked' \
-          --scoring-rank-names 'standard_for_protein_protein' --output-dir './results'
+          --scoring-rank-names 'protein_protein_voromqa_and_gnn_no_sr' --output-dir './results'
     
     Named collections of rank names, to be provided as a single string to '--scoring-rank-names':
-
+    
         protein_protein_voromqa_and_global_and_gnn_no_sr
         protein_protein_voromqa_and_global_and_gnn_with_sr
         protein_protein_voromqa_and_gnn_no_sr
@@ -327,8 +328,9 @@ Example script:
       --use-ftdock 'true' \
       --use-hex 'false' \
       --constraint-clashes 0.5 \
-      --ftdock-keep 5 \
-      --ftdock-angle-step 5 \
+      --ftdock-keep 10 \
+      --ftdock-angle-step 6 \
+      --geom-hash-to-simplify 1 \
       --scoring-rank-names 'protein_protein_voromqa_and_global_and_gnn_no_sr' \
       --scoring-full-top 3000 \
       --scoring-ranks-top 100 \
@@ -373,8 +375,9 @@ Example script:
       --use-ftdock 'true' \
       --use-hex 'false' \
       --constraint-clashes 0.9 \
-      --ftdock-keep 5 \
-      --ftdock-angle-step 5 \
+      --ftdock-keep 10 \
+      --ftdock-angle-step 6 \
+      --geom-hash-to-simplify 1 \
       --scoring-rank-names 'generalized_voromqa' \
       --scoring-full-top 3000 \
       --scoring-ranks-top 200 \
