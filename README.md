@@ -277,6 +277,18 @@ Below is the breef description of 'ftdmp-all' interface.
         --output-dir              string  *  output directory path
         --help | -h                          flag to display help message and exit
     
+    Output:
+    
+        All the docking and scoring results are placed into directory "${output_dir}/${jobname}"
+    
+        Main results for raw (unrelaxed) complex models:
+            final ordered table with VoroIF-jury scores = "${output_dir}/${jobname}/raw_top_scoring_results_RJS_only.txt"
+            directory with built top complex models in PDB format = "${output_dir}/${jobname}/raw_top_complexes"
+        
+        Main results for relaxed complex models:
+            directory with built and relaxed top complex models in PDB format = "${output_dir}/${jobname}/relaxed_top_complexes"
+            final ordered table with VoroIF-jury scores = "${output_dir}/${jobname}/relaxed_top_scoring_results_RJS_only.txt"
+    
     Examples:
     
         ftdmp-all --job-name 'j1' --static-file './chainA.pdb' --mobile-file './chainB.pdb' \
