@@ -57,6 +57,7 @@ Options:
     --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
     --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 1
     --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 0.9
+    --plugin-scoring-script   string     path to executable script that outputs a table of scores for a PDB structure
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
@@ -161,6 +162,7 @@ SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="5 20" 
 SCORING_RANKS_JURY_CLUSTER="0.9" 
 SCORING_RANKS_JURY_MAX_VALUES="1" 
+PLUGIN_SCORING_SCRIPT=""
 NUMBER_OF_COMPLEXES_TO_BUILD="0"
 REDUNDANCY_THRESHOLD="0.9"
 MULTIPLY_CHAINS=""
@@ -375,6 +377,10 @@ do
 		;;
 	--scoring-jury-maxs)
 		SCORING_RANKS_JURY_MAX_VALUES="$OPTARG"
+		shift
+		;;
+	--plugin-scoring-script)
+		PLUGIN_SCORING_SCRIPT="$OPTARG"
 		shift
 		;;
 	--build-complexes)
@@ -872,6 +878,7 @@ ftdmp-all-score \
   --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
   --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
   --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --plugin-scoring-script   "$PLUGIN_SCORING_SCRIPT" \
   --conda-path              "$CONDA_PATH" \
   --conda-env               "$CONDA_ENV_FOR_GNN" \
   --score-symmetry          "$SCORE_SYMMETRY" \
@@ -1125,6 +1132,7 @@ ftdmp-all-score \
   --mode-protein-gnn        "$SCORING_MODE_PROTEIN_GNN" \
   --mode-protein-gnn-sr     "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" \
   --mode-protein-global     "$SCORING_MODE_PROTEIN_GLOBAL" \
+  --plugin-scoring-script   "$PLUGIN_SCORING_SCRIPT" \
   --conda-path              "$CONDA_PATH" \
   --conda-env               "$CONDA_ENV_FOR_GNN" \
   --score-symmetry          "$SCORE_SYMMETRY" \

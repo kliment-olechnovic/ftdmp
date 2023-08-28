@@ -30,6 +30,7 @@ Options:
     --mode-protein-gnn        string     flag to score using GNN in protein mode
     --mode-protein-gnn-sr     string     flag to score using GNN in protein side chain-rebuilding mode
     --mode-protein-global     string     flag to score full protein structures
+    --plugin-scoring-script   string     path to executable script that outputs a table of scores for a PDB structure
     --external-scores         string     path to input file with external scores table, default is ''
     --score-symmetry          string     flag to score symmetry, default is 'false'
     --local-columns           string     flag to add per-residue scores to the global output table
@@ -129,6 +130,7 @@ SCORING_MODE_GENERIC_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GNN="false"
 SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_PROTEIN_GLOBAL="false"
+PLUGIN_SCORING_SCRIPT=""
 EXTERNAL_SCORES_FILE=""
 OUTPUT_PATH=""
 HELP_MODE="false"
@@ -271,6 +273,10 @@ do
 		;;
 	--mode-protein-global)
 		SCORING_MODE_PROTEIN_GLOBAL="$OPTARG"
+		shift
+		;;
+	--plugin-scoring-script)
+		PLUGIN_SCORING_SCRIPT="$OPTARG"
 		shift
 		;;
 	--external-scores)
@@ -836,6 +842,101 @@ fi
 
 ################################################################################
 
+if [ -n "$PLUGIN_SCORING_SCRIPT" ]
+then
+	echo >&2 "ftdpm-all-score: doing scoring with provided plugin script"
+	
+	NEXT_SCORING_RESULTS_FILE="${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_PLUGIN.txt"
+	
+	{
+	compute_hash_of_input_structures "$PREV_SCORING_RESULTS_FILE" "$HEAD_LINES_TO_KEEP" "$INPUT_PREFIX" "$INPUT_SUFFIX" "$MONOMERFILE1" "$MONOMERFILE2"
+	if [ -s "$PLUGIN_SCORING_SCRIPT" ]
+	then
+		echo "script file"
+		cat "$PLUGIN_SCORING_SCRIPT"
+	else
+		echo "script command"
+		echo "$PLUGIN_SCORING_SCRIPT"
+	fi
+	} | ftdmp-check-hash --hash-file "${OUTPUT_PATH}/input_hashes/$(basename "$NEXT_SCORING_RESULTS_FILE")" --dependent-file "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ ! -s "$NEXT_SCORING_RESULTS_FILE" ]
+	then
+		cat "$PREV_SCORING_RESULTS_FILE" | head -n "$HEAD_LINES_TO_KEEP" | awk '{print $1}' > "${TMPLDIR}/current_ids.txt"
+		
+		mkdir -p "${TMPLDIR}/plugin_input"
+		
+		ftdmp-join-tables "${TMPLDIR}/current_ids.txt" "$INITIAL_SCORING_INPUT_FILE" \
+		| \
+		{
+			if [ -n "$MONOMERFILE1" ]
+			then
+				ftdmp-build-complex --monomer1 "$MONOMERFILE1" --monomer2 "$MONOMERFILE2" --output-prefix "${TMPLDIR}/plugin_input/" --output-suffix '' > /dev/null
+				find "${TMPLDIR}/plugin_input/" -type f | sort
+			else
+				awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}'
+			fi
+		} \
+		> "${TMPLDIR}/plugin_input_list"
+		
+		mkdir -p "${TMPLDIR}/plugin_output"
+		
+		cat "${TMPLDIR}/plugin_input_list" \
+		| xargs -L 1 basename \
+		| awk -v prefix="${TMPLDIR}/plugin_output/" '{print prefix $1}' \
+		> "${TMPLDIR}/plugin_output_list"
+		
+		if [ -n "$SCORING_SBATCH" ]
+		then
+			mkdir -p "${TMPLDIR}/plugin_slurm_logs"
+			
+			paste -d ' ' "${TMPLDIR}/plugin_input_list" "${TMPLDIR}/plugin_output_list" \
+			| xargs -L 1 sbatch -o "${TMPLDIR}/plugin_slurm_logs/slurmjob-%j.out" -e "${TMPLDIR}/plugin_slurm_logs/slurmjob-%j.err" $SCORING_SBATCH $PLUGIN_SCORING_SCRIPT \
+			| egrep '^Submitted batch job ' \
+			| awk '{print $4}' \
+			> "${TMPLDIR}/plugin_slurm_job_ids"
+			
+			sleep 1
+			PLUGIN_REMAINING_SLURM_JOBS="$(squeue | grep -f ${TMPLDIR}/plugin_slurm_job_ids | wc -l)"
+			while [ "$PLUGIN_REMAINING_SLURM_JOBS" -gt "0" ]
+			do
+				sleep 5
+				PLUGIN_REMAINING_SLURM_JOBS="$(squeue | grep -f ${TMPLDIR}/plugin_slurm_job_ids | wc -l)"
+			done
+			
+			find "${TMPLDIR}/plugin_slurm_logs/" -type f -not -empty | xargs -L 1 cat >&2
+		else
+			paste -d ' ' "${TMPLDIR}/plugin_input_list" "${TMPLDIR}/plugin_output_list" \
+			| xargs -L 1 -P "$SCORING_PROCESSORS" $PLUGIN_SCORING_SCRIPT
+		fi
+		
+		rm -rf "${TMPLDIR}/plugin_input"
+		
+		{
+			find "${TMPLDIR}/plugin_output/" -type f -not -empty \
+			| sort \
+			| head -1 \
+			| xargs cat \
+			| head -1 \
+			| sed 's|^|ID |' \
+			| sed "s|\s\+| ${SCORENAME_PREFIX}|g"
+			
+			find "${TMPLDIR}/plugin_output/" -type f -not -empty \
+			| sort \
+			| while read -r PLUGIN_RESULT_FILE
+			do
+				cat "${PLUGIN_RESULT_FILE}" | head -2 | tail -1 | sed "s|^|$(basename ${PLUGIN_RESULT_FILE} ${INPUT_SUFFIX}) |"
+			done \
+			| sort -n -r -k2,2
+		} \
+		> "$NEXT_SCORING_RESULTS_FILE"
+	fi
+	
+	PREV_SCORING_RESULTS_FILE="$NEXT_SCORING_RESULTS_FILE"
+fi
+
+################################################################################
+
 if [ -n "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ]
 then
 	echo >&2 "ftdpm-all-score: doing comparison with reference"
@@ -924,6 +1025,12 @@ fi
 if [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" == "true" ]
 then
 	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_FIGNN_sr.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
+	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
+fi
+
+if [ -n "$PLUGIN_SCORING_SCRIPT" ]
+then
+	ftdmp-join-tables "${TMPLDIR}/current_ids_with_scores.txt" "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_PLUGIN.txt" > "${TMPLDIR}/current_ids_with_more_scores.txt"
 	mv "${TMPLDIR}/current_ids_with_more_scores.txt" "${TMPLDIR}/current_ids_with_scores.txt"
 fi
 
@@ -1249,6 +1356,24 @@ then
 		fi
 	} \
 	> "$NEXT_SCORING_RESULTS_FILE"
+	
+	if [ -n "$PLUGIN_SCORING_SCRIPT" ]
+	then
+		head -1 "${OUTPUT_PATH}/${SCORENAME_PREFIX}scoring_results_PLUGIN.txt" \
+		| tr ' ' '\n' \
+		| egrep '.' \
+		| tail -n +2 \
+		| while read -r PLUGIN_SCORE_NAME
+		do
+			cat "$NEXT_SCORING_RESULTS_FILE" \
+			| ftdmp-sort-table \
+			  --columns "${PLUGIN_SCORE_NAME}" \
+			  --add-rank-column "${PLUGIN_SCORE_NAME}_rank" \
+			> "${TMPLDIR}/augmented_scoring_results_with_ranks.txt"
+			
+			mv "${TMPLDIR}/augmented_scoring_results_with_ranks.txt" "$NEXT_SCORING_RESULTS_FILE"
+		done
+	fi
 	
 	if [ -n "$EXTERNAL_SCORES_FILE" ]
 	then

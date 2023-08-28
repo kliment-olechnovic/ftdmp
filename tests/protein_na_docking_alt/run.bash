@@ -30,6 +30,7 @@ ${FTDMPDIR}/ftdmp-all \
   --constraint-clashes 0.9 \
   --ftdock-keep 15 \
   --ftdock-angle-step 6 \
+  --plugin-scoring-script "./plugin.bash" \
   --scoring-rank-names 'generalized_voromqa' \
   --geom-hash-to-simplify 1 \
   --scoring-full-top 3000 \
