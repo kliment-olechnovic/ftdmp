@@ -62,6 +62,7 @@ Options:
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is ''
     --relax-complexes         string     options to relax complexes, default is ''
+    --all-ranks-for-relaxed   string     flag to use both scoring ranks of both raw and relaxed structures, default is 'true'
     --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is 'false'
     --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
     --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
@@ -169,6 +170,7 @@ NUMBER_OF_COMPLEXES_TO_BUILD="0"
 REDUNDANCY_THRESHOLD="0.9"
 MULTIPLY_CHAINS=""
 RELAX_COMPLEXES=""
+ALL_RANKS_FOR_RELAXED="true"
 ONLY_DOCK_AND_SCORE="false"
 DIVERSIFY=""
 PLOT_JURY_SCORES="false"
@@ -403,6 +405,10 @@ do
 		;;
 	--relax-complexes)
 		RELAX_COMPLEXES="$OPTARG"
+		shift
+		;;
+	--all-ranks-for-relaxed)
+		ALL_RANKS_FOR_RELAXED="$OPTARG"
 		shift
 		;;
 	--only-dock-and-score)
@@ -679,7 +685,7 @@ fi
 
 EXTRA_SCORING_RANKS="$(echo ${EXTRA_SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
 
-if [ "$EXTRA_SCORING_RANKS" != "all_plugin" ]
+if [ -n "$EXTRA_SCORING_RANKS" ] && [ "$EXTRA_SCORING_RANKS" != "all_plugin" ]
 then
 	SCORING_RANKS="${SCORING_RANKS} ${EXTRA_SCORING_RANKS}"
 fi
@@ -1188,7 +1194,10 @@ echo >&2 "ftdpm-all: running ftdmp-all-jury for scored relaxed complexes"
 
 RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^raw_/relaxed_/' | tr '\n' ' ')"
 
-RELAXED_SCORING_RANKS="$SCORING_RANKS $RELAXED_SCORING_RANKS"
+if [ "$ALL_RANKS_FOR_RELAXED" == "true" ]
+then
+	RELAXED_SCORING_RANKS="$SCORING_RANKS $RELAXED_SCORING_RANKS"
+fi
 
 echo "$RELAXED_SCORING_RANKS" | tr ' ' '\n' > "${OUTPUT_PATH}/relaxed_used_scoring_ranks_names.txt"
 

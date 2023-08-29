@@ -42,6 +42,7 @@ ${FTDMPDIR}/ftdmp-all \
   --build-complexes 200 \
   --openmm-forcefield "amber14-all-no-water" \
   --relax-complexes "--max-iterations 0 --force-cuda --focus whole_interface" \
+  --all-ranks-for-relaxed 'true' \
   --plot-jury-scores 'true' \
   --reference "./input/6FPQ_reference.pdb" \
   --cache-dir "./output/docking/cache"
