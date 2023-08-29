@@ -34,6 +34,7 @@
 <li><a href="#command-line-user-interface-1">Command line user interface</a></li>
 <li><a href="#example-of-protein-protein-docking-for-running-on-cluster">Example of protein-protein docking for running on cluster</a></li>
 <li><a href="#example-of-protein-dna-docking-for-running-on-cluster">Example of protein-DNA docking for running on cluster</a></li>
+<li><a href="#using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</a></li>
 </ul></li>
 <li><a href="#using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</a><ul>
 <li><a href="#command-line-user-interface-2">Command line user interface</a></li>
@@ -253,14 +254,17 @@ Options:
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
+    --scoring-rank-names-x    string     extra rank names to use, default is &#39;all_plugin&#39; to use plugin output columns (if any)
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is &#39;5 20&#39;
     --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
     --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 1
     --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 0.9
+    --plugin-scoring-script   string     path to executable script that outputs a table of scores for a PDB structure
     --build-complexes         number     number of top complexes to build, default is 0
     --multiply-chains         string     options to multiply chains, default is &#39;&#39;
     --relax-complexes         string     options to relax complexes, default is &#39;&#39;
+    --all-ranks-for-relaxed   string     flag to use both scoring ranks of both raw and relaxed structures, default is &#39;true&#39;
     --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is &#39;false&#39;
     --diversify               number     step of CAD-score to diversify scoring results and exit, default is &#39;&#39;
     --plot-jury-scores        string     flag to output plot of jury scores, default is &#39;false&#39;
@@ -393,6 +397,32 @@ ${HOME}/git/ftdmp/ftdmp-all \
 
 --openmm-forcefield &#39;amber14-all-no-water&#39;                        # now using a force field that is compatible with DNA and RNA
 --relax-complexes &#39;--max-iterations 10 --focus whole_interface&#39;   # now using iterations limit to not overdo the relaxation in absence of water</code></pre>
+<h2 id="using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</h2>
+<p>'ftdmp-all' can accept a plugin script that outputs one or more scoresa for an input model structure in PDB format. Such a script must:</p>
+<ul>
+<li>accept two command line argument: input file, output file</li>
+<li>write an output file with two lines: first line with space-separated score names, second line with score values</li>
+</ul>
+<p>Example of a plugin script:</p>
+<pre><code>#!/bin/bash
+
+INFILE=&quot;$1&quot;
+OUTFILE=&quot;$2&quot;
+
+{
+    echo &quot;Useful_Score1 Useful_Score2 Useful_Score3&quot;
+    ${HOME}/software/program_that outputs_three_scores &quot;$INFILE&quot;
+} \
+&gt; &quot;$OUTFILE&quot;</code></pre>
+<p>Example of a plugin script output:</p>
+<pre><code>Useful_Score1 Useful_Score2 Useful_Score3
+0.85 1.73 104.9</code></pre>
+<p>When providing a plugin script script file with</p>
+<pre><code>--plugin-scoring-script ./plugin.bash</code></pre>
+<p>and not providing anything with '--scoring-rank-names-x', the default behaviour is to automatically use all the scores from the plugin script output.</p>
+<p>Alternatively, space-separated score names with 'raw_' prefix can be provided, e.g.</p>
+<pre><code>--plugin-scoring-script ./plugin.bash --scoring-rank-names-x &quot;raw_Useful_Score1 raw_Useful_Score3&quot;</code></pre>
+<p>Important note - the plugin scores are assummed to be &quot;the higher, the better&quot;, i.e. for ranking they are sorted in descending order.</p>
 <h1 id="using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</h1>
 <h2 id="command-line-user-interface-2">Command line user interface</h2>
 <p>Relaxing is done with the 'ftdmp-relax-with-openmm' script. After relaxing, model structures can be rescored and reranked with the 'ftdmp-qa-all' script. It is advised to do it on a machine with a nice GPU. Below is the breef description of 'ftdmp-relax-with-openmm' interface.</p>

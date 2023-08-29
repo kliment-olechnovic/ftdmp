@@ -260,14 +260,17 @@ Below is the breef description of 'ftdmp-all' interface.
         --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
         --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
         --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
+        --scoring-rank-names-x    string     extra rank names to use, default is 'all_plugin' to use plugin output columns (if any)
         --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
         --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
         --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
         --scoring-jury-maxs       number     number of max values to use for ranks jury scoring, default is 1
         --redundancy-threshold    number     minimal ordered redundancy value to accept, default is 0.9
+        --plugin-scoring-script   string     path to executable script that outputs a table of scores for a PDB structure
         --build-complexes         number     number of top complexes to build, default is 0
         --multiply-chains         string     options to multiply chains, default is ''
         --relax-complexes         string     options to relax complexes, default is ''
+        --all-ranks-for-relaxed   string     flag to use both scoring ranks of both raw and relaxed structures, default is 'true'
         --only-dock-and-score     string     flag to only dock, score and quit after scoring, default is 'false'
         --diversify               number     step of CAD-score to diversify scoring results and exit, default is ''
         --plot-jury-scores        string     flag to output plot of jury scores, default is 'false'
@@ -409,6 +412,44 @@ Main essential changes when compared with the protei-protein docking case:
     --openmm-forcefield 'amber14-all-no-water'                        # now using a force field that is compatible with DNA and RNA
     --relax-complexes '--max-iterations 10 --focus whole_interface'   # now using iterations limit to not overdo the relaxation in absence of water
 
+## Using a plugin script to score docking models
+
+'ftdmp-all' can accept a plugin script that outputs one or more scoresa for an input model structure in PDB format.
+Such a script must:
+
+ * accept two command line argument: input file, output file
+ * write an output file with two lines: first line with space-separated score names, second line with score values
+
+Example of a plugin script:
+
+    #!/bin/bash
+    
+    INFILE="$1"
+    OUTFILE="$2"
+    
+    {
+        echo "Useful_Score1 Useful_Score2 Useful_Score3"
+        ${HOME}/software/program_that outputs_three_scores "$INFILE"
+    } \
+    > "$OUTFILE"
+
+Example of a plugin script output:
+
+    Useful_Score1 Useful_Score2 Useful_Score3
+    0.85 1.73 104.9
+
+When providing a plugin script script file with
+
+    --plugin-scoring-script ./plugin.bash
+
+and not providing anything with '--scoring-rank-names-x',
+the default behaviour is to automatically use all the scores from the plugin script output.
+
+Alternatively, space-separated score names with 'raw_' prefix can be provided, e.g.
+
+    --plugin-scoring-script ./plugin.bash --scoring-rank-names-x "raw_Useful_Score1 raw_Useful_Score3"
+
+Important note - the plugin scores are assummed to be "the higher, the better", i.e. for ranking they are sorted in descending order.
 
 # Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions
 
