@@ -52,6 +52,7 @@ Options:
     --scoring-full-top        number     number of top complexes to keep after full scoring stage, default is 1000
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
+    --scoring-rank-names-x    string     extra rank names to use, default is 'all_plugin' to use plugin output columns (if any)
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
     --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
@@ -158,6 +159,7 @@ GEOM_HASH_MAX_PRESENCE="0"
 SCORING_TOP_STAGE1="1000"
 SCORING_TOP_STAGE1_FOR_SLOW="9999999"
 SCORING_RANKS=""
+EXTRA_SCORING_RANKS="all_plugin"
 SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="5 20" 
 SCORING_RANKS_JURY_CLUSTER="0.9" 
@@ -361,6 +363,10 @@ do
 		;;
 	--scoring-rank-names)
 		SCORING_RANKS="$OPTARG"
+		shift
+		;;
+	--scoring-rank-names-x)
+		EXTRA_SCORING_RANKS="$OPTARG"
 		shift
 		;;
 	--scoring-ranks-top)
@@ -666,6 +672,18 @@ fi
 
 SCORING_RANKS="$(echo ${SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
 
+if [[ $EXTRA_SCORING_RANKS == "file:"* ]]
+then
+	EXTRA_SCORING_RANKS="$(cat "$(echo ${EXTRA_SCORING_RANKS} | sed 's|^file:||')" | tr '\n' ' ')"
+fi
+
+EXTRA_SCORING_RANKS="$(echo ${EXTRA_SCORING_RANKS} | tr '\n' ' ' | sed 's/\s\+/ /g' | sed 's/^\s\+//' | sed 's/\s\+$//')"
+
+if [ "$EXTRA_SCORING_RANKS" != "all_plugin" ]
+then
+	SCORING_RANKS="${SCORING_RANKS} ${EXTRA_SCORING_RANKS}"
+fi
+
 SCORING_MODE_PROTEIN="false"
 SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT="false"
 SCORING_MODE_GENERIC="false"
@@ -927,7 +945,17 @@ fi
 
 ################################################################################
 
+if [ "$EXTRA_SCORING_RANKS" == "all_plugin" ] && [ -n "$PLUGIN_SCORING_SCRIPT" ] && [ -s "${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt" ]
+then
+	EXTRA_SCORING_RANKS="$(cat ${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt | head -1 | sed 's/^\S\+\s\+//')"
+	SCORING_RANKS="${SCORING_RANKS} ${EXTRA_SCORING_RANKS}"
+fi
+
+################################################################################
+
 echo >&2 "ftdpm-all: running ftdmp-all-jury"
+
+echo "$SCORING_RANKS" | tr ' ' '\n' > "${OUTPUT_PATH}/raw_used_scoring_ranks_names.txt"
 
 ftdmp-all-jury \
   --input-scoring-table     "$PREV_SCORING_RESULTS_FILE" \
@@ -1160,12 +1188,16 @@ echo >&2 "ftdpm-all: running ftdmp-all-jury for scored relaxed complexes"
 
 RELAXED_SCORING_RANKS="$(echo "$SCORING_RANKS" | sed 's/\s\+/\n/g' | sed 's/^raw_/relaxed_/' | tr '\n' ' ')"
 
+RELAXED_SCORING_RANKS="$SCORING_RANKS $RELAXED_SCORING_RANKS"
+
+echo "$RELAXED_SCORING_RANKS" | tr ' ' '\n' > "${OUTPUT_PATH}/relaxed_used_scoring_ranks_names.txt"
+
 ftdmp-all-jury \
   --input-scoring-table     "$PREV_SCORING_RESULTS_FILE" \
   --structure-prefix        "${TOP_RELAXED_COMPLEXES_DIR}/" \
   --structure-suffix        ".pdb" \
   --subselect-contacts      "$INTERFACE_SUBSELECTION" \
-  --rank-names              "$SCORING_RANKS $RELAXED_SCORING_RANKS" \
+  --rank-names              "$RELAXED_SCORING_RANKS" \
   --ranks-top               "999999" \
   --remap-cadscore          "$REMAP_CADSCORE" \
   --jury-slices             "$SCORING_RANKS_JURY_SLICES" \
