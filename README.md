@@ -72,10 +72,18 @@ Activate Miniconda environment:
 
 Install packages for using graph neural network-based scoring:
 
-    conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia # using instructions from 'https://pytorch.org/get-started/locally/'
-    conda install pyg -c pyg # using instructions from 'https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html'
+    # install PyTorch using instructions from 'https://pytorch.org/get-started/locally/'
+    conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+    
+    # install PyTorch Geometric using instructions from 'https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html'
+    pip install torch_geometric
+    pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+    
+    # install Pandas
     conda install pandas
-    conda install r # may skip this if you have R already and do not want it in Miniconda
+    
+    # if you do not have R installed in you system, install it - not necessarily using conda, e.g 'sudo apt-get install r-base' in Ubuntu
+    conda install -c conda-forge r-essentials
 
 Test PyTorch installation:
 

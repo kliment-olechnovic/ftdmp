@@ -1,11 +1,19 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
-  <title></title>
-  <style type="text/css">code{white-space: pre;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>FTDMP version 1.0</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
   <style type="text/css">
   a { color: #0000CC; }
   td { padding-right: 1em; }
@@ -14,37 +22,43 @@
   </style>
 </head>
 <body>
-<h1>FTDMP version 1.0</h1>
-<div id="TOC">
+<header id="title-block-header">
+<h1 class="title">FTDMP version 1.0</h1>
+</header>
+<nav id="TOC" role="doc-toc">
 <ul>
 <li><a href="#about-ftdmp">About FTDMP</a></li>
-<li><a href="#obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</a><ul>
+<li><a href="#obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</a>
+<ul>
 <li><a href="#getting-the-latest-version">Getting the latest version</a></li>
 <li><a href="#building-the-included-software">Building the included software</a></li>
 <li><a href="#installing">Installing</a></li>
 <li><a href="#setting-miniconda-for-using-graph-neural-network-based-scoring-and-for-using-openmm">Setting Miniconda for using graph neural network-based scoring, and for using OpenMM</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</a><ul>
+<li><a href="#using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</a>
+<ul>
 <li><a href="#command-line-user-interface">Command line user interface</a></li>
 <li><a href="#scoring-and-ranking-multimeric-protein-models-using-all-available-scoring-tools">Scoring and ranking multimeric protein models using all available scoring tools</a></li>
 <li><a href="#scoring-and-ranking-multimeric-protein-models-without-using-graph-neural-networks">Scoring and ranking multimeric protein models without using graph neural networks</a></li>
 <li><a href="#scoring-and-ranking-multimeric-models-that-include-rna-or-dna">Scoring and ranking multimeric models that include RNA or DNA:</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-docking">Using FTDMP for docking</a><ul>
+<li><a href="#using-ftdmp-for-docking">Using FTDMP for docking</a>
+<ul>
 <li><a href="#command-line-user-interface-1">Command line user interface</a></li>
 <li><a href="#example-of-protein-protein-docking-for-running-on-cluster">Example of protein-protein docking for running on cluster</a></li>
 <li><a href="#example-of-protein-dna-docking-for-running-on-cluster">Example of protein-DNA docking for running on cluster</a></li>
 <li><a href="#using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</a><ul>
+<li><a href="#using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</a>
+<ul>
 <li><a href="#command-line-user-interface-2">Command line user interface</a></li>
 <li><a href="#example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid">Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)</a></li>
 </ul></li>
 </ul>
-</div>
+</nav>
 <h1 id="about-ftdmp">About FTDMP</h1>
 <p>FTDMP is a software system for running docking experiments and scoring/ranking multimeric models.</p>
-<p>FTDMP was used in CASP15 by the &quot;Venclovas&quot; team (Vilnius University / Life Sciences Center / Institute of Biotechnology). The most novel and useful features of FTDMP are integrated <strong>VoroIF-jury</strong> and <strong>VoroIF-GNN</strong> methods.</p>
+<p>FTDMP was used in CASP15 by the “Venclovas” team (Vilnius University / Life Sciences Center / Institute of Biotechnology). The most novel and useful features of FTDMP are integrated <strong>VoroIF-jury</strong> and <strong>VoroIF-GNN</strong> methods.</p>
 <p>FTDMP has two main entry-point scripts:</p>
 <ul>
 <li><strong>ftdmp-all</strong> - script to perform docking with FTDock/HEX/SAM and subsequent scoring/ranking using VoroIF-jury.</li>
@@ -63,7 +77,7 @@
 <li><strong>voronota-js-fast-iface-data-graph</strong> (wrapper to a voronota-js program for the computation of interface graphs used by the VoroIF-GNN method)</li>
 <li><strong>voronota-js-voroif-gnn</strong> (wrapper to a voronota-js program and GNN inference scripts that run the VoroIF-GNN method for scoring models of protein-protein complexes (developed for CASP15))</li>
 </ul></li>
-<li><strong>FTDock</strong> (a modified version of a popular rigid-body-docking software tool), it depends on &quot;fftw-2.1.5&quot; that is also included</li>
+<li><strong>FTDock</strong> (a modified version of a popular rigid-body-docking software tool), it depends on “fftw-2.1.5” that is also included</li>
 <li><strong>FASPR</strong> (a fast tool for rebuilding sidechains in protein structures)</li>
 </ul>
 <p>FTDMP also can use non-open-source docking tools that are not included in the FTDMP package, but can be easily installed separately:</p>
@@ -71,21 +85,21 @@
 <li><strong>HEX</strong> (a rigid-body-docking software tool)</li>
 <li><strong>SAM</strong> (a symmetry-docking software tool)</li>
 </ul>
-<p>Some features of FTDMP require aditional dependencies (that are easily available through &quot;conda&quot; package manager):</p>
+<p>Some features of FTDMP require aditional dependencies (that are easily available through “conda” package manager):</p>
 <ul>
-<li>graph neural network-based scoring using &quot;voronota-js-voroif-gnn&quot; requires &quot;R&quot;, &quot;PyTorch&quot; and &quot;PyTorch Geometric&quot;</li>
-<li>relaxing using molecular dynamics requires &quot;OpenMM&quot;</li>
+<li>graph neural network-based scoring using “voronota-js-voroif-gnn” requires “R”, “PyTorch” and “PyTorch Geometric”</li>
+<li>relaxing using molecular dynamics requires “OpenMM”</li>
 </ul>
 <h1 id="obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</h1>
 <h2 id="getting-the-latest-version">Getting the latest version</h2>
-<p>The currently recommended way to obtain FTDMP is cloning the FTDMP git repository <a href="https://github.com/kliment-olechnovic/ftdmp" class="uri">https://github.com/kliment-olechnovic/ftdmp</a>:</p>
+<p>The currently recommended way to obtain FTDMP is cloning the FTDMP git repository <a href="https://github.com/kliment-olechnovic/ftdmp">https://github.com/kliment-olechnovic/ftdmp</a>:</p>
 <pre><code>git clone https://github.com/kliment-olechnovic/ftdmp.git
 cd ./ftdmp</code></pre>
 <h2 id="building-the-included-software">Building the included software</h2>
 <p>To build all the included dependencies, run the following command:</p>
 <pre><code>./core/build.bash</code></pre>
 <h2 id="installing">Installing</h2>
-<p>To, optionally, make FTDMP accessible without specifying full path, add the following line at the end of &quot;.bash_profile&quot; or &quot;.bashrc&quot;:</p>
+<p>To, optionally, make FTDMP accessible without specifying full path, add the following line at the end of “.bash_profile” or “.bashrc”:</p>
 <pre><code>export PATH=&quot;/path/to/ftdmp:${PATH}&quot;</code></pre>
 <h2 id="setting-miniconda-for-using-graph-neural-network-based-scoring-and-for-using-openmm">Setting Miniconda for using graph neural network-based scoring, and for using OpenMM</h2>
 <p>Download the Miniconda package:</p>
@@ -96,10 +110,18 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh</code
 <p>Activate Miniconda environment:</p>
 <pre><code>source ~/miniconda3/bin/activate</code></pre>
 <p>Install packages for using graph neural network-based scoring:</p>
-<pre><code>conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia # using instructions from &#39;https://pytorch.org/get-started/locally/&#39;
-conda install pyg -c pyg # using instructions from &#39;https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html&#39;
+<pre><code># install PyTorch using instructions from &#39;https://pytorch.org/get-started/locally/&#39;
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+
+# install PyTorch Geometric using instructions from &#39;https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html&#39;
+pip install torch_geometric
+pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+
+# install Pandas
 conda install pandas
-conda install r # may skip this if you have R already and do not want it in Miniconda</code></pre>
+
+# if you do not have R installed in you system, install it - not necessarily using conda, e.g &#39;sudo apt-get install r-base&#39; in Ubuntu
+conda install -c conda-forge r-essentials</code></pre>
 <p>Test PyTorch installation:</p>
 <pre><code>python -c &quot;import torch; print(torch.__version__)&quot;</code></pre>
 <p>Install packages for using OpenMM:</p>
@@ -109,7 +131,7 @@ conda install -c conda-forge pdbfixer</code></pre>
 <p>Test OpenMM installation:</p>
 <pre><code>python -m openmm.testInstallation</code></pre>
 <h1 id="using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</h1>
-<p>Scoring and ranking is done with the 'ftdmp-qa-all' script. Below is the breef description of 'ftdmp-qa-all' interface.</p>
+<p>Scoring and ranking is done with the ‘ftdmp-qa-all’ script. Below is the breef description of ‘ftdmp-qa-all’ interface.</p>
 <h2 id="command-line-user-interface">Command line user interface</h2>
 <pre><code>&#39;ftdmp-qa-all&#39; scores and ranks multimeric structures of proteins or nucleic acids
 
@@ -205,7 +227,7 @@ Named collections of rank names, to be provided as a single string to &#39;--ran
   --workdir &#39;./works&#39;</code></pre>
 <h1 id="using-ftdmp-for-docking">Using FTDMP for docking</h1>
 <h2 id="command-line-user-interface-1">Command line user interface</h2>
-<p>Docking and scoring is done with the 'ftdmp-all' script. Below is the breef description of 'ftdmp-all' interface.</p>
+<p>Docking and scoring is done with the ‘ftdmp-all’ script. Below is the breef description of ‘ftdmp-all’ interface.</p>
 <pre><code>&#39;ftdmp-all&#39; docks, scores and ranks complex structures of proteins or nucleic acids
 
 Options:
@@ -398,7 +420,7 @@ ${HOME}/git/ftdmp/ftdmp-all \
 --openmm-forcefield &#39;amber14-all-no-water&#39;                        # now using a force field that is compatible with DNA and RNA
 --relax-complexes &#39;--max-iterations 10 --focus whole_interface&#39;   # now using iterations limit to not overdo the relaxation in absence of water</code></pre>
 <h2 id="using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</h2>
-<p>'ftdmp-all' can accept a plugin script that outputs one or more scoresa for an input model structure in PDB format. Such a script must:</p>
+<p>‘ftdmp-all’ can accept a plugin script that outputs one or more scoresa for an input model structure in PDB format. Such a script must:</p>
 <ul>
 <li>accept two command line argument: input file, output file</li>
 <li>write an output file with two lines: first line with space-separated score names, second line with score values</li>
@@ -419,13 +441,13 @@ OUTFILE=&quot;$2&quot;
 0.85 1.73 104.9</code></pre>
 <p>When providing a plugin script script file with</p>
 <pre><code>--plugin-scoring-script ./plugin.bash</code></pre>
-<p>and not providing anything with '--scoring-rank-names-x', the default behaviour is to automatically use all the scores from the plugin script output.</p>
-<p>Alternatively, space-separated score names with 'raw_' prefix can be provided, e.g.</p>
+<p>and not providing anything with ‘–scoring-rank-names-x’, the default behaviour is to automatically use all the scores from the plugin script output.</p>
+<p>Alternatively, space-separated score names with ‘raw_’ prefix can be provided, e.g.</p>
 <pre><code>--plugin-scoring-script ./plugin.bash --scoring-rank-names-x &quot;raw_Useful_Score1 raw_Useful_Score3&quot;</code></pre>
-<p>Important note - the plugin scores are assummed to be &quot;the higher, the better&quot;, i.e. for ranking they are sorted in descending order.</p>
+<p>Important note - the plugin scores are assummed to be “the higher, the better”, i.e. for ranking they are sorted in descending order.</p>
 <h1 id="using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</h1>
 <h2 id="command-line-user-interface-2">Command line user interface</h2>
-<p>Relaxing is done with the 'ftdmp-relax-with-openmm' script. After relaxing, model structures can be rescored and reranked with the 'ftdmp-qa-all' script. It is advised to do it on a machine with a nice GPU. Below is the breef description of 'ftdmp-relax-with-openmm' interface.</p>
+<p>Relaxing is done with the ‘ftdmp-relax-with-openmm’ script. After relaxing, model structures can be rescored and reranked with the ‘ftdmp-qa-all’ script. It is advised to do it on a machine with a nice GPU. Below is the breef description of ‘ftdmp-relax-with-openmm’ interface.</p>
 <pre><code>&#39;ftdmp-relax-with-openmm&#39; script relaxes a molecular structure using OpenMM.
 
 Options:
@@ -463,7 +485,7 @@ Examples:
     ftdmp-relax-with-openmm --conda-path ~/miniconda3 --forcefield amber14-all \
       -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output</code></pre>
 <h2 id="example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid">Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)</h2>
-<p>Using the 'amber14-all-no-water' forcefield, the example below works for protein-protein, protein-nucleic acid, and nucleic acid-nucleic acid interfaces.</p>
+<p>Using the ‘amber14-all-no-water’ forcefield, the example below works for protein-protein, protein-nucleic acid, and nucleic acid-nucleic acid interfaces.</p>
 <pre><code>find &quot;./models/raw/&quot; -type f -name &#39;*.pdb&#39; \
 | while read -r INFILE
 do

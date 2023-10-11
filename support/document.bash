@@ -16,7 +16,5 @@ div#TOC > ul > li > ul > li ul { display: none; }
 </style>
 EOF
 
-echo "<h1>FTDMP version 1.0</h1>" > $TMPLDIR/include_before_body.html
-
-pandoc $TMPLDIR/documentation.markdown -f markdown -t html --toc -H $TMPLDIR/include_in_header.html -B $TMPLDIR/include_before_body.html -s -o ./index.html
+pandoc $TMPLDIR/documentation.markdown -f markdown -t html --metadata title="FTDMP version 1.0" -M document-css=false --wrap=none --toc -H $TMPLDIR/include_in_header.html -s -o ./index.html
 
