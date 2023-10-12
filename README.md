@@ -82,8 +82,8 @@ Install packages for using graph neural network-based scoring:
     # install Pandas
     conda install pandas
     
-    # if you do not have R installed in you system, install it - not necessarily using conda, e.g 'sudo apt-get install r-base' in Ubuntu
-    conda install -c conda-forge r-essentials
+    # if you do not have R installed in you system, install it (not necessarily using conda, e.g 'sudo apt-get install r-base' in Ubuntu)
+    conda install r -c conda-forge
 
 Test PyTorch installation:
 

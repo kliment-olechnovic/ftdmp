@@ -536,8 +536,8 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
         # install Pandas
         conda install pandas
-        # if you do not have R installed in you system, install it - not necessarily using conda, e.g 'sudo apt-get install r-base' in Ubuntu
-        conda install -c conda-forge r-essentials
+        # if you do not have R installed in you system, install it (not necessarily using conda, e.g 'sudo apt-get install r-base' in Ubuntu)
+        conda install r -c conda-forge
     
 
 ## Protein-ligand interface variation of CAD-score
