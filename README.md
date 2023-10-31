@@ -130,7 +130,7 @@ Below is the breef description of 'ftdmp-qa-all' interface.
         --keep-top-slow                   number     number of top complexes to keep before slow full scoring stage, default is 9999999
         --limit-voromqa-light             number     minimal allowed VoroMQA-light whole-stricture score, default is ''
         --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
-        --ranks-top                       number     number of top complexes to consider for each ranking, default is 9999999
+        --ranks-top                       number     number of top complexes to consider for each ranking, default is 300
         --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
         --jury-cluster                    number     clustering threshold for ranks jury scoring, default is 0.9
         --jury-maxs                       number     number of max values to use for ranks jury scoring, default is 1

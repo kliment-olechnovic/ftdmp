@@ -28,7 +28,7 @@ Options:
     --keep-top-slow                   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --limit-voromqa-light             number     minimal allowed VoroMQA-light whole-stricture score, default is ''
     --rank-names                      string     rank names to use, or name of a standard set of rank names, default is 'protein_protein_voromqa_and_global_and_gnn_no_sr'
-    --ranks-top                       number     number of top complexes to consider for each ranking, default is 9999999
+    --ranks-top                       number     number of top complexes to consider for each ranking, default is 300
     --jury-slices                     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
     --jury-cluster                    number     clustering threshold for ranks jury scoring, default is 0.9
     --jury-maxs                       number     number of max values to use for ranks jury scoring, default is 1
@@ -99,7 +99,7 @@ KEEP_TOP_FAST="9999999"
 KEEP_TOP_SLOW="9999999"
 LIMIT_VOROMQA_LIGHT=""
 SCORING_RANKS="protein_protein_voromqa_and_global_and_gnn_no_sr"
-SCORING_RANKS_TOP="9999999"
+SCORING_RANKS_TOP="300"
 SCORING_RANKS_JURY_SLICES="5 20" 
 SCORING_RANKS_JURY_CLUSTER="0.9" 
 SCORING_RANKS_JURY_MAX_VALUES="1" 
