@@ -86,6 +86,9 @@ public:
 		set_command_for_extra_actions("configure-gui-disable-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_DISABLE_CONSOLE));
 		set_command_for_extra_actions("configure-gui-enable-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_ENABLE_CONSOLE));
 		set_command_for_extra_actions("configure-gui-toggle-console", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_TOGGLE_CONSOLE));
+		set_command_for_extra_actions("configure-gui-scale-x1", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SCALE_X1));
+		set_command_for_extra_actions("configure-gui-scale-x2", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SCALE_X2));
+		set_command_for_extra_actions("configure-gui-scale-x3", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SCALE_X3));
 		set_command_for_extra_actions("set-initial-atom-representation-to-cartoon", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_INITIAL_MAIN_REPRESENTATION).set_value_of_initial_main_represenation(GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_CARTOON));
 		set_command_for_extra_actions("set-initial-atom-representation-to-trace", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_INITIAL_MAIN_REPRESENTATION).set_value_of_initial_main_represenation(GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_TRACE));
 		set_command_for_extra_actions("clear", scripting::operators::Mock());
@@ -94,6 +97,7 @@ public:
 		set_command_for_extra_actions("history-all", scripting::operators::Mock());
 		set_command_for_extra_actions("animate-none", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_NONE));
 		set_command_for_extra_actions("animate-loop-picked-objects", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS));
+		set_command_for_extra_actions("animate-loop-picked-objects-bidirectionally", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS_BIDIRECTIONALLY));
 		set_command_for_extra_actions("animate-spin-left", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_LEFT));
 		set_command_for_extra_actions("animate-spin-right", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT));
 		set_command_for_extra_actions("animate-spin-on-z-left", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT));
@@ -102,10 +106,13 @@ public:
 		set_command_for_extra_actions("import-view", operators::ImportView());
 		set_command_for_extra_actions("hint-render-area-size", operators::HintRenderAreaSize());
 
-		set_command_for_congregation_of_data_managers("fetch", duktaper::operators::Fetch(RemoteImportDownloaderAdaptive::instance()));
-		set_command_for_congregation_of_data_managers("fetch-afdb", duktaper::operators::FetchAFDB(RemoteImportDownloaderAdaptive::instance()));
-		set_command_for_congregation_of_data_managers("import-url", duktaper::operators::ImportUrl(RemoteImportDownloaderAdaptive::instance()));
-		set_command_for_congregation_of_data_managers("import-downloaded", operators::ImportDownloaded());
+		set_command_for_congregation_of_data_managers("fetch", duktaper::operators::Fetch(RemoteImportDownloaderAdaptiveForOLD::instance()));
+		set_command_for_congregation_of_data_managers("fetch-afdb", duktaper::operators::FetchAFDB(RemoteImportDownloaderAdaptiveForOLD::instance()));
+		set_command_for_congregation_of_data_managers("fetch-mmcif", duktaper::operators::FetchMMCIF(RemoteImportDownloaderAdaptiveForMMCIF::instance()));
+		set_command_for_congregation_of_data_managers("import-url", duktaper::operators::ImportUrl<RemoteImportDownloaderAdaptiveForOLD>());
+		set_command_for_congregation_of_data_managers("import-mmcif-url", duktaper::operators::ImportUrl<RemoteImportDownloaderAdaptiveForMMCIF>());
+		set_command_for_congregation_of_data_managers("import-downloaded", operators::ImportDownloaded<RemoteImportDownloaderAdaptiveForOLD>());
+		set_command_for_congregation_of_data_managers("import-downloaded-mmcif", operators::ImportDownloaded<RemoteImportDownloaderAdaptiveForMMCIF>());
 		set_command_for_congregation_of_data_managers("export-session", operators::ExportSession());
 		set_command_for_congregation_of_data_managers("import-session", operators::ImportSession());
 		set_command_for_congregation_of_data_managers("orient", operators::Orient());
@@ -273,24 +280,29 @@ public:
 			{
 				if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS)
 				{
-					congregation_of_data_managers().set_next_picked_object_visible();
+					congregation_of_data_managers().set_next_picked_object_visible(false);
+					update_console_object_states();
+				}
+				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS_BIDIRECTIONALLY)
+				{
+					congregation_of_data_managers().set_next_picked_object_visible(true);
 					update_console_object_states();
 				}
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_LEFT)
 				{
-					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), 0.01);
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), -0.01);
 				}
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT)
 				{
-					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), -0.01);
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), 0.01);
 				}
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT)
 				{
-					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), 0.01);
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), -0.01);
 				}
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_RIGHT)
 				{
-					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), -0.01);
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 0, 1), 0.01);
 				}
 				animation_timer.reset();
 			}

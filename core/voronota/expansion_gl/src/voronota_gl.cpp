@@ -5,8 +5,6 @@
 
 #include "../../src/voronota_version.h"
 
-#include "uv/stocked_default_fonts.h"
-
 int main(const int argc, const char** argv)
 {
 	int return_status=1;
@@ -34,7 +32,6 @@ int main(const int argc, const char** argv)
 		const std::string custom_font_file=command_args_input.get_value_or_default<std::string>("custom-font-file", "");
 		const std::vector<std::string> files=command_args_input.get_value_vector_or_all_unused_unnamed_values("files");
 		const std::vector<std::string> scripts=command_args_input.get_value_vector_or_default<std::string>("scripts", std::vector<std::string>());
-		const bool musical=command_args_input.get_flag("musical");
 
 		command_args_input.assert_nothing_unusable();
 
@@ -43,21 +40,7 @@ int main(const int argc, const char** argv)
 			throw std::runtime_error(std::string("Failed to init application."));
 		}
 
-		if(!custom_font_file.empty())
-		{
-			ImGuiIO& io=ImGui::GetIO();
-			io.Fonts->AddFontFromFileTTF(custom_font_file.c_str(), 13.0f*gui_scaling);
-		}
-		else
-		{
-			ImGuiIO& io=ImGui::GetIO();
-			static ImFontConfig font_config=ImFontConfig();
-			font_config.FontDataOwnedByAtlas=false;
-			io.Fonts->AddFontFromMemoryTTF(reinterpret_cast<void*>(voronota::uv::default_font_mono_regular_data()), voronota::uv::default_font_mono_regular_data_size(), 13.0f*gui_scaling, &font_config);
-		}
-
-		voronota::viewer::GUIStyleWrapper::initialized()=true;
-		voronota::viewer::GUIStyleWrapper::set_scale_factor(gui_scaling, false);
+		voronota::viewer::GUIStyleWrapper::instance().init(custom_font_file, gui_scaling);
 
 		voronota::viewer::Application::instance().enqueue_script("clear");
 		voronota::viewer::Application::instance().enqueue_script("setup-defaults");
@@ -67,20 +50,10 @@ int main(const int argc, const char** argv)
 		voronota::viewer::Application::instance().enqueue_script("occlusion-none");
 		voronota::viewer::Application::instance().enqueue_script("multisampling-basic");
 		voronota::viewer::Application::instance().enqueue_script("background 0xCCCCCC");
+		voronota::viewer::Application::instance().enqueue_script("setup-parallelization -processors 8 -dynamic -in-script");
 
 		const bool faster_loading=(files.size()>5);
 		const bool show_cartoons_after_faster_loading=(faster_loading && files.size()<=30);
-		const bool with_music_background_for_loading=(musical && files.size()>10);
-
-		if(musical)
-		{
-			voronota::viewer::Application::instance().enqueue_script("music-background enable");
-		}
-
-		if(with_music_background_for_loading)
-		{
-			voronota::viewer::Application::instance().enqueue_script("music-background waiting");
-		}
 
 		if(faster_loading)
 		{
@@ -113,11 +86,6 @@ int main(const int argc, const char** argv)
 			voronota::viewer::Application::instance().enqueue_script(scripts[i]);
 		}
 
-		if(with_music_background_for_loading)
-		{
-			voronota::viewer::Application::instance().enqueue_script("music-background stop");
-		}
-
 #ifdef FOR_WEB
 		emscripten_set_main_loop(voronota::viewer::Application::instance_render_frame, 0, 1);
 #else
@@ -133,19 +101,6 @@ int main(const int argc, const char** argv)
 	catch(...)
 	{
 		std::cerr << "Unknown exception caught." << std::endl;
-	}
-
-	try
-	{
-		voronota::duktaper::operators::MusicBackground::stop_if_was_used();
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << "Exception caught when finalizing: " << e.what() << std::endl;
-	}
-	catch(...)
-	{
-		std::cerr << "Unknown exception caught when finalizing." << std::endl;
 	}
 
 	return return_status;

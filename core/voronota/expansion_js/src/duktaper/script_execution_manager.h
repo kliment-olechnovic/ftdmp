@@ -7,17 +7,22 @@
 #include "operators/checksum.h"
 #include "operators/congruence_score.h"
 #include "operators/congruence_score_many.h"
+#include "operators/construct_contacts_radically_fast.h"
 #include "operators/construct_or_load_contacts.h"
 #include "operators/construct_or_load_quality_scores.h"
 #include "operators/convert_bff_obj_to_svg.h"
+#include "operators/export_atoms_to_mmcif.h"
+#include "operators/export_atoms_to_mmcif_multimodel.h"
 #include "operators/faspr.h"
 #include "operators/fetch.h"
 #include "operators/fetch_afdb.h"
+#include "operators/fetch_mmcif.h"
 #include "operators/import_cod_cif.h"
+#include "operators/import_mmcif.h"
 #include "operators/import_url.h"
-#include "operators/music_background.h"
 #include "operators/nnport_predict.h"
 #include "operators/plot_contacts_map.h"
+#include "operators/qcprot_many.h"
 #include "operators/qcprot.h"
 #include "operators/run_bff.h"
 #include "operators/run_hbplus.h"
@@ -47,10 +52,11 @@ public:
 		set_command_for_extra_actions("convert-bff-obj-to-svg", operators::ConvertBFFObjToSVG());
 		set_command_for_extra_actions("nnport-predict", operators::NNPortPredict());
 		set_command_for_extra_actions("setup-defaults", operators::SetupDefaults());
-		set_command_for_extra_actions("music-background", operators::MusicBackground());
 
+		set_command_for_data_manager("construct-contacts-radically-fast", operators::ConstructContactsRadicallyFast(), true);
 		set_command_for_data_manager("construct-or-load-contacts", operators::ConstructOrLoadContacts(), true);
 		set_command_for_data_manager("construct-or-load-quality-scores", operators::ConstructOrLoadQualityScores(), true);
+		set_command_for_data_manager("export-atoms-to-mmcif", operators::ExportAtomsToMMCIF(), false);
 		set_command_for_data_manager("faspr", operators::FASPR(), true);
 		set_command_for_data_manager("plot-contacts-map", operators::PlotContactsMap(), true);
 		set_command_for_data_manager("run-bff", operators::RunBFF(), true);
@@ -62,10 +68,15 @@ public:
 
 		set_command_for_congregation_of_data_managers("congruence-score", operators::CongruenceScore());
 		set_command_for_congregation_of_data_managers("congruence-score-many", operators::CongruenceScoreMany());
-		set_command_for_congregation_of_data_managers("fetch", operators::Fetch(RemoteImportDownloaderSimple::instance()));
-		set_command_for_congregation_of_data_managers("fetch-afdb", operators::FetchAFDB(RemoteImportDownloaderSimple::instance()));
+		set_command_for_congregation_of_data_managers("export-atoms-to-mmcif-multimodel", operators::ExportAtomsToMMCIFMultimodel());
+		set_command_for_congregation_of_data_managers("fetch", operators::Fetch(RemoteImportDownloaderSimple< RemoteImportRequest<scripting::operators::ImportMany> >::instance()));
+		set_command_for_congregation_of_data_managers("fetch-afdb", operators::FetchAFDB(RemoteImportDownloaderSimple< RemoteImportRequest<scripting::operators::ImportMany> >::instance()));
+		set_command_for_congregation_of_data_managers("fetch-mmcif", operators::FetchMMCIF(RemoteImportDownloaderSimple< RemoteImportRequest<operators::ImportMMCIF> >::instance()));
 		set_command_for_congregation_of_data_managers("import-cod-cif", operators::ImportCODCIF());
-		set_command_for_congregation_of_data_managers("import-url", operators::ImportUrl(RemoteImportDownloaderSimple::instance()));
+		set_command_for_congregation_of_data_managers("import-mmcif", operators::ImportMMCIF());
+		set_command_for_congregation_of_data_managers("import-mmcif-url", operators::ImportUrl< RemoteImportDownloaderSimple< RemoteImportRequest<operators::ImportMMCIF> > >());
+		set_command_for_congregation_of_data_managers("import-url", operators::ImportUrl< RemoteImportDownloaderSimple< RemoteImportRequest<scripting::operators::ImportMany> > >());
+		set_command_for_congregation_of_data_managers("qcprot-many", operators::QCProtMany());
 		set_command_for_congregation_of_data_managers("qcprot", operators::QCProt());
 		set_command_for_congregation_of_data_managers("run-nolb", operators::RunNolb());
 		set_command_for_congregation_of_data_managers("summarize-two-state-motion", operators::SummarizeTwoStateMotion());

@@ -34,9 +34,11 @@ public:
 		need_contacts_unmark_button_(false),
 		current_atoms_selection_not_default_(false),
 		current_contacts_selection_not_default_(false),
+		current_atoms_selection_marked_(false),
+		current_contacts_selection_marked_(false),
 		default_atoms_selection_string_("[]"),
 		marked_atoms_selection_string_("[_marked]"),
-		default_contacts_selection_string_("[-no-solvent]"),
+		default_contacts_selection_string_("[]"),
 		marked_contacts_selection_string_("[_marked]")
 	{
 		atoms_selection_string_suggestions_.first.push_back(default_atoms_selection_string_);
@@ -52,8 +54,8 @@ public:
 
 		contacts_selection_string_suggestions_.first.push_back(default_contacts_selection_string_);
 		contacts_selection_string_suggestions_.first.push_back(marked_contacts_selection_string_);
-		contacts_selection_string_suggestions_.first.push_back("[]");
 		contacts_selection_string_suggestions_.first.push_back("[_visible]");
+		contacts_selection_string_suggestions_.first.push_back("[-no-solvent]");
 		contacts_selection_string_suggestions_.first.push_back("[-no-solvent -min-seq-sep 1]");
 		contacts_selection_string_suggestions_.first.push_back("[-solvent]");
 		contacts_selection_string_suggestions_.first.push_back("[-inter-chain]");
@@ -128,6 +130,8 @@ public:
 
 		current_atoms_selection_not_default_=(atoms_selection_string_safe()!=default_atoms_selection_string_);
 		current_contacts_selection_not_default_=(contacts_selection_string_safe()!=default_contacts_selection_string_);
+		current_atoms_selection_marked_=current_atoms_selection_not_default_ && (atoms_selection_string_safe()==marked_atoms_selection_string_);
+		current_contacts_selection_marked_=current_contacts_selection_not_default_ && (contacts_selection_string_safe()==marked_contacts_selection_string_);
 
 		{
 			{
@@ -140,18 +144,30 @@ public:
 						{
 							if(current_atoms_selection_not_default_)
 							{
-								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.5f, 1.0f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+								if(current_atoms_selection_marked_)
+								{
+									ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.5f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+								}
+								else
+								{
+									ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.5f, 0.2f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
+								}
+							}
+							else
+							{
+								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.7f, 0.7f, 1.0f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.8f, 0.8f, 1.0f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.7f, 0.7f, 1.0f));
 							}
 
 							std::string button_id=atoms_selection_string_safe()+"##button_atoms_selection_change";
 							ImGui::Button(button_id.c_str());
 
-							if(current_atoms_selection_not_default_)
-							{
-								ImGui::PopStyleColor(3);
-							}
+							ImGui::PopStyleColor(3);
 						}
 						const std::string submenu_id=std::string("Change##submenu_atoms_selection");
 						if(ImGui::BeginPopupContextItem(submenu_id.c_str(), 0))
@@ -262,18 +278,30 @@ public:
 						{
 							if(current_contacts_selection_not_default_)
 							{
-								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.5f, 1.0f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+								if(current_contacts_selection_marked_)
+								{
+									ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.5f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.4f, 1.0f));
+								}
+								else
+								{
+									ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.5f, 0.2f, 1.0f));
+									ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
+								}
+							}
+							else
+							{
+								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.7f, 0.7f, 1.0f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.8f, 0.8f, 1.0f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.7f, 0.7f, 1.0f));
 							}
 
 							std::string button_id=contacts_selection_string_safe()+"##button_contacts_selection_change";
 							ImGui::Button(button_id.c_str());
 
-							if(current_contacts_selection_not_default_)
-							{
-								ImGui::PopStyleColor(3);
-							}
+							ImGui::PopStyleColor(3);
 						}
 						const std::string submenu_id=std::string("Change##submenu_contacts_selection");
 						if(ImGui::BeginPopupContextItem(submenu_id.c_str(), 0))
@@ -439,53 +467,76 @@ public:
 						result="hide-objects -not-picked";
 					}
 
+					ImGui::Separator();
+
+					if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_NONE)
 					{
-						bool separated=false;
-
-						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_NONE)
+						if(ImGui::Selectable("Stop animation"))
 						{
-							if(!separated)
-							{
-								ImGui::Separator();
-								separated=true;
-							}
+							result="animate-none\n";
+						}
+					}
 
-							if(ImGui::Selectable("Stop animation"))
+					if(ImGui::BeginMenu("Set animation##set_animation"))
+					{
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS && objects_info.num_of_picked_objects()>1)
+						{
+							if(ImGui::Selectable("Loop picked objects, only forward"))
 							{
-								result="animate-none\n";
+								result="animate-loop-picked-objects\n";
 							}
 						}
 
-						if(objects_info.num_of_picked_objects()>1)
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS_BIDIRECTIONALLY && objects_info.num_of_picked_objects()>1)
 						{
-							if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_NONE || (GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS && GUIConfiguration::instance().animation_step_miliseconds>12.0))
+							if(ImGui::Selectable("Loop picked objects, forward and backward"))
 							{
-								if(!separated)
-								{
-									ImGui::Separator();
-									separated=true;
-								}
-
-								if(ImGui::Selectable("Loop picked objects, faster"))
-								{
-									result="animate-loop-picked-objects -time-step 5.0\n";
-								}
-							}
-
-							if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_NONE || (GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_LOOP_PICKED_OBJECTS && GUIConfiguration::instance().animation_step_miliseconds<12.0))
-							{
-								if(!separated)
-								{
-									ImGui::Separator();
-									separated=true;
-								}
-
-								if(ImGui::Selectable("Loop picked objects, slower"))
-								{
-									result="animate-loop-picked-objects -time-step 25.0\n";
-								}
+								result="animate-loop-picked-objects-bidirectionally\n";
 							}
 						}
+
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_SPIN_LEFT)
+						{
+							if(ImGui::Selectable("Spin left"))
+							{
+								result="animate-spin-left\n";
+							}
+						}
+
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT)
+						{
+							if(ImGui::Selectable("Spin right"))
+							{
+								result="animate-spin-right\n";
+							}
+						}
+
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT)
+						{
+							if(ImGui::Selectable("Spin clockwise"))
+							{
+								result="animate-spin-on-z-left\n";
+							}
+						}
+
+						if(GUIConfiguration::instance().animation_variant!=GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_RIGHT)
+						{
+							if(ImGui::Selectable("Spin counter-clockwise"))
+							{
+								result="animate-spin-on-z-right\n";
+							}
+						}
+
+						ImGui::Separator();
+
+						static float animation_time_step=50.0f;
+
+						if(ImGui::SliderFloat("milliseconds per frame", &animation_time_step, 1.0f, 250.0f, "%.0f", 0))
+						{
+							GUIConfiguration::instance().animation_step_miliseconds=static_cast<double>(animation_time_step);
+						}
+
+						ImGui::EndMenu();
 					}
 
 					ImGui::EndPopup();
@@ -1375,17 +1426,7 @@ private:
 
 						if(ImGui::Selectable("  Align all"))
 						{
-							const bool with_music_background=(object_states.size()>10);
-							result="";
-							if(with_music_background)
-							{
-								result+="music-background waiting\n";
-							}
-							result+=std::string("tmalign-many -target '")+os_name+"' -target-sel '("+atoms_selection_string_safe()+")' -model-sel '("+atoms_selection_string_safe()+")'";
-							if(with_music_background)
-							{
-								result+="\nmusic-background stop\n";
-							}
+							result=std::string("tmalign-many -target '")+os_name+"' -target-sel '("+atoms_selection_string_safe()+")' -model-sel '("+atoms_selection_string_safe()+")'";
 						}
 
 						int num_of_other_picked_objects=0;
@@ -1399,17 +1440,7 @@ private:
 
 						if(num_of_other_picked_objects>0 && ImGui::Selectable("  Align picked"))
 						{
-							const bool with_music_background=(num_of_other_picked_objects>10);
-							result="";
-							if(with_music_background)
-							{
-								result+="music-background waiting\n";
-							}
-							result+=std::string("tmalign-many -picked -target '")+os_name+"' -target-sel '("+atoms_selection_string_safe()+")' -model-sel '("+atoms_selection_string_safe()+")'";
-							if(with_music_background)
-							{
-								result+="\nmusic-background stop\n";
-							}
+							result=std::string("tmalign-many -picked -target '")+os_name+"' -target-sel '("+atoms_selection_string_safe()+")' -model-sel '("+atoms_selection_string_safe()+")'";
 						}
 
 						ImGui::PopStyleColor();
@@ -2466,6 +2497,8 @@ private:
 
 	bool current_atoms_selection_not_default_;
 	bool current_contacts_selection_not_default_;
+	bool current_atoms_selection_marked_;
+	bool current_contacts_selection_marked_;
 
 	std::vector<char> atoms_selection_buffer_;
 	std::vector<char> contacts_selection_buffer_;

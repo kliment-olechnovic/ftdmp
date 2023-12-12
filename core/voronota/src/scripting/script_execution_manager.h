@@ -17,6 +17,7 @@
 #include "operators/center_atoms.h"
 #include "operators/check_distance_constraint.h"
 #include "operators/clash_score.h"
+#include "operators/collect_inter_residue_contacts_area_ranges.h"
 #include "operators/color_atoms.h"
 #include "operators/color_contacts.h"
 #include "operators/color_figures.h"
@@ -24,6 +25,7 @@
 #include "operators/construct_contacts.h"
 #include "operators/construct_triangulation.h"
 #include "operators/copy_object.h"
+#include "operators/count_common_tessellation_elements.h"
 #include "operators/delete_adjuncts_of_atoms.h"
 #include "operators/delete_adjuncts_of_contacts.h"
 #include "operators/delete_figures.h"
@@ -40,6 +42,7 @@
 #include "operators/distance.h"
 #include "operators/download_virtual_file.h"
 #include "operators/echo.h"
+#include "operators/ensure_exactly_matching_atom_ids_in_objects.h"
 #include "operators/estimate_axis.h"
 #include "operators/exit.h"
 #include "operators/explain_command.h"
@@ -87,7 +90,6 @@
 #include "operators/mock.h"
 #include "operators/mock_voromqa_local_contacts.h"
 #include "operators/move_atoms.h"
-#include "operators/order_atoms_by_residue_id.h"
 #include "operators/pick_objects.h"
 #include "operators/print_atoms.h"
 #include "operators/print_contacts.h"
@@ -137,6 +139,7 @@
 #include "operators/setup_chemistry_annotating.h"
 #include "operators/setup_loading.h"
 #include "operators/setup_mock_voromqa.h"
+#include "operators/setup_parallelization.h"
 #include "operators/setup_random_seed.h"
 #include "operators/setup_voromqa.h"
 #include "operators/show_atoms.h"
@@ -213,6 +216,7 @@ public:
 		set_command_for_congregation_of_data_managers("list-objects", operators::ListObjects());
 		set_command_for_congregation_of_data_managers("delete-objects", operators::DeleteObjects());
 		set_command_for_congregation_of_data_managers("rename-object", operators::RenameObject());
+		set_command_for_congregation_of_data_managers("collect-inter-residue-contact-area-ranges", operators::CollectInterResidueContactAreaRanges());
 		set_command_for_congregation_of_data_managers("copy-object", operators::CopyObject());
 		set_command_for_congregation_of_data_managers("import-docking-result", operators::ImportDockingResult());
 		set_command_for_congregation_of_data_managers("import-many", operators::ImportMany());
@@ -230,6 +234,8 @@ public:
 		set_command_for_congregation_of_data_managers("export-global-adjuncts", operators::ExportGlobalAdjuncts());
 		set_command_for_congregation_of_data_managers("export-objects", operators::ExportObjects());
 		set_command_for_congregation_of_data_managers("import-objects", operators::ImportObjects());
+		set_command_for_congregation_of_data_managers("ensure-exactly-matching-atom-ids-in-objects", operators::EnsureExactlyMatchingAtomIDsInObjects());
+		set_command_for_congregation_of_data_managers("count-common-tessellation-elements", operators::CountCommonTessellationElements());
 
 		set_command_for_data_manager("add-figure", operators::AddFigure(), true);
 		set_command_for_data_manager("add-figures-of-labels", operators::AddFiguresOfLabels(), true);
@@ -299,7 +305,6 @@ public:
 		set_command_for_data_manager("mark-contacts", operators::MarkContacts(), true);
 		set_command_for_data_manager("mock-voromqa-local-contacts", operators::MockVoroMQALocalContacts(), true);
 		set_command_for_data_manager("move-atoms", operators::MoveAtoms(), true);
-		set_command_for_data_manager("order-atoms-by-residue-id", operators::OrderAtomsByResidueID(), true);
 		set_command_for_data_manager("print-atoms", operators::PrintAtoms(), true);
 		set_command_for_data_manager("print-contacts", operators::PrintContacts(), true);
 		set_command_for_data_manager("print-figures", operators::PrintFigures(), true);
@@ -368,6 +373,7 @@ public:
 		set_command_for_extra_actions("setup-chemistry-annotating", operators::SetupChemistryAnnotating());
 		set_command_for_extra_actions("setup-loading", operators::SetupLoading());
 		set_command_for_extra_actions("setup-mock-voromqa", operators::SetupMockVoroMQA());
+		set_command_for_extra_actions("setup-parallelization", operators::SetupParallelization());
 		set_command_for_extra_actions("setup-random-seed", operators::SetupRandomSeed());
 		set_command_for_extra_actions("setup-voromqa", operators::SetupVoroMQA());
 		set_command_for_extra_actions("explain-command", operators::ExplainCommand(collection_of_command_documentations_));
@@ -889,11 +895,7 @@ private:
 				}
 				else if(picked_data_managers.size()==1 || commands_for_data_manager_[command_name]->multiplicable())
 				{
-#ifdef _OPENMP
-					const bool in_parallel=true;
-#else
-					const bool in_parallel=false;
-#endif
+					const bool in_parallel=Parallelization::Configuration::get_default_configuration().in_script;
 					if(!in_parallel || picked_data_managers.size()==1)
 					{
 						for(std::size_t i=0;i<picked_data_managers.size();i++)

@@ -64,6 +64,39 @@ public:
 		return result;
 	}
 
+	static Remainder construct_contact_remainder_without_tessellation(
+			const std::vector<SimpleSphere>& spheres,
+			const std::vector<std::size_t>& sorted_neighbor_ids,
+			const std::size_t a_id,
+			const double probe,
+			const SubdividedIcosahedron& raw_sih)
+	{
+		Remainder result;
+		if(a_id<spheres.size())
+		{
+			const SimpleSphere& a=spheres[a_id];
+			const SimpleSphere a_expanded=SimpleSphere(a, a.r+probe);
+			result=init_remainder(a_expanded, raw_sih);
+			Remainder result_fully_uncut;
+			prefilter_contact_remainder(spheres, probe, sorted_neighbor_ids, result, result_fully_uncut);
+			if(!result.empty())
+			{
+				for(std::vector<std::size_t>::const_iterator it=sorted_neighbor_ids.begin();it!=sorted_neighbor_ids.end();++it)
+				{
+					const std::size_t c_id=(*it);
+					if(c_id<spheres.size())
+					{
+						const SimpleSphere& c=spheres[c_id];
+						const SimpleSphere c_expanded=SimpleSphere(c, c.r+probe);
+						cut_contact_remainder(c_expanded, std::make_pair(10, a_expanded), result);
+					}
+				}
+			}
+			result.insert(result.end(), result_fully_uncut.begin(), result_fully_uncut.end());
+		}
+		return result;
+	}
+
 private:
 	static void cut_contact_remainder(const SimpleSphere& sphere, const std::pair<int, SimpleSphere>& projection_parameters, Remainder& remainder)
 	{
@@ -213,6 +246,47 @@ private:
 			result=project_point_on_sphere(sphere_b, result);
 		}
 		return result;
+	}
+
+	static void prefilter_contact_remainder(const std::vector<SimpleSphere>& spheres, const double probe, const std::vector<std::size_t>& neighbor_ids, Remainder& remainder, Remainder& remainder_fully_uncut)
+	{
+		int marks[3]={0, 0, 0};
+		Remainder::iterator it=remainder.begin();
+		while(it!=remainder.end())
+		{
+			bool fully_cut=false;
+			std::size_t num_of_fully_uncut=0;
+			for(std::size_t j=0;j<neighbor_ids.size() && !fully_cut;j++)
+			{
+				const SimpleSphere& sphere=spheres[neighbor_ids[j]];
+				for(int i=0;i<3;i++)
+				{
+					marks[i]=squared_distance_from_point_to_point(it->p[i], sphere)<((sphere.r+probe)*(sphere.r+probe)) ? 1 : 0;
+				}
+				const int marks_sum=(marks[0]+marks[1]+marks[2]);
+				if(marks_sum==3)
+				{
+					fully_cut=true;
+				}
+				else if(marks_sum==0)
+				{
+					num_of_fully_uncut++;
+				}
+			}
+			if(fully_cut)
+			{
+				it=remainder.erase(it);
+			}
+			else if(num_of_fully_uncut==neighbor_ids.size())
+			{
+				remainder_fully_uncut.push_back(*it);
+				it=remainder.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
 	}
 };
 
