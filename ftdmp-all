@@ -953,7 +953,7 @@ fi
 
 if [ "$EXTRA_SCORING_RANKS" == "all_plugin" ] && [ -n "$PLUGIN_SCORING_SCRIPT" ] && [ -s "${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt" ]
 then
-	EXTRA_SCORING_RANKS="$(cat ${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt | head -1 | sed 's/^\S\+\s\+//')"
+	EXTRA_SCORING_RANKS="$(cat ${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt | head -1 | sed 's/^\S\+\s\+//' | sed 's/\s\+/_rank /g' | sed 's/$/_rank/g')"
 	SCORING_RANKS="${SCORING_RANKS} ${EXTRA_SCORING_RANKS}"
 fi
 
