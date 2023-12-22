@@ -401,7 +401,7 @@ then
 	exit 1
 fi
 
-if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ]
+if [ -z "$REFERENCE_STRUCTURE_FILE_FOR_COMPARISON" ] && [ "$SCORING_MODE_PROTEIN" != "true" ] && [ "$SCORING_MODE_PROTEIN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_GENERIC" != "true" ] && [ "$SCORING_MODE_GENERIC_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN" != "true" ] && [ "$SCORING_MODE_PROTEIN_GNN_SIDECHAIN_REBUILT" != "true" ] && [ "$SCORING_MODE_PROTEIN_GLOBAL" != "true" ] && [ -z "$PLUGIN_SCORING_SCRIPT" ] && [ -z "$EXTERNAL_SCORES_FILE" ]
 then
 	echo >&2 "Error: no scoring actions specified"
 	exit 1

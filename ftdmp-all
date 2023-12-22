@@ -53,6 +53,7 @@ Options:
     --scoring-full-top-slow   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --scoring-rank-names      string  *  rank names to use, or name of a standard set of rank names
     --scoring-rank-names-x    string     extra rank names to use, default is 'all_plugin' to use plugin output columns (if any)
+    --only-extra-in-jury      string     flag to only use extra rank names in jury stage
     --scoring-ranks-top       number     number of top complexes to consider for each ranking, default is 100
     --scoring-jury-slices     string     slice sizes sequence definition for ranks jury scoring, default is '5 20'
     --scoring-jury-cluster    number     clustering threshold for ranks jury scoring, default is 0.9
@@ -161,6 +162,7 @@ SCORING_TOP_STAGE1="1000"
 SCORING_TOP_STAGE1_FOR_SLOW="9999999"
 SCORING_RANKS=""
 EXTRA_SCORING_RANKS="all_plugin"
+ONLY_EXTRA_SCORING_IN_JURY="false"
 SCORING_TOP_STAGE2="100"
 SCORING_RANKS_JURY_SLICES="5 20" 
 SCORING_RANKS_JURY_CLUSTER="0.9" 
@@ -369,6 +371,10 @@ do
 		;;
 	--scoring-rank-names-x)
 		EXTRA_SCORING_RANKS="$OPTARG"
+		shift
+		;;
+	--only-extra-in-jury)
+		ONLY_EXTRA_SCORING_IN_JURY="$OPTARG"
 		shift
 		;;
 	--scoring-ranks-top)
@@ -955,6 +961,17 @@ if [ "$EXTRA_SCORING_RANKS" == "all_plugin" ] && [ -n "$PLUGIN_SCORING_SCRIPT" ]
 then
 	EXTRA_SCORING_RANKS="$(cat ${OUTPUT_PATH}/raw_scoring_results_PLUGIN.txt | head -1 | sed 's/^\S\+\s\+//' | sed 's/\s\+/_rank /g' | sed 's/$/_rank/g')"
 	SCORING_RANKS="${SCORING_RANKS} ${EXTRA_SCORING_RANKS}"
+fi
+
+if [ "$ONLY_EXTRA_SCORING_IN_JURY" == "true" ]
+then
+	if [ -n "$EXTRA_SCORING_RANKS" ]
+	then
+		SCORING_RANKS="${EXTRA_SCORING_RANKS}"
+	else
+		echo >&2 "Error: only extra scoring rank names requested to be used in jury, but no extra scoring rank names available"
+		exit 1
+	fi
 fi
 
 ################################################################################
