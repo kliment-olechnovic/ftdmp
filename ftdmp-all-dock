@@ -30,6 +30,8 @@ Options:
     --hex-max-solutions       number     max number of docking solutions for HEX, default is 10000
     --hex-script              string     semicolon-sparated additional commands for HEX, default is ''
     --hex-swap-and-repeat     string     flag to run HEX twice with monomers swapped, default is 'false'
+    --reuse-ftdock-results    string     path to directly input ftdock docking results file and avoid running ftdock, default is ''
+    --reuse-hex-results       string     path to directly input hex docking results file and avoid running hex, default is ''
     --parallel                number     number of processes to run when docking with ftdock, default is 8
     --sbatch-for-ftdock       string     sbatch parameters to run docking with ftdock in parallel, default is ''
     --sbatch-for-hex-or-sam   string     sbatch parameters to run docking with HEX or SAM on cluster, default is ''
@@ -81,6 +83,9 @@ HEX_MACRO_MODE="true"
 HEX_MAX_SOLUTIONS="10000"
 HEX_SCRIPT=""
 HEX_SWAP_AND_REPEAT="false"
+REUSE_FTDOCK_DOCKING_RESULTS=""
+REUSE_HEX_DOCKING_RESULTS=""
+DOCKING_SBATCH_FOR_FTDOCK=""
 DOCKING_PROCESSORS="8"
 DOCKING_SBATCH_FOR_FTDOCK=""
 DOCKING_SBATCH_FOR_HEX_OR_SAM=""
@@ -185,6 +190,14 @@ do
 		HEX_SWAP_AND_REPEAT="$OPTARG"
 		shift
 		;;
+	--reuse-ftdock-results)
+		REUSE_FTDOCK_DOCKING_RESULTS="$OPTARG"
+		shift
+		;;
+	--reuse-hex-results)
+		REUSE_HEX_DOCKING_RESULTS="$OPTARG"
+		shift
+		;;
 	--parallel)
 		DOCKING_PROCESSORS="$OPTARG"
 		shift
@@ -246,6 +259,18 @@ then
 	if [ "$USE_FTDOCK" != "true" ] && [ "$USE_HEX" != "true" ]
 	then
 		echo >&2 "Error: no tool usage turned on for hetero docking"
+		exit 1
+	fi
+	
+	if [ -n "$REUSE_FTDOCK_DOCKING_RESULTS" ] && [ ! -s "$REUSE_FTDOCK_DOCKING_RESULTS" ]
+	then
+		echo >&2 "Error: ftdock results reuse file path provided but invalid"
+		exit 1
+	fi
+	
+	if [ -n "$REUSE_HEX_DOCKING_RESULTS" ] && [ ! -s "$REUSE_HEX_DOCKING_RESULTS" ]
+	then
+		echo >&2 "Error: hex results reuse file path provided but invalid"
 		exit 1
 	fi
 	
@@ -341,13 +366,18 @@ then
 		
 		if [ ! -s "$DOCKING_FTDOCK_RESULTS_FILE" ]
 		then
-			ftdmp-dock-two-monomers-with-ftdock --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-			  --job-name "${JOB_NAME}_" \
-			  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH_FOR_FTDOCK" \
-			  --ftdock-keep "$FTDOCK_KEEP" \
-			  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
-			  --ftdock-min-grid-sep "$FTDOCK_MIN_GRID_SEP" \
-			> "$DOCKING_FTDOCK_RESULTS_FILE"
+			if [ -z "$REUSE_FTDOCK_DOCKING_RESULTS" ]
+			then
+				ftdmp-dock-two-monomers-with-ftdock --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --job-name "${JOB_NAME}_" \
+				  --parallel "$DOCKING_PROCESSORS" --sbatch-parameters "$DOCKING_SBATCH_FOR_FTDOCK" \
+				  --ftdock-keep "$FTDOCK_KEEP" \
+				  --ftdock-angle-step "$FTDOCK_ANGLE_STEP" \
+				  --ftdock-min-grid-sep "$FTDOCK_MIN_GRID_SEP" \
+				> "$DOCKING_FTDOCK_RESULTS_FILE"
+			else
+				cat "$REUSE_FTDOCK_DOCKING_RESULTS" > "$DOCKING_FTDOCK_RESULTS_FILE"
+			fi
 		fi
 	fi
 	
@@ -364,14 +394,19 @@ then
 		
 		if [ ! -f "$DOCKING_HEX_RESULTS_FILE" ]
 		then
-			ftdmp-dock-two-monomers-with-hex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
-			  --job-name "${JOB_NAME}_" \
-			  --sbatch-parameters "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
-			  --hex-macro-mode "$HEX_MACRO_MODE" \
-			  --hex-max-solutions "$HEX_MAX_SOLUTIONS" \
-			  --hex-script "$HEX_SCRIPT" \
-			  --hex-swap-and-repeat "$HEX_SWAP_AND_REPEAT" \
-			> "$DOCKING_HEX_RESULTS_FILE"
+			if [ -z "$REUSE_HEX_DOCKING_RESULTS" ]
+			then
+				ftdmp-dock-two-monomers-with-hex --monomer1 "$PREPARED_STATIC_STRUCTURE_FILE" --monomer2 "$PREPARED_MOBILE_STRUCTURE_FILE" \
+				  --job-name "${JOB_NAME}_" \
+				  --sbatch-parameters "$DOCKING_SBATCH_FOR_HEX_OR_SAM" \
+				  --hex-macro-mode "$HEX_MACRO_MODE" \
+				  --hex-max-solutions "$HEX_MAX_SOLUTIONS" \
+				  --hex-script "$HEX_SCRIPT" \
+				  --hex-swap-and-repeat "$HEX_SWAP_AND_REPEAT" \
+				> "$DOCKING_HEX_RESULTS_FILE"
+			else
+				cat "$REUSE_HEX_DOCKING_RESULTS" > "$DOCKING_HEX_RESULTS_FILE"
+			fi
 		fi
 	fi
 	
