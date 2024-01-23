@@ -34,6 +34,12 @@ Some features of FTDMP require aditional dependencies (that are easily available
  * graph neural network-based scoring using "voronota-js-voroif-gnn" requires "R", "PyTorch" and "PyTorch Geometric"
  * relaxing using molecular dynamics requires "OpenMM"
 
+# Benchmarks for protein-protein, protein-DNA, and protein-RNA docking 
+
+The benchmark dataset for protein-protein, protein-DNA, and protein-RNA docking is available at [https://doi.org/10.5281/zenodo.10517524](https://doi.org/10.5281/zenodo.10517524).
+It contains structures of three docking benchmarks, as well as docking tables.
+This dataset together with the FTDMP framework can be used for docking and scoring complexes, as well as evaluating new scoring functions.
+
 # Obtaining and installing FTDMP
 
 ## Getting the latest version
