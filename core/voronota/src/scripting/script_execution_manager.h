@@ -11,12 +11,14 @@
 #include "operators/add_figure_of_voxels_test.h"
 #include "operators/cad_score_many.h"
 #include "operators/cad_score.h"
+#include "operators/calculate_akbps.h"
 #include "operators/calculate_betweenness.h"
 #include "operators/calculate_burial_depth.h"
 #include "operators/cat_files.h"
 #include "operators/center_atoms.h"
 #include "operators/check_distance_constraint.h"
 #include "operators/clash_score.h"
+#include "operators/collect_inter_atom_contacts_area_ranges.h"
 #include "operators/collect_inter_residue_contacts_area_ranges.h"
 #include "operators/color_atoms.h"
 #include "operators/color_contacts.h"
@@ -32,6 +34,7 @@
 #include "operators/delete_figures_of_labels.h"
 #include "operators/delete_global_adjuncts.h"
 #include "operators/delete_objects.h"
+#include "operators/delete_objects_if.h"
 #include "operators/delete_selections_of_atoms.h"
 #include "operators/delete_selections_of_contacts.h"
 #include "operators/delete_tags_of_atoms.h"
@@ -125,7 +128,9 @@
 #include "operators/set_adjunct_of_contacts_by_expression.h"
 #include "operators/set_adjunct_of_contacts.h"
 #include "operators/set_adjuncts_of_atoms_by_ufsr.h"
+#include "operators/set_adjuncts_of_contacts_by_ufsr.h"
 #include "operators/set_alias.h"
+#include "operators/set_atom_names.h"
 #include "operators/set_atom_serials.h"
 #include "operators/set_chain_name.h"
 #include "operators/set_chain_names_and_residue_numbers_by_sequences.h"
@@ -133,9 +138,11 @@
 #include "operators/set_chain_residue_numbers_by_sequence.h"
 #include "operators/set_global_adjunct_by_pooling.h"
 #include "operators/set_global_adjunct.h"
+#include "operators/set_residue_numbers_sequentially.h"
 #include "operators/set_tag_of_atoms_by_secondary_structure.h"
 #include "operators/set_tag_of_atoms.h"
 #include "operators/set_tag_of_contacts.h"
+#include "operators/setup_akbps.h"
 #include "operators/setup_chemistry_annotating.h"
 #include "operators/setup_loading.h"
 #include "operators/setup_mock_voromqa.h"
@@ -215,7 +222,9 @@ public:
 
 		set_command_for_congregation_of_data_managers("list-objects", operators::ListObjects());
 		set_command_for_congregation_of_data_managers("delete-objects", operators::DeleteObjects());
+		set_command_for_congregation_of_data_managers("delete-objects-if", operators::DeleteObjectsIf());
 		set_command_for_congregation_of_data_managers("rename-object", operators::RenameObject());
+		set_command_for_congregation_of_data_managers("collect-inter-atom-contact-area-ranges", operators::CollectInterAtomContactAreaRanges());
 		set_command_for_congregation_of_data_managers("collect-inter-residue-contact-area-ranges", operators::CollectInterResidueContactAreaRanges());
 		set_command_for_congregation_of_data_managers("copy-object", operators::CopyObject());
 		set_command_for_congregation_of_data_managers("import-docking-result", operators::ImportDockingResult());
@@ -245,6 +254,7 @@ public:
 		set_command_for_data_manager("add-figure-of-text", operators::AddFigureOfText(), true);
 		set_command_for_data_manager("add-figure-of-triangulation", operators::AddFigureOfTriangulation(), true);
 		set_command_for_data_manager("add-figure-of-voxels-test", operators::AddFigureOfVoxelsTest(), true);
+		set_command_for_data_manager("calculate-akbps", operators::CalculateAKBPs(), true);
 		set_command_for_data_manager("calculate-betweenness", operators::CalculateBetweenness(), true);
 		set_command_for_data_manager("calculate-burial-depth", operators::CalculateBurialDepth(), true);
 		set_command_for_data_manager("center-atoms", operators::CenterAtoms(), true);
@@ -332,6 +342,8 @@ public:
 		set_command_for_data_manager("set-adjunct-of-contacts-by-expression", operators::SetAdjunctOfContactsByExpression(), true);
 		set_command_for_data_manager("set-adjunct-of-contacts", operators::SetAdjunctOfContacts(), true);
 		set_command_for_data_manager("set-adjuncts-of-atoms-by-ufsr", operators::SetAdjunctsOfAtomsByTypeUFSR(), true);
+		set_command_for_data_manager("set-adjuncts-of-contacts-by-ufsr", operators::SetAdjunctsOfContactsByUFSR(), true);
+		set_command_for_data_manager("set-atom-names", operators::SetAtomNames(), true);
 		set_command_for_data_manager("set-atom-serials", operators::SetAtomSerials(), true);
 		set_command_for_data_manager("set-chain-name", operators::SetChainName(), true);
 		set_command_for_data_manager("set-chain-names-and-residue-numbers-by-sequences", operators::SetChainNamesAndResidueNumbersBySequences(), true);
@@ -339,6 +351,7 @@ public:
 		set_command_for_data_manager("set-chain-residue-numbers-by-sequence", operators::SetChainResidueNumbersBySequences(), true);
 		set_command_for_data_manager("set-global-adjunct-by-pooling", operators::SetGlobalAdjunctByPooling(), true);
 		set_command_for_data_manager("set-global-adjunct", operators::SetGlobalAdjunct(), true);
+		set_command_for_data_manager("set-residue-numbers-sequentially", operators::SetResidueNumbersSequentially(), true);
 		set_command_for_data_manager("set-tag-of-atoms-by-secondary-structure", operators::SetTagOfAtomsBySecondaryStructure(), true);
 		set_command_for_data_manager("set-tag-of-atoms", operators::SetTagOfAtoms(), true);
 		set_command_for_data_manager("set-tag-of-contacts", operators::SetTagOfContacts(), true);
@@ -370,6 +383,7 @@ public:
 		set_command_for_extra_actions("download-virtual-file", operators::DownloadVirtualFile());
 		set_command_for_extra_actions("print-virtual-file", operators::PrintVirtualFile());
 		set_command_for_extra_actions("delete-virtual-files", operators::DeleteVirtualFiles());
+		set_command_for_extra_actions("setup-akbps", operators::SetupAKBPs());
 		set_command_for_extra_actions("setup-chemistry-annotating", operators::SetupChemistryAnnotating());
 		set_command_for_extra_actions("setup-loading", operators::SetupLoading());
 		set_command_for_extra_actions("setup-mock-voromqa", operators::SetupMockVoroMQA());

@@ -121,17 +121,7 @@ public:
 	{
 		PreparationForTessellation::Result preparation_result;
 		PreparationForTessellation::prepare_for_tessellation(spheres, grouping_of_spheres, preparation_result, time_recorder);
-		construct_full_tessellation(spheres, preparation_result, with_graphics, result, result_graphics, time_recorder);
-	}
 
-	static void construct_full_tessellation(
-			const std::vector<SimpleSphere>& spheres,
-			const PreparationForTessellation::Result& preparation_result,
-			const bool with_graphics,
-			Result& result,
-			ResultGraphics& result_graphics,
-			TimeRecorder& time_recorder)
-	{
 		time_recorder.reset();
 
 		result=Result();
@@ -161,7 +151,7 @@ public:
 			{
 				const UnsignedInt id_a=preparation_result.relevant_collision_ids[i].first;
 				const UnsignedInt id_b=preparation_result.relevant_collision_ids[i].second;
-				if(SimplifiedAWTessellationContactConstruction::construct_contact_descriptor(spheres, id_a, id_b, preparation_result.all_colliding_ids[id_a], 0.2, 5, with_graphics, cd))
+				if(SimplifiedAWTessellationContactConstruction::construct_contact_descriptor(spheres, preparation_result.all_exclusion_statuses, id_a, id_b, preparation_result.all_colliding_ids[id_a], 0.2, 5, with_graphics, cd))
 				{
 					possible_contacts_summaries[i].set(cd);
 					if(with_graphics)

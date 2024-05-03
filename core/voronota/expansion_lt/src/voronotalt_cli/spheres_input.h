@@ -79,12 +79,12 @@ public:
 						SphereLabel& sphere_label=result.sphere_labels[i];
 						if(label_size==1)
 						{
-							sphere_label.atom_name=string_ids[i];
+							sphere_label.chain_id=string_ids[i];
 						}
 						else if(label_size==2)
 						{
-							sphere_label.residue_id=string_ids[i*label_size+0];
-							sphere_label.atom_name=string_ids[i*label_size+1];
+							sphere_label.chain_id=string_ids[i*label_size+0];
+							sphere_label.residue_id=string_ids[i*label_size+1];
 						}
 						else if(label_size==3)
 						{
@@ -117,10 +117,7 @@ public:
 
 		if(result.label_size>1)
 		{
-			if(result.label_size==3)
-			{
-				result.number_of_chain_groups=assign_groups_to_sphere_labels_by_chain(result.sphere_labels, result.grouping_by_chain);
-			}
+			result.number_of_chain_groups=assign_groups_to_sphere_labels_by_chain(result.sphere_labels, result.grouping_by_chain);
 
 			result.number_of_residue_groups=assign_groups_to_sphere_labels_by_residue(result.sphere_labels, result.grouping_by_residue);
 

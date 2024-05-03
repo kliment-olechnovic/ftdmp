@@ -13,11 +13,7 @@ class SpheresSearcher
 public:
 	explicit SpheresSearcher(const std::vector<SimpleSphere>& spheres) : spheres_(spheres), box_size_(FLOATCONST(1.0))
 	{
-		for(UnsignedInt i=0;i<spheres_.size();i++)
-		{
-			const SimpleSphere& s=spheres_[i];
-			box_size_=std::max(box_size_, s.r*FLOATCONST(2.0)+FLOATCONST(0.25));
-		}
+		box_size_=calculate_grid_box_size(spheres_, box_size_);
 
 		for(UnsignedInt i=0;i<spheres_.size();i++)
 		{
@@ -61,9 +57,21 @@ public:
 		}
 	}
 
-	bool find_colliding_ids(const UnsignedInt& central_id, std::vector<UnsignedInt>& colliding_ids, const bool discard_hidden) const
+	static Float calculate_grid_box_size(const std::vector<SimpleSphere>& spheres, const Float min_box_size)
+	{
+		Float box_size=min_box_size;
+		for(UnsignedInt i=0;i<spheres.size();i++)
+		{
+			const SimpleSphere& s=spheres[i];
+			box_size=std::max(box_size, s.r*FLOATCONST(2.0)+FLOATCONST(0.25));
+		}
+		return box_size;
+	}
+
+	bool find_colliding_ids(const UnsignedInt& central_id, std::vector<UnsignedInt>& colliding_ids, const bool discard_hidden, int& exclusion_status) const
 	{
 		colliding_ids.clear();
+		exclusion_status=0;
 		if(central_id<spheres_.size())
 		{
 			const SimpleSphere& central_sphere=spheres_[central_id];
@@ -91,12 +99,16 @@ public:
 									const SimpleSphere& candidate_sphere=spheres_[id];
 									if(id!=central_id && sphere_intersects_sphere(central_sphere, candidate_sphere))
 									{
-										if(discard_hidden && sphere_contains_sphere(candidate_sphere, central_sphere))
+										if(discard_hidden
+												&& sphere_contains_sphere(candidate_sphere, central_sphere)
+												&& (!sphere_equals_sphere(candidate_sphere, central_sphere) || central_id>id))
 										{
 											colliding_ids.clear();
+											exclusion_status=1;
 											return false;
 										}
-										else if(!discard_hidden || !sphere_contains_sphere(central_sphere, candidate_sphere))
+										else if(!discard_hidden
+												|| !sphere_contains_sphere(central_sphere, candidate_sphere))
 										{
 											colliding_ids.push_back(id);
 										}

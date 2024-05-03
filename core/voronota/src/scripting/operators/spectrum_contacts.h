@@ -1,6 +1,8 @@
 #ifndef SCRIPTING_OPERATORS_SPECTRUM_CONTACTS_H_
 #define SCRIPTING_OPERATORS_SPECTRUM_CONTACTS_H_
 
+#include <cstdint>
+
 #include "../operators_common.h"
 
 namespace voronota
@@ -94,7 +96,7 @@ public:
 
 		const std::set<std::size_t> representation_ids=data_manager.contacts_representation_descriptor().ids_by_names(representation_names);
 
-		if(by!="area" && by!="residue-area" && by!="adjunct" && by!="dist-centers" && by!="dist-balls" && by!="seq-sep" && by!="residue-ids" && by!="atom-ids" && by!="residue-ids-simplified" && by!="atom-ids-simplified")
+		if(by!="area" && by!="residue-area" && by!="chain-area" && by!="adjunct" && by!="dist-centers" && by!="dist-balls" && by!="seq-sep" && by!="residue-ids" && by!="atom-ids" && by!="residue-ids-simplified" && by!="atom-ids-simplified" && by!="chain-ids")
 		{
 			throw std::runtime_error(std::string("Invalid 'by' value '")+by+"'.");
 		}
@@ -160,6 +162,23 @@ public:
 				map_of_ids_values[*it]=residue_ids_to_values[common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]).without_some_info(true, true, false, false)];
 			}
 		}
+		else if(by=="chain-area")
+		{
+			std::map<common::ChainResidueAtomDescriptorsPair, double> chain_ids_to_values;
+			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
+			{
+				const Contact& contact=data_manager.contacts()[*it];
+				const common::ChainResidueAtomDescriptorsPair raw_crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]);
+				const common::ChainResidueAtomDescriptorsPair crads=common::ChainResidueAtomDescriptorsPair(common::ChainResidueAtomDescriptor(raw_crads.a.chainID), common::ChainResidueAtomDescriptor(raw_crads.b.chainID));
+				chain_ids_to_values[crads]+=contact.value.area;
+			}
+			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
+			{
+				const common::ChainResidueAtomDescriptorsPair raw_crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]);
+				const common::ChainResidueAtomDescriptorsPair crads=common::ChainResidueAtomDescriptorsPair(common::ChainResidueAtomDescriptor(raw_crads.a.chainID), common::ChainResidueAtomDescriptor(raw_crads.b.chainID));
+				map_of_ids_values[*it]=chain_ids_to_values[crads];
+			}
+		}
 		else if(by=="dist-centers")
 		{
 			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
@@ -212,7 +231,7 @@ public:
 			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
 			{
 				const common::ChainResidueAtomDescriptorsPair crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]).without_some_info(true, true, false, false);
-				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<uint32_t>::max());
+				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<std::uint32_t>::max());
 			}
 		}
 		else if(by=="atom-ids")
@@ -220,7 +239,7 @@ public:
 			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
 			{
 				const common::ChainResidueAtomDescriptorsPair crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]).without_some_info(true, false, false, false);
-				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<uint32_t>::max());
+				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<std::uint32_t>::max());
 			}
 		}
 		else if(by=="residue-ids-simplified")
@@ -230,7 +249,7 @@ public:
 				common::ChainResidueAtomDescriptorsPair crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]).without_some_info(true, true, false, true);
 				crads.a.chainID.clear();
 				crads.b.chainID.clear();
-				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<uint32_t>::max());
+				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<std::uint32_t>::max());
 			}
 		}
 		else if(by=="atom-ids-simplified")
@@ -240,7 +259,16 @@ public:
 				common::ChainResidueAtomDescriptorsPair crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]).without_some_info(true, false, false, true);
 				crads.a.chainID.clear();
 				crads.b.chainID.clear();
-				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<uint32_t>::max());
+				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<std::uint32_t>::max());
+			}
+		}
+		else if(by=="chain-ids")
+		{
+			for(std::set<std::size_t>::const_iterator it=ids.begin();it!=ids.end();++it)
+			{
+				const common::ChainResidueAtomDescriptorsPair raw_crads=common::ConversionOfDescriptors::get_contact_descriptor(data_manager.atoms(), data_manager.contacts()[*it]);
+				const common::ChainResidueAtomDescriptorsPair crads(common::ChainResidueAtomDescriptor(raw_crads.a.chainID), common::ChainResidueAtomDescriptor(raw_crads.b.chainID));
+				map_of_ids_values[*it]=static_cast<double>(crads.hash_value())/static_cast<double>(std::numeric_limits<std::uint32_t>::max());
 			}
 		}
 

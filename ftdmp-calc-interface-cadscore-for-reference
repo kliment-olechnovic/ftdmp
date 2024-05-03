@@ -212,11 +212,11 @@ then
 	cd - &> /dev/null
 	
 	find "${TMPLDIR}/docklines" -type f -not -empty \
-	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --model-input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}"
+	| voronota-js-fast-iface-cadscore --lt --target "$REFERENCEFILE" --model _list --model-input-is-script --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}"
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-cadscore --target "$REFERENCEFILE" --model _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}" \
+	| voronota-js-fast-iface-cadscore --lt --target "$REFERENCEFILE" --model _list --processors "$PARALLEL_PARTS" --sbatch-parameters "$SBATCH_PARAMETERS" --subselect-contacts "$SUBSELECT_CONTACTS" "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}" \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
 fi
 } \

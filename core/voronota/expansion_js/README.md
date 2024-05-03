@@ -37,6 +37,10 @@ Voronota-JS relies on several externally developed software projects (big thanks
 * tinf - [https://github.com/jibsen/tinf](https://github.com/jibsen/tinf)
 * LodePNG - [https://github.com/lvandeve/lodepng](https://github.com/lvandeve/lodepng)
 
+# Quick install guide
+
+Please refer to the [core Voronota quick install guide](../README.md#quick-install-guide).
+
 # Getting the latest version
 
 Download the latest archive from the official downloads page:
@@ -350,17 +354,20 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         --model | -m              string  *  model file path or '_list' to read file paths from stdin
         --restrict-input          string     query to restrict input atoms, default is '[]'
         --subselect-contacts      string     query to subselect inter-chain contacts, default is '[]'
+        --subselect-site          string     query to subselect atoms for binding site scoring, default is '[]'
         --output-table-file       string     output table file path, default is '_stdout' to print to stdout
         --processors              number     maximum number of processors to run in parallel, default is 1
         --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
         --stdin-file              string     input file path to replace stdin
         --run-faspr               string     path to FASPR binary to rebuild side-chains
+        --permuting-allowance     number     maximum number of chains for exhaustive remapping, default is 4
         --as-assembly                        flag to treat input files as biological assemblies
         --remap-chains                       flag to calculate and use optimal chains remapping
         --remap-chains-logging               flag to print log of chains remapping to stderr
         --ignore-residue-names               flag to ignore residue names in residue identifiers
         --test-common-ids                    flag to fail quickly if there are no common residues
         --crude                              flag to enable very crude faster mode
+        --lt                                 flag to enable voronota-lt faster mode
         --help | -h                          flag to display help message and exit
     
     Standard output:
@@ -387,10 +394,12 @@ Example of visualized contacts (with direct interface contacts in green, adjacen
         --processors              number     maximum number of processors to run in parallel, default is 1
         --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
         --stdin-file              string     input file path to replace stdin
+        --permuting-allowance     number     maximum number of chains for exhaustive remapping, default is 4
         --as-assembly                        flag to treat input files as biological assemblies
         --remap-chains                       flag to calculate and use optimal chains remapping
         --ignore-residue-names               flag to ignore residue names in residue identifiers
         --crude                              flag to enable very crude faster mode
+        --lt                                 flag to enable voronota-lt faster mode
         --help | -h                          flag to display help message and exit
     
     Standard output:
