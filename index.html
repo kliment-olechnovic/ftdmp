@@ -8,10 +8,18 @@
   <style>
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    span.underline{text-decoration: underline;}
-    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    ul.task-list{list-style: none;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <style type="text/css">
@@ -27,33 +35,34 @@
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#about-ftdmp">About FTDMP</a></li>
-<li><a href="#benchmarks-for-protein-protein-protein-dna-and-protein-rna-docking">Benchmarks for protein-protein, protein-DNA, and protein-RNA docking</a></li>
-<li><a href="#obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</a>
+<li><a href="#about-ftdmp" id="toc-about-ftdmp">About FTDMP</a></li>
+<li><a href="#benchmarks-for-protein-protein-protein-dna-and-protein-rna-docking" id="toc-benchmarks-for-protein-protein-protein-dna-and-protein-rna-docking">Benchmarks for protein-protein, protein-DNA, and protein-RNA docking</a></li>
+<li><a href="#obtaining-and-installing-ftdmp" id="toc-obtaining-and-installing-ftdmp">Obtaining and installing FTDMP</a>
 <ul>
-<li><a href="#getting-the-latest-version">Getting the latest version</a></li>
-<li><a href="#building-the-included-software">Building the included software</a></li>
-<li><a href="#installing">Installing</a></li>
-<li><a href="#setting-miniconda-for-using-graph-neural-network-based-scoring-and-for-using-openmm">Setting Miniconda for using graph neural network-based scoring, and for using OpenMM</a></li>
+<li><a href="#getting-the-latest-version" id="toc-getting-the-latest-version">Getting the latest version</a></li>
+<li><a href="#building-the-included-software" id="toc-building-the-included-software">Building the included software</a></li>
+<li><a href="#installing" id="toc-installing">Installing</a></li>
+<li><a href="#setting-miniconda-for-using-graph-neural-network-based-scoring-and-for-using-openmm" id="toc-setting-miniconda-for-using-graph-neural-network-based-scoring-and-for-using-openmm">Setting Miniconda for using graph neural network-based scoring, and for using OpenMM</a></li>
+<li><a href="#setting-up-miniconda-using-the-provided-environment-configuration-file" id="toc-setting-up-miniconda-using-the-provided-environment-configuration-file">Setting up Miniconda using the provided environment configuration file</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</a>
+<li><a href="#using-ftdmp-for-scoring-and-ranking-multimeric-models" id="toc-using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</a>
 <ul>
-<li><a href="#command-line-user-interface">Command line user interface</a></li>
-<li><a href="#scoring-and-ranking-multimeric-protein-models-using-all-available-scoring-tools">Scoring and ranking multimeric protein models using all available scoring tools</a></li>
-<li><a href="#scoring-and-ranking-multimeric-protein-models-without-using-graph-neural-networks">Scoring and ranking multimeric protein models without using graph neural networks</a></li>
-<li><a href="#scoring-and-ranking-multimeric-models-that-include-rna-or-dna">Scoring and ranking multimeric models that include RNA or DNA:</a></li>
+<li><a href="#command-line-user-interface" id="toc-command-line-user-interface">Command line user interface</a></li>
+<li><a href="#scoring-and-ranking-multimeric-protein-models-using-all-available-scoring-tools" id="toc-scoring-and-ranking-multimeric-protein-models-using-all-available-scoring-tools">Scoring and ranking multimeric protein models using all available scoring tools</a></li>
+<li><a href="#scoring-and-ranking-multimeric-protein-models-without-using-graph-neural-networks" id="toc-scoring-and-ranking-multimeric-protein-models-without-using-graph-neural-networks">Scoring and ranking multimeric protein models without using graph neural networks</a></li>
+<li><a href="#scoring-and-ranking-multimeric-models-that-include-rna-or-dna" id="toc-scoring-and-ranking-multimeric-models-that-include-rna-or-dna">Scoring and ranking multimeric models that include RNA or DNA:</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-docking">Using FTDMP for docking</a>
+<li><a href="#using-ftdmp-for-docking" id="toc-using-ftdmp-for-docking">Using FTDMP for docking</a>
 <ul>
-<li><a href="#command-line-user-interface-1">Command line user interface</a></li>
-<li><a href="#example-of-protein-protein-docking-for-running-on-cluster">Example of protein-protein docking for running on cluster</a></li>
-<li><a href="#example-of-protein-dna-docking-for-running-on-cluster">Example of protein-DNA docking for running on cluster</a></li>
-<li><a href="#using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</a></li>
+<li><a href="#command-line-user-interface-1" id="toc-command-line-user-interface-1">Command line user interface</a></li>
+<li><a href="#example-of-protein-protein-docking-for-running-on-cluster" id="toc-example-of-protein-protein-docking-for-running-on-cluster">Example of protein-protein docking for running on cluster</a></li>
+<li><a href="#example-of-protein-dna-docking-for-running-on-cluster" id="toc-example-of-protein-dna-docking-for-running-on-cluster">Example of protein-DNA docking for running on cluster</a></li>
+<li><a href="#using-a-plugin-script-to-score-docking-models" id="toc-using-a-plugin-script-to-score-docking-models">Using a plugin script to score docking models</a></li>
 </ul></li>
-<li><a href="#using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</a>
+<li><a href="#using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions" id="toc-using-ftdmp-for-relaxing-structures-with-openmm-to-remove-clashes-and-improve-interface-interactions">Using FTDMP for relaxing structures with OpenMM to remove clashes and improve interface interactions</a>
 <ul>
-<li><a href="#command-line-user-interface-2">Command line user interface</a></li>
-<li><a href="#example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid">Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)</a></li>
+<li><a href="#command-line-user-interface-2" id="toc-command-line-user-interface-2">Command line user interface</a></li>
+<li><a href="#example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid" id="toc-example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid">Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)</a></li>
 </ul></li>
 </ul>
 </nav>
@@ -133,6 +142,16 @@ conda install -c conda-forge openmm
 conda install -c conda-forge pdbfixer</code></pre>
 <p>Test OpenMM installation:</p>
 <pre><code>python -m openmm.testInstallation</code></pre>
+<h2 id="setting-up-miniconda-using-the-provided-environment-configuration-file">Setting up Miniconda using the provided environment configuration file</h2>
+<p>As an alternative to manually installing packages, it is possible to use the environment configuration file <a href="envs/ftdmp_environment_for_conda.yml">envs/ftdmp_environment_for_conda.yml</a> provided in the FTDMP repository.</p>
+<p>For this, first download+install+activate Miniconda:</p>
+<pre><code>wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+source ~/miniconda3/bin/activate</code></pre>
+<p>Then create the environment from file:</p>
+<pre><code>conda env create -f ftdmp_environment_for_conda.yml</code></pre>
+<p>If no other name is specified, then the newly created environment will be called ‘ftdmp’.</p>
+<p>Note that the usage of the provided configuration file results in installing Pandas, OpenMM, and the CPU versions of PyTorch and PyTorch Geometric. For CUDA-based PyTorch and PyTorch Geometric packages, the manual installation way, described the previous section, is recommended.</p>
 <h1 id="using-ftdmp-for-scoring-and-ranking-multimeric-models">Using FTDMP for scoring and ranking multimeric models</h1>
 <p>Scoring and ranking is done with the ‘ftdmp-qa-all’ script. Below is the breef description of ‘ftdmp-qa-all’ interface.</p>
 <h2 id="command-line-user-interface">Command line user interface</h2>

@@ -105,6 +105,25 @@ Test OpenMM installation:
 
     python -m openmm.testInstallation
 
+## Setting up Miniconda using the provided environment configuration file
+
+As an alternative to manually installing packages, it is possible to use the environment configuration file [envs/ftdmp_environment_for_conda.yml](envs/ftdmp_environment_for_conda.yml) provided in the FTDMP repository.
+
+For this, first download+install+activate Miniconda:
+
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh
+    source ~/miniconda3/bin/activate
+
+Then create the environment from file:
+    
+    conda env create -f ftdmp_environment_for_conda.yml
+
+If no other name is specified, then the newly created environment will be called 'ftdmp'.
+
+Note that the usage of the provided configuration file results in installing Pandas, OpenMM, and the CPU versions of PyTorch and PyTorch Geometric.
+For CUDA-based PyTorch and PyTorch Geometric packages, the manual installation way, described the previous section, is recommended.
+
 # Using FTDMP for scoring and ranking multimeric models
 
 Scoring and ranking is done with the 'ftdmp-qa-all' script.
