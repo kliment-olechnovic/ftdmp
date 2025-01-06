@@ -40,6 +40,18 @@ The benchmark dataset for protein-protein, protein-DNA, and protein-RNA docking 
 It contains structures of three docking benchmarks, as well as docking tables.
 This dataset together with the FTDMP framework can be used for docking and scoring complexes, as well as evaluating new scoring functions.
 
+# FTDMP publications
+
+If you use the FTDMP for your research, please cite the following articles.
+
+FTDMP software, cleaned docking benchmarks and docking results are published here:
+
+* Olechnovič K, Banciul R, Dapkūnas J, Venclovas Č. (2025) *FTDMP: A Framework for Protein-Protein, Protein-DNA, and Protein-RNA Docking and Scoring*. Proteins. doi: [10.1002/prot.26792](https://doi.org/10.1002/prot.26792). PubMed PMID: [39748638](https://pubmed.ncbi.nlm.nih.gov/39748638/).
+
+Scoring of protein-protein interfaces using the VoroIF-jury algorithm and details of this algorithm are published in our CASP16 article:
+
+* Olechnovič K, Valančauskas L, Dapkūnas J, Venclovas Č. (2023) *Prediction of protein assemblies by structure sampling followed by interface-focused scoring*. Proteins; 91:1724–1733. doi: [10.1002/prot.26569](https://doi.org/10.1002/prot.26569). PubMed PMID: [37578163](https://pubmed.ncbi.nlm.nih.gov/37578163/).
+
 # Obtaining and installing FTDMP
 
 ## Getting the latest version
