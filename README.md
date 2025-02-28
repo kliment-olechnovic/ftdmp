@@ -564,3 +564,23 @@ Using the 'amber14-all-no-water' forcefield, the example below works for protein
             --cache-dir ./workdir/relax_cache
     done
 
+
+# Additional information
+
+## Score names in FTDMP
+
+Score names in FTDMP result table are quite strange, it happened historically. Below are explanations for the main score names.
+
+* __FIV__ - interface VoroMQA pseudoenergy. In FTDMP it is computed by the 'ftdmp-calc-interface-voromqa-scores' script, which employs the 'voronota-js-fast-iface-voromqa' script from the Voronota package.
+
+* __FIVb__ - interface VoroMQA pseudoenergy in "blanket" regime, calculated using simplified atom typing. It works for both protein-protein and protein-nucleic acid interfaces. In FTDMP it is computed by the 'ftdmp-calc-interface-voromqa-scores' script with '--blanket' flag.
+
+* __FIGNN__ - interface VoroIF-GNN score. In FTDMP it is computed by the 'ftdmp-calc-interface-gnn-scores' script, which employs the 'voronota-js-voroif-gnn' from the Voronota package.
+
+* __FGV__ - global VoroMQA score. In FTDMP it is computed by the 'ftdmp-calc-global-voromqa-scores' script, which employs the 'voronota-js-only-global-voromqa' from the Voronota package.
+
+* __RJS__ - VoroIF-jury score, calculated by the VoroIF-jury algorithm. It is the main score for ranking results results. In FTDMP it is computed by the 'ftdmp-calc-ranks-jury-scores' script.
+
+* __RDDS__ - interface redundancy score, showing how similar a model is to the most similar higher-ranked model. In FTDMP it is computed by the 'ftdmp-calc-redundancy-scores' script. It uses the CAD-score similarity matrix to assign every model a score equal to the maximum similarity to any model that is ranked higher.
+
+
