@@ -65,6 +65,10 @@
 <li><a href="#command-line-user-interface-2" id="toc-command-line-user-interface-2">Command line user interface</a></li>
 <li><a href="#example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid" id="toc-example-of-relaxing-multiple-complex-structures-containing-chains-of-different-types-protein-nucleic-acid">Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)</a></li>
 </ul></li>
+<li><a href="#additional-information" id="toc-additional-information">Additional information</a>
+<ul>
+<li><a href="#score-names-in-ftdmp" id="toc-score-names-in-ftdmp">Score names in FTDMP</a></li>
+</ul></li>
 </ul>
 </nav>
 <h1 id="about-ftdmp">About FTDMP</h1>
@@ -536,5 +540,16 @@ do
         --output &quot;$OUTFILE&quot; \
         --cache-dir ./workdir/relax_cache
 done</code></pre>
+<h1 id="additional-information">Additional information</h1>
+<h2 id="score-names-in-ftdmp">Score names in FTDMP</h2>
+<p>Score names in FTDMP result table are quite strange, it happened historically. Below are explanations for the main score names.</p>
+<ul>
+<li><p><strong>FIV</strong> - interface VoroMQA pseudoenergy. In FTDMP it is computed by the ‘ftdmp-calc-interface-voromqa-scores’ script, which employs the ‘voronota-js-fast-iface-voromqa’ script from the Voronota package.</p></li>
+<li><p><strong>FIVb</strong> - interface VoroMQA pseudoenergy in “blanket” regime, calculated using simplified atom typing. It works for both protein-protein and protein-nucleic acid interfaces. In FTDMP it is computed by the ‘ftdmp-calc-interface-voromqa-scores’ script with ‘–blanket’ flag.</p></li>
+<li><p><strong>FIGNN</strong> - interface VoroIF-GNN score. In FTDMP it is computed by the ‘ftdmp-calc-interface-gnn-scores’ script, which employs the ‘voronota-js-voroif-gnn’ from the Voronota package.</p></li>
+<li><p><strong>FGV</strong> - global VoroMQA score. In FTDMP it is computed by the ‘ftdmp-calc-global-voromqa-scores’ script, which employs the ‘voronota-js-only-global-voromqa’ from the Voronota package.</p></li>
+<li><p><strong>RJS</strong> - VoroIF-jury score, calculated by the VoroIF-jury algorithm. It is the main score for ranking results results. In FTDMP it is computed by the ‘ftdmp-calc-ranks-jury-scores’ script.</p></li>
+<li><p><strong>RDDS</strong> - interface redundancy score, showing how similar a model is to the most similar higher-ranked model. In FTDMP it is computed by the ‘ftdmp-calc-redundancy-scores’ script. It uses the CAD-score similarity matrix to assign every model a score equal to the maximum similarity to any model that is ranked higher.</p></li>
+</ul>
 </body>
 </html>
