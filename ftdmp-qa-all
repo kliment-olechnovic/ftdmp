@@ -547,7 +547,7 @@ if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ]
 then
 	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark" ]
 	then
-		if [ "$SCORING_MODE_PROTEIN_GNN" != "true" ]
+		if [ "$SCORING_MODE_GENERIC" != "true" ]
 		then
 			echo >&2 "Error: mode '$WRITE_SCORES_PDB_MODE' for writing scores in PDB files is incompatible with requested scoring ranks"
 			exit 1
