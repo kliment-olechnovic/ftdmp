@@ -7,7 +7,7 @@ FTDMPDIR="$(pwd)"
 cd - > /dev/null
 
 CONDADIR="${HOME}/miniconda3"
-CONDAENV="base"
+CONDAENV="ftdmp"
 
 STATICFILE="./input/6FPQ_A.pdb"
 MOBILEFILE="./input/6FPQ_B.pdb"

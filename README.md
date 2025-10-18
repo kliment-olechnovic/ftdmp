@@ -73,19 +73,34 @@ To, optionally, make FTDMP accessible without specifying full path, add the foll
 
     export PATH="/path/to/ftdmp:${PATH}"
 
-## Setting Miniconda for using graph neural network-based scoring, and for using OpenMM
+## Setting up Miniconda
 
-Download the Miniconda package:
+FTDMP works in a conda environment when using graph neural network-based scoring, and when using OpenMM.
 
-    cd ~/Downloads
+### Recommended Miniconda setup - using the provided environment configuration file
+
+Instead of setting up a suitable environment by manually installing required packages, it is possible to use the environment configuration file [envs/ftdmp_environment_for_conda.yml](envs/ftdmp_environment_for_conda.yml) provided in the FTDMP repository.
+
+For this, first download+install+activate Miniconda:
+
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    
-Install Miniconda:
-
     bash Miniconda3-latest-Linux-x86_64.sh
-    
-Activate Miniconda environment:
+    source ~/miniconda3/bin/activate
 
+Then create the environment from file:
+    
+    conda env create -f ./envs/ftdmp_environment_for_conda.yml
+
+If no other name is specified, then the newly created environment will be called 'ftdmp'.
+
+Note that the usage of the provided configuration file results in installing Pandas, OpenMM, and the CPU versions of PyTorch and PyTorch Geometric.
+
+### Alternative manual Miniconda setup
+
+Download+install+activate Miniconda:
+
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh
     source ~/miniconda3/bin/activate
 
 Install packages for using graph neural network-based scoring:
@@ -116,25 +131,6 @@ Install packages for using OpenMM:
 Test OpenMM installation:
 
     python -m openmm.testInstallation
-
-## Setting up Miniconda using the provided environment configuration file
-
-As an alternative to manually installing packages, it is possible to use the environment configuration file [envs/ftdmp_environment_for_conda.yml](envs/ftdmp_environment_for_conda.yml) provided in the FTDMP repository.
-
-For this, first download+install+activate Miniconda:
-
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash Miniconda3-latest-Linux-x86_64.sh
-    source ~/miniconda3/bin/activate
-
-Then create the environment from file:
-    
-    conda env create -f ftdmp_environment_for_conda.yml
-
-If no other name is specified, then the newly created environment will be called 'ftdmp'.
-
-Note that the usage of the provided configuration file results in installing Pandas, OpenMM, and the CPU versions of PyTorch and PyTorch Geometric.
-For CUDA-based PyTorch and PyTorch Geometric packages, the manual installation way, described the previous section, is recommended.
 
 # Using FTDMP for scoring and ranking multimeric models
 
@@ -188,11 +184,11 @@ Below is the breef description of 'ftdmp-qa-all' interface.
     
     Examples:
     
-        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr
+        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --conda-env 'ftdmp' --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr
         
         ls ./*.pdb | ftdmp-qa-all --workdir './tmp/works' --rank-names protein_protein_voromqa_no_sr
         
-        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
+        ls ./*.pdb | ftdmp-qa-all --conda-path ~/miniconda3 --conda-env 'ftdmp' --workdir './tmp/works' --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
             --write-pdb-file './output/scored_-RANK-_-BASENAME-' --write-pdb-mode 'voromqa_dark_and_gnn' --write-pdb-num 5
     
     Named collections of rank names, to be provided as a single string to '--rank-names':
@@ -214,6 +210,7 @@ Example of scoring using only interface-focused methods:
     | ftdmp-qa-all \
       --rank-names protein_protein_voromqa_and_gnn_no_sr \
       --conda-path ~/miniconda3 \
+      --conda-env 'ftdmp' \
       --workdir './works'
     
 Example of scoring using both interface-focused and whole-structure methods:
@@ -222,6 +219,7 @@ Example of scoring using both interface-focused and whole-structure methods:
     | ftdmp-qa-all \
       --rank-names protein_protein_voromqa_and_global_and_gnn_no_sr \
       --conda-path ~/miniconda3 \
+      --conda-env 'ftdmp' \
       --workdir './works'
 
 ## Scoring and ranking multimeric protein models without using graph neural networks
@@ -370,6 +368,7 @@ Example script:
     ${HOME}/git/ftdmp/ftdmp-all \
       --ftdmp-root ${HOME}/git/ftdmp \
       --conda-path ${HOME}/miniconda3 \
+      --conda-env 'ftdmp' \
       --conda-early 'true' \
       --parallel-docking 64 \
       --parallel-scoring 128 \
@@ -417,6 +416,7 @@ Example script:
     ${HOME}/git/ftdmp/ftdmp-all \
       --ftdmp-root ${HOME}/git/ftdmp \
       --conda-path ${HOME}/miniconda3 \
+      --conda-env 'ftdmp' \
       --conda-early 'true' \
       --parallel-docking 32 \
       --parallel-scoring 64 \
@@ -539,7 +539,7 @@ Below is the breef description of 'ftdmp-relax-with-openmm' interface.
     
         ftdmp-relax-with-openmm --input model.pdb --output relaxed_model.pdb
         
-        ftdmp-relax-with-openmm --conda-path ~/miniconda3 --forcefield amber14-all \
+        ftdmp-relax-with-openmm --conda-path ~/miniconda3 --conda-env ftdmp --forcefield amber14-all \
           -i model.pdb -o relaxed_model.pdb --score-at-end fast_iface --trim-output
 
 ## Example of relaxing multiple complex structures containing chains of different types (protein, nucleic acid)
@@ -553,7 +553,7 @@ Using the 'amber14-all-no-water' forcefield, the example below works for protein
         
         ${HOME}/git/ftdmp/ftdmp-relax-with-openmm \
             --conda-path ${HOME}/miniconda3 \
-            --conda-env '' \
+            --conda-env 'ftdmp' \
             --force-cuda \
             --full-preparation \
             --forcefield 'amber14-all-no-water' \
