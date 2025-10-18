@@ -201,6 +201,8 @@ fi
 
 cat "$TMPLDIR/paths_to_names" \
 | awk -v outdir="$OUTDIR" '{print " --input " $1 " --output " outdir "/" $2}' \
+| sed 's|\.cif$|.pdb|' \
+| sed 's|\.CIF$|.pdb|' \
 | xargs -L 1 -P "$PROCESSORS" \
   ftdmp-reset-ids-by-sequences \
     --sequences "$SEQUENCESFILE" \
