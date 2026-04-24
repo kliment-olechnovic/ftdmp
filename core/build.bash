@@ -32,5 +32,16 @@ fi
 
 ################################################################################
 
+cd "${SCRIPTDIR}/cadscore-lt"
+g++ -std=c++17 -O3 -fopenmp -I ./src -o ./cadscore-lt ./src/cadscore_lt.cpp
+
+if [ ! -s "./cadscore-lt" ]
+then
+	echo "Failed to build cadscore-lt executable"
+	exit 1
+fi
+
+################################################################################
+
 exit 0
 

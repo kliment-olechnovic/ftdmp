@@ -23,7 +23,8 @@ Options:
     --score-symmetry                  string     flag to score symmetry, default is 'false'
     --external-scores                 string     path to input file with external scores table, default is ''
     --remap-cadscore                  string     flag to use optimal chains remapping for CAD-score, default is 'false'
-    --crude-cadscore                  string     flag to use faster but crude mode for CAD-score
+    --crude-cadscore                  string     flag to use faster but crude mode for CAD-score, default is 'false'
+    --heteroatoms-for-cadscore        string     flag to include heteroatoms for CAD-score, default is 'false'
     --keep-top-fast                   number     number of top complexes to keep after full scoring stage, default is 9999999
     --keep-top-slow                   number     number of top complexes to keep before slow full scoring stage, default is 9999999
     --limit-voromqa-light             number     minimal allowed VoroMQA-light whole-stricture score, default is ''
@@ -95,6 +96,7 @@ SCORE_SYMMETRY="false"
 EXTERNAL_SCORES_FILE=""
 REMAP_CADSCORE="false"
 CRUDE_CADSCORE="false"
+HETEROATOMS_FOR_CADSCORE="false"
 KEEP_TOP_FAST="9999999"
 KEEP_TOP_SLOW="9999999"
 LIMIT_VOROMQA_LIGHT=""
@@ -189,6 +191,10 @@ do
 		;;
 	--crude-cadscore)
 		CRUDE_CADSCORE="$OPTARG"
+		shift
+		;;
+	--heteroatoms-for-cadscore)
+		HETEROATOMS_FOR_CADSCORE="$OPTARG"
 		shift
 		;;
 	--keep-top-fast)
@@ -611,6 +617,13 @@ then
 		export FTDMPDIR="$FTDMP_ROOT"
 	fi
 	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}/core/3D_Dock/progs:${FTDMPDIR}:${PATH}"
+fi
+
+################################################################################
+
+if [ "$HETEROATOMS_FOR_CADSCORE" == "true" ]
+then
+	export GLOBAL_FTDMP_CADSCORE_INCLUDE_HETEROATOMS="true"
 fi
 
 ################################################################################

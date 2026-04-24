@@ -17,6 +17,7 @@ Options:
     --crude                   string     flag to use faster but crude mode
     --parallel                number     total number of parallel parts, default is 1
     --sbatch-parameters       string     sbatch parameters to run in parallel, default is ''
+    --use-cadscore-lt         string     flag to use CAD-score-LT, default is 'true'
     --help | -h                          flag to display help message and exit
 
 Standard input:
@@ -41,7 +42,7 @@ fi
 if [ -z "$FTDMPDIR" ]
 then
 	export FTDMPDIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-	export PATH="${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
+	export PATH="${FTDMPDIR}/core/cadscore-lt:${FTDMPDIR}/core/voronota/expansion_js:${FTDMPDIR}:${PATH}"
 fi
 
 command -v voronota-js-fast-iface-cadscore-matrix &> /dev/null || { echo >&2 "Error: 'voronota-js-fast-iface-cadscore-matrix' executable not in binaries path"; exit 1; }
@@ -57,6 +58,7 @@ SBATCH_PARAMETERS=""
 USE_MONOMERS="false"
 REMAP_CHAINS="false"
 CRUDE_MODE="false"
+USE_CADSCORE_LT="true"
 HELP_MODE="false"
 
 while [[ $# > 0 ]]
@@ -105,6 +107,10 @@ do
 		;;
 	--crude)
 		CRUDE_MODE="$OPTARG"
+		shift
+		;;
+	--use-cadscore-lt)
+		USE_CADSCORE_LT="$OPTARG"
 		shift
 		;;
 	-h|--help)
@@ -175,9 +181,23 @@ MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("$SUBSELECT_CONTACTS")
 MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--sbatch-parameters")
 MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("$SBATCH_PARAMETERS")
 
+MORE_CADSCORELT_PATAMETERS=()
+
+MORE_CADSCORELT_PATAMETERS+=("--processors")
+MORE_CADSCORELT_PATAMETERS+=("$PARALLEL_PARTS")
+MORE_CADSCORELT_PATAMETERS+=("--subselect-contacts")
+MORE_CADSCORELT_PATAMETERS+=("(([-inter-chain]) and ($SUBSELECT_CONTACTS))")
+
+if [ "$GLOBAL_FTDMP_CADSCORE_INCLUDE_HETEROATOMS" == "true" ]
+then
+	MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--include-heteroatoms")
+	MORE_CADSCORELT_PATAMETERS+=("--include-heteroatoms")
+fi
+
 if [ "$REMAP_CHAINS" == "true" ]
 then
 	MORE_FAST_IFACE_CADSCORE_PARAMETERS+=("--remap-chains")
+	MORE_CADSCORELT_PATAMETERS+=("--remap-chains")
 fi
 
 if [ "$CRUDE_MODE" == "true" ]
@@ -213,7 +233,14 @@ then
 else
 	cat "${TMPLDIR}/input" \
 	| awk -v prefix="$INPUT_PREFIX" -v suffix="$INPUT_SUFFIX" '{if($1!="ID"){print prefix $1 suffix}}' \
-	| voronota-js-fast-iface-cadscore-matrix --lt "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}" \
+	| {
+		if [ "$USE_CADSCORE_LT" == "true" ]
+		then
+			cadscore-lt --scoring-types contacts sites "${MORE_CADSCORELT_PATAMETERS[@]}" | awk '{print $1 " " $2 " " $5 " " $6}'
+		else
+			voronota-js-fast-iface-cadscore-matrix --lt "${MORE_FAST_IFACE_CADSCORE_PARAMETERS[@]}"
+		fi
+	} \
 	| sed "s/^\(\S\+\)${INPUT_SUFFIX}\s\+\(\S\+\)${INPUT_SUFFIX} /\1 \2 /"
 fi
 } \
