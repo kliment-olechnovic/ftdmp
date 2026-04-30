@@ -36,9 +36,9 @@ Options:
     --output-redundancy-threshold     number     minimal ordered redundancy value to accept, default is 0.9
     --plot-jury-scores                string     file path to output plot of jury scores, default is ''
     --plot-jury-diagnostics           string     flag to plot jury diagnostics, default is 'false'
-    --write-pdb-file                  string     file path template to output scores in PDB files, default is ''
-    --write-pdb-mode                  string     mode for PDB scores output ('voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'voromqa_dark_and_gnn'
-    --write-pdb-num                   number     number of top PDB files with scores to write, default is 5
+    --write-pdb-file                  string     file path template to output PDB files, default is ''
+    --write-pdb-mode                  string     mode for PDB scores output ('preserve_bfactors' or 'voromqa_dark' or 'voromqa_dark_and_gnn'), default is 'preserve_bfactors'
+    --write-pdb-num                   number     number of top PDB files to write, default is 5
     --write-full-table                string     file path to output full table, default is ''
     --help | -h                                  flag to display help message and exit
 
@@ -109,7 +109,7 @@ REDUNDANCY_THRESHOLD="0.9"
 PLOT_JURY_SCORES=""
 PLOT_JURY_DIAGNOSTICS="false"
 WRITE_SCORES_PDB_FILE=""
-WRITE_SCORES_PDB_MODE="voromqa_dark_and_gnn"
+WRITE_SCORES_PDB_MODE="preserve_bfactors"
 WRITE_SCORES_PDB_NUM="5"
 WRITE_FULL_TABLE=""
 HELP_MODE="false"
@@ -280,7 +280,7 @@ fi
 
 [ -n "$SCORING_RANKS_JURY_SLICES" ] || { echo >&2 "Error: scoring ranks jury slices not defined"; exit 1;}
 
-if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark_and_gnn" ]
+if [ -n "$WRITE_SCORES_PDB_FILE" ] && [ "$WRITE_SCORES_PDB_NUM" -gt "0" ] && [ "$WRITE_SCORES_PDB_MODE" != "preserve_bfactors" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark" ] && [ "$WRITE_SCORES_PDB_MODE" != "voromqa_dark_and_gnn" ]
 then
 	echo >&2 "Error: invalid mode '$WRITE_SCORES_PDB_MODE' for writing scores in PDB files"
 	exit 1
@@ -792,11 +792,21 @@ then
 		OUTPUT_PDB_FILE="$(echo "${WRITE_SCORES_PDB_FILE}" | sed "s|-RANK-|${PRETTY_RESULT_RANK}|" | sed "s|-BASENAME-|${ORIGINAL_FILE_BASENAME}|")"
 		echo "${ORIGINAL_INPUT_FILE} ${OUTPUT_PDB_FILE}"
 	done \
-	> "$TMPLDIR/pdb_files_for_writing_cores"
+	> "$TMPLDIR/pdb_files_for_writing_scores"
+	
+	if [ "$WRITE_SCORES_PDB_MODE" == "preserve_bfactors" ]
+	then
+		cat "$TMPLDIR/pdb_files_for_writing_scores" \
+		| while read -r ORIGINAL_INPUT_FILE OUTPUT_PDB_FILE
+		do
+			mkdir -p "$(dirname ${OUTPUT_PDB_FILE})"
+			cat "$ORIGINAL_INPUT_FILE" | voronota-js-pdb-utensil-filter-atoms > "$OUTPUT_PDB_FILE"
+		done
+	fi
 	
 	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark" ] || [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark_and_gnn" ]
 	then
-		cat "$TMPLDIR/pdb_files_for_writing_cores" \
+		cat "$TMPLDIR/pdb_files_for_writing_scores" \
 		| awk '{print " --input " $1 " --output-dark-pdb " $2}' \
 		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-js-only-global-voromqa \
 		  --cache-dir "$CACHE_DIR" \
@@ -806,7 +816,7 @@ then
 	
 	if [ "$WRITE_SCORES_PDB_MODE" == "voromqa_dark_and_gnn" ]
 	then
-		cat "$TMPLDIR/pdb_files_for_writing_cores" \
+		cat "$TMPLDIR/pdb_files_for_writing_scores" \
 		| awk '{print " --input " $2 " --output-pdb-file " $2}' \
 		| xargs -L 1 -P "$SCORING_PROCESSORS" voronota-js-voroif-gnn \
 		  --conda-path "$CONDA_PATH" \
