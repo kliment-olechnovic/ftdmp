@@ -93,6 +93,8 @@ public:
 		set_command_for_extra_actions("set-initial-atom-representation-to-trace", operators::ConfigureGUI(operators::ConfigureGUI::ACTION_SET_INITIAL_MAIN_REPRESENTATION).set_value_of_initial_main_represenation(GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_TRACE));
 		set_command_for_extra_actions("clear", scripting::operators::Mock());
 		set_command_for_extra_actions("clear-last", scripting::operators::Mock());
+		set_command_for_extra_actions("clear-start", scripting::operators::Mock());
+		set_command_for_extra_actions("clear-end", scripting::operators::Mock());
 		set_command_for_extra_actions("history", scripting::operators::Mock());
 		set_command_for_extra_actions("history-all", scripting::operators::Mock());
 		set_command_for_extra_actions("animate-none", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_NONE));
@@ -102,13 +104,15 @@ public:
 		set_command_for_extra_actions("animate-spin-right", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT));
 		set_command_for_extra_actions("animate-spin-on-z-left", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT));
 		set_command_for_extra_actions("animate-spin-on-z-right", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_RIGHT));
+		set_command_for_extra_actions("animate-wiggle", operators::Animate(GUIConfiguration::ANIMATION_VARIANT_WIGGLE_LEFT));
 		set_command_for_extra_actions("export-view", operators::ExportView());
 		set_command_for_extra_actions("import-view", operators::ImportView());
 		set_command_for_extra_actions("hint-render-area-size", operators::HintRenderAreaSize());
 
-		set_command_for_congregation_of_data_managers("fetch", duktaper::operators::Fetch(RemoteImportDownloaderAdaptiveForOLD::instance()));
+		set_command_for_congregation_of_data_managers("fetch-pdb", duktaper::operators::Fetch(RemoteImportDownloaderAdaptiveForOLD::instance()));
 		set_command_for_congregation_of_data_managers("fetch-afdb", duktaper::operators::FetchAFDB(RemoteImportDownloaderAdaptiveForOLD::instance()));
 		set_command_for_congregation_of_data_managers("fetch-mmcif", duktaper::operators::FetchMMCIF(RemoteImportDownloaderAdaptiveForMMCIF::instance()));
+		set_command_for_congregation_of_data_managers("fetch", duktaper::operators::FetchMMCIF(RemoteImportDownloaderAdaptiveForMMCIF::instance()));
 		set_command_for_congregation_of_data_managers("import-url", duktaper::operators::ImportUrl<RemoteImportDownloaderAdaptiveForOLD>());
 		set_command_for_congregation_of_data_managers("import-mmcif-url", duktaper::operators::ImportUrl<RemoteImportDownloaderAdaptiveForMMCIF>());
 		set_command_for_congregation_of_data_managers("import-downloaded", operators::ImportDownloaded<RemoteImportDownloaderAdaptiveForOLD>());
@@ -295,6 +299,16 @@ public:
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_RIGHT)
 				{
 					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), 0.01);
+				}
+				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_WIGGLE_LEFT)
+				{
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), -0.02);
+					GUIConfiguration::instance().animation_variant=GUIConfiguration::ANIMATION_VARIANT_WIGGLE_RIGHT;
+				}
+				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_WIGGLE_RIGHT)
+				{
+					uv::ViewerApplication::instance().rotate(glm::vec3(0, 1, 0), 0.02);
+					GUIConfiguration::instance().animation_variant=GUIConfiguration::ANIMATION_VARIANT_WIGGLE_LEFT;
 				}
 				else if(GUIConfiguration::instance().animation_variant==GUIConfiguration::ANIMATION_VARIANT_SPIN_ON_Z_LEFT)
 				{
@@ -544,6 +558,14 @@ protected:
 					{
 						console::Console::instance().text_interface_info().clear_last_output();
 					}
+					else if(command_name=="clear-start")
+					{
+						console::Console::instance().text_interface_info().add_clear_start();
+					}
+					else if(command_name=="clear-end")
+					{
+						console::Console::instance().text_interface_info().clear_outputs_from_last_clear_start();
+					}
 					else if(command_name=="history")
 					{
 						console::Console::instance().text_interface_info().add_history_output(20);
@@ -655,6 +677,7 @@ private:
 				}
 
 				std::string list_of_names;
+
 				{
 					std::ostringstream list_output;
 					for(std::set<std::string>::const_iterator it=object_query.names.begin();it!=object_query.names.end();++it)
@@ -666,21 +689,26 @@ private:
 
 				std::ostringstream script_output;
 
+				script_output << "clear-start\n";
 				script_output << "set-tag-of-atoms-by-secondary-structure -on-objects " << list_of_names << "\n";
-				script_output << "clear-last\n";
+				script_output << "clear-end\n";
 
+				script_output << "clear-start\n";
 				script_output << "zoom-by-objects  -names " << list_of_names << "\n";
-				script_output << "clear-last\n";
+				script_output << "clear-end\n";
 
+				script_output << "clear-start\n";
 				script_output << "hide-atoms -on-objects " << list_of_names << "\n";
-				script_output << "clear-last\n";
+				script_output << "clear-end\n";
 
 				if(available_contacts)
 				{
+					script_output << "clear-start\n";
 					script_output << "hide-contacts -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 				}
 
+				script_output << "clear-start\n";
 				script_output << "show-atoms [-t! het] -rep ";
 				if(GUIConfiguration::instance().initial_main_representation_variant==GUIConfiguration::INITIAL_REPRESENTATION_VARIANT_TRACE)
 				{
@@ -691,30 +719,45 @@ private:
 					script_output << "cartoon";
 				}
 				script_output << " -on-objects " << list_of_names << "\n";
-				script_output << "clear-last\n";
+				script_output << "clear-end\n";
 
-				script_output << "spectrum-atoms [] -by chain -scheme random -on-objects " << list_of_names << "\n";
-				script_output << "clear-last\n";
+				if(object_query.names.size()==1 && list_of_names.rfind(" AF-", 0)==0)
+				{
+					script_output << "clear-start\n";
+					script_output << "spectrum-atoms -adjunct tf -scheme rwb -min-val 50 -max-val 100 -on-objects " << list_of_names << "\n";
+					script_output << "clear-end\n";
+				}
+				else
+				{
+					script_output << "clear-start\n";
+					script_output << "spectrum-atoms [] -by chain -scheme random -on-objects " << list_of_names << "\n";
+					script_output << "clear-end\n";
+				}
 
 				if(available_tags_het)
 				{
+					script_output << "clear-start\n";
 					script_output << "show-atoms [-t het] -rep sticks -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 
+					script_output << "clear-start\n";
 					script_output << "spectrum-atoms [-t het -t! el=C] -by atom-type -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 				}
 
 				if(available_adjuncts_cif_cell)
 				{
+					script_output << "clear-start\n";
 					script_output << "show-atoms [-v cif_cell] -rep balls -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 
+					script_output << "clear-start\n";
 					script_output << "spectrum-atoms [-v cif_cell] -adjunct cif_cell -scheme bcgyr -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 
+					script_output << "clear-start\n";
 					script_output << "color-atoms [-v cif_cell=0] -col 0xFFFFFF -on-objects " << list_of_names << "\n";
-					script_output << "clear-last\n";
+					script_output << "clear-end\n";
 				}
 
 				script_partitioner().add_pending_sentences_from_string_to_front(script_output.str());
@@ -760,9 +803,10 @@ private:
 		}
 	}
 
+
+#ifdef FOR_WEB
 	void initiate_files_forwarding_if_requested(const GenericCommandRecord& cr)
 	{
-#ifdef FOR_WEB
 		if(cr.successful)
 		{
 			std::map< std::string, std::vector<std::string> >::const_iterator it=cr.heterostorage.forwarding_strings.find("download");
@@ -779,8 +823,13 @@ private:
 				}
 			}
 		}
-#endif
 	}
+#else
+	void initiate_files_forwarding_if_requested(const GenericCommandRecord& /*cr*/)
+	{
+	}
+#endif
+
 
 	bool zoom_if_requested(const GenericCommandRecord& cr)
 	{

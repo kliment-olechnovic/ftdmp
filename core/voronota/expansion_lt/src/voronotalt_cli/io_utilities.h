@@ -1,183 +1,131 @@
 #ifndef VORONOTALT_IO_UTILITIES_H_
 #define VORONOTALT_IO_UTILITIES_H_
 
-#include <iostream>
-#include <sstream>
-#include <cstdlib>
+#include <string>
 #include <vector>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <iostream>
+#include <fstream>
 
-#ifdef _OPENMP
+#ifdef VORONOTALT_OPENMP
 #include <omp.h>
 #endif
 
 namespace voronotalt
 {
 
-inline bool read_double_values_from_text_string(const std::string& input_data, std::vector<double>& values)
+inline bool read_double_values_from_text_string(const std::string& input_data, std::vector<double>& values) noexcept
 {
-	const std::size_t initial_number_of_values=values.size();
+	values.clear();
 
 	if(!input_data.empty())
 	{
-		bool read_in_parallel=false;
-#ifdef _OPENMP
-		if(input_data.size()>100000)
+		const char* data=input_data.c_str();
+		const char* end=data+input_data.size();
+		values.reserve(input_data.size()/5);
+		while(data<end)
 		{
-			const int n_threads=omp_get_max_threads();
-			if(n_threads>1)
+			char* next=0;
+			const double value=std::strtod(data, &next);
+			if(data==next)
 			{
-				const int input_data_size=static_cast<int>(input_data.size());
-				const int approximate_portion_size=(input_data_size/n_threads);
-				if(approximate_portion_size>1000)
+				if(next!=0 && std::strcspn(next, " \t\v\n\r")==0)
 				{
-					std::vector< std::vector<double> > thread_values(n_threads);
-					std::vector<int> thread_data_starts(n_threads, 0);
-					for(int i=0;i<n_threads;i++)
-					{
-						thread_values[i].reserve(approximate_portion_size/5);
-						int thread_data_start=(i>0 ? std::max(approximate_portion_size*i, thread_data_starts[i-1]+1) : 0);
-						while(i!=0 && thread_data_start<input_data_size && input_data[thread_data_start]>' ')
-						{
-							thread_data_start++;
-						}
-						thread_data_starts[i]=thread_data_start;
-					}
-
-					#pragma omp parallel
-					{
-						#pragma omp for schedule(static,1)
-						for(int i=0;i<n_threads;i++)
-						{
-							if(thread_data_starts[i]<input_data_size)
-							{
-								const char* data=input_data.c_str()+thread_data_starts[i];
-								const char* end=input_data.c_str()+((i+1)<n_threads ? std::min(thread_data_starts[i+1], input_data_size) : input_data_size);
-								while(data<end)
-								{
-									char* next=0;
-									const double value=std::strtod(data, &next);
-									if(data==next)
-									{
-										++data;
-									}
-									else
-									{
-										thread_values[i].push_back(value);
-										data=next;
-									}
-								}
-							}
-						}
-					}
-
-					std::size_t total_values_count=0;
-
-					for(std::size_t i=0;i<thread_values.size();i++)
-					{
-						total_values_count+=thread_values[i].size();
-					}
-
-					values.reserve(total_values_count);
-
-					for(std::size_t i=0;i<thread_values.size();i++)
-					{
-						values.insert(values.end(), thread_values[i].begin(), thread_values[i].end());
-					}
-
-					read_in_parallel=true;
-				}
-			}
-		}
-#endif
-		if(!read_in_parallel)
-		{
-			const char* data=input_data.c_str();
-			const char* end=data+input_data.size();
-			values.reserve(input_data.size()/5);
-			while(data<end)
-			{
-				char* next=0;
-				const double value=std::strtod(data, &next);
-				if(data==next)
-				{
-					++data;
+					data=end;
 				}
 				else
 				{
-					values.push_back(value);
-					data=next;
+					values.clear();
+					return false;
 				}
 			}
-		}
-	}
-
-	return (values.size()>initial_number_of_values);
-}
-
-inline bool read_double_values_from_text_stream(std::istream& input, std::vector<double>& values)
-{
-	std::istreambuf_iterator<char> input_eos;
-	std::string input_data(std::istreambuf_iterator<char>(input), input_eos);
-
-	return read_double_values_from_text_string(input_data, values);
-}
-
-inline bool read_lines_from_text_stream(std::istream& input, std::vector<std::string>& lines)
-{
-	const std::size_t initial_number_of_lines=lines.size();
-
-	while(input.good())
-	{
-		std::string line;
-		std::getline(input, line);
-		if(!line.empty())
-		{
-			std::size_t last_content_pos=line.find_last_not_of(" \t\n\r\f\v");
-			if(last_content_pos!=std::string::npos)
+			else
 			{
-				if(last_content_pos+1<line.size())
-				{
-					line=line.substr(0, last_content_pos+1);
-				}
-				lines.push_back(line);
+				values.push_back(value);
+				data=next;
 			}
 		}
 	}
 
-	return (lines.size()>initial_number_of_lines);
+	return (!values.empty());
 }
 
-inline bool read_string_ids_and_double_values_from_text_stream(const std::size_t number_of_double_values_per_line, std::istream& input, std::vector<std::string>& string_ids, std::vector<double>& values)
+inline bool read_non_empty_lines_from_text_string(const std::string& input_data, const std::size_t max_num_of_lines, std::vector< std::pair<std::size_t, std::size_t> >& line_ranges) noexcept
+{
+	line_ranges.clear();
+
+	if(!input_data.empty())
+	{
+		std::size_t start=input_data.find_first_not_of(" \t\v\n\r");
+		while(start!=std::string::npos)
+		{
+			std::size_t end_of_line=input_data.find_first_of("\n\r", start);
+			std::size_t next_start=std::string::npos;
+			if(end_of_line==std::string::npos)
+			{
+				end_of_line=input_data.size();
+			}
+			else
+			{
+				next_start=input_data.find_first_not_of(" \n\r\t\v", end_of_line);
+			}
+			while(end_of_line>start && std::isspace(static_cast<unsigned char>(input_data[end_of_line-1])))
+			{
+				end_of_line--;
+			}
+			if(end_of_line>start)
+			{
+				line_ranges.push_back(std::pair<std::size_t, std::size_t>(start, end_of_line));
+				if(max_num_of_lines>0 && line_ranges.size()==max_num_of_lines)
+				{
+					return true;
+				}
+			}
+			start=next_start;
+		}
+	}
+
+	return (!line_ranges.empty());
+}
+
+bool read_token_from_text_string(const std::string& input_data, const std::pair<std::size_t, std::size_t>& search_range, std::pair<std::size_t, std::size_t>& token_range) noexcept
+{
+	if(search_range.first<search_range.second && search_range.first<input_data.size())
+	{
+		const std::size_t start=search_range.first+std::strspn(&input_data[search_range.first], " \t\v\n\r");
+		const std::size_t end=std::min(start+std::strcspn(&input_data[start], " \t\v\n\r"), search_range.second);
+		if(end>start)
+		{
+			token_range.first=start;
+			token_range.second=end;
+			return true;
+		}
+	}
+	return false;
+}
+
+inline bool read_string_ids_and_double_values_from_text_string(const std::size_t number_of_double_values_per_line, const std::string& input_data, const std::size_t max_num_of_lines, std::vector<std::string>& string_ids, std::vector<double>& values) noexcept
 {
 	string_ids.clear();
 	values.clear();
 
-	std::string first_line;
-
-	do
-	{
-		std::getline(input, first_line);
-	}
-	while(first_line.empty() && input.good());
-
-	if(first_line.empty())
-	{
-		return false;
-	}
-
 	std::vector<std::string> first_line_tokens;
 
 	{
-		std::istringstream lineinput(first_line);
-		std::string token;
-		while(lineinput.good())
+		std::vector< std::pair<std::size_t, std::size_t> > first_line_ranges;
+		if(!read_non_empty_lines_from_text_string(input_data, 1, first_line_ranges))
 		{
-			token.clear();
-			lineinput >> token;
-			if(!lineinput.fail() && !token.empty())
-			{
-				first_line_tokens.push_back(token);
-			}
+			return false;
+		}
+		std::pair<std::size_t, std::size_t> search_range=first_line_ranges[0];
+		std::pair<std::size_t, std::size_t> token_range;
+		while(read_token_from_text_string(input_data, search_range, token_range))
+		{
+			search_range.first=token_range.second;
+			first_line_tokens.push_back(input_data.substr(token_range.first, token_range.second-token_range.first));
 		}
 	}
 
@@ -188,58 +136,115 @@ inline bool read_string_ids_and_double_values_from_text_stream(const std::size_t
 		return false;
 	}
 
-	if(number_of_tokens_in_first_line==number_of_double_values_per_line)
-	{
-		const bool valid_values_read=(read_double_values_from_text_string(first_line, values) && read_double_values_from_text_stream(input, values) && values.size()%number_of_double_values_per_line==0);
-		if(!valid_values_read)
-		{
-			values.clear();
-		}
-		return valid_values_read;
-	}
-
 	const std::size_t number_of_string_ids_per_line=(number_of_tokens_in_first_line-number_of_double_values_per_line);
 
-	const bool string_ids_tailing=(first_line_tokens[number_of_double_values_per_line]=="#");
+	bool switch_to_raw_parsing_of_double_values=(number_of_string_ids_per_line==0 && max_num_of_lines==0);
 
-	std::vector<std::string> lines;
-	lines.push_back(first_line);
-	read_lines_from_text_stream(input, lines);
+#ifdef VORONOTALT_OPENMP
+	switch_to_raw_parsing_of_double_values=(switch_to_raw_parsing_of_double_values && omp_get_max_threads()<2);
+#endif
 
-	string_ids.resize(lines.size()*number_of_string_ids_per_line);
-	values.resize(lines.size()*number_of_double_values_per_line, 0.0);
+	if(switch_to_raw_parsing_of_double_values)
+	{
+		return (read_double_values_from_text_string(input_data, values) && values.size()%number_of_double_values_per_line==0);
+	}
 
-	std::vector<int> failures(lines.size(), 0);
+	const bool string_ids_tailing=((number_of_string_ids_per_line>0) && (first_line_tokens[number_of_double_values_per_line]=="#"));
+
+	std::vector< std::pair<std::size_t, std::size_t> > line_ranges;
+
+	if(!read_non_empty_lines_from_text_string(input_data, max_num_of_lines, line_ranges))
+	{
+		return false;
+	}
+
+	if(number_of_string_ids_per_line>0)
+	{
+		string_ids.resize(line_ranges.size()*number_of_string_ids_per_line);
+	}
+
+	values.resize(line_ranges.size()*number_of_double_values_per_line, 0.0);
+
+	std::vector<int> failures(line_ranges.size(), 0);
 
 	{
 		#pragma omp parallel
 		{
 			#pragma omp for
-			for(std::size_t i=0;i<lines.size();i++)
+			for(std::size_t i=0;i<line_ranges.size();i++)
 			{
-				std::istringstream lineinput(lines[i]);
-				for(int block=0;block<2;block++)
+				if(number_of_string_ids_per_line>0)
 				{
-					if((block==0 && !string_ids_tailing) || (block==1 && string_ids_tailing))
+					std::pair<std::size_t, std::size_t> search_range=line_ranges[i];
+					std::pair<std::size_t, std::size_t> token_range;
+
+					for(int block=0;block<2 && failures[i]==0;block++)
 					{
-						for(std::size_t j=0;j<number_of_string_ids_per_line;j++)
+						if((block==0 && !string_ids_tailing) || (block==1 && string_ids_tailing))
 						{
-							lineinput >> string_ids[i*number_of_string_ids_per_line+j];
-							if(lineinput.fail())
+							for(std::size_t j=0;j<number_of_string_ids_per_line && failures[i]==0;j++)
 							{
-								failures[i]++;
+								if(read_token_from_text_string(input_data, search_range, token_range))
+								{
+									search_range.first=token_range.second;
+									string_ids[i*number_of_string_ids_per_line+j]=input_data.substr(token_range.first, token_range.second-token_range.first);
+								}
+								else
+								{
+									failures[i]++;
+								}
+							}
+						}
+						else
+						{
+							for(std::size_t j=0;j<number_of_double_values_per_line && failures[i]==0;j++)
+							{
+								if(read_token_from_text_string(input_data, search_range, token_range))
+								{
+									search_range.first=token_range.second;
+									const char* str=&input_data[token_range.first];
+									char* str_next=0;
+									const double value=std::strtod(str, &str_next);
+									if(str==str_next)
+									{
+										failures[i]++;
+									}
+									else
+									{
+										values[i*number_of_double_values_per_line+j]=value;
+									}
+								}
+								else
+								{
+									failures[i]++;
+								}
 							}
 						}
 					}
-					else
+				}
+				else
+				{
+					const char* str=&input_data[line_ranges[i].first];
+					const char* str_limit=str+(line_ranges[i].second-line_ranges[i].first);
+					for(std::size_t j=0;j<number_of_double_values_per_line && failures[i]==0;j++)
 					{
-						for(std::size_t j=0;j<number_of_double_values_per_line;j++)
+						if(str<str_limit)
 						{
-							lineinput >> values[i*number_of_double_values_per_line+j];
-							if(lineinput.fail())
+							char* str_next=0;
+							const double value=std::strtod(str, &str_next);
+							if(str==str_next)
 							{
 								failures[i]++;
 							}
+							else
+							{
+								values[i*number_of_double_values_per_line+j]=value;
+								str=str_next;
+							}
+						}
+						else
+						{
+							failures[i]++;
 						}
 					}
 				}
@@ -260,6 +265,153 @@ inline bool read_string_ids_and_double_values_from_text_stream(const std::size_t
 	}
 
 	return (total_failures==0);
+}
+
+inline void string_append_char(std::string& dest, const char c) noexcept
+{
+	dest.push_back(c);
+}
+
+inline void string_append_cstring(std::string& dest, const char* s) noexcept
+{
+	dest.append(s);
+}
+
+inline void string_append_string(std::string& dest, const std::string& s) noexcept
+{
+	dest.append(s);
+}
+
+template<typename IntType>
+inline void string_append_int(std::string& dest, const IntType v) noexcept
+{
+    char buf[32];
+    const int n=std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(v));
+    if(n>0)
+	{
+    	dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.push_back('.');
+    }
+}
+
+template<typename FloatType>
+inline void string_append_double(std::string& dest, const FloatType v) noexcept
+{
+    char buf[32];
+    const int n=std::snprintf(buf, sizeof(buf), "%.6g", static_cast<double>(v));
+    if(n>0)
+	{
+		dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.push_back('.');
+    }
+}
+
+template<typename FloatType>
+inline void string_append_doubles(std::string& dest, const FloatType v1, const FloatType v2) noexcept
+{
+    char buf[64];
+    const int n=std::snprintf(buf, sizeof(buf), "%.6g\t%.6g", static_cast<double>(v1), static_cast<double>(v2));
+    if(n>0)
+	{
+		dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.append(".\t.");
+    }
+}
+
+template<typename FloatType>
+inline void string_append_doubles(std::string& dest, const FloatType v1, const FloatType v2, const FloatType v3) noexcept
+{
+    char buf[96];
+    const int n=std::snprintf(buf, sizeof(buf), "%.6g\t%.6g\t%.6g", static_cast<double>(v1), static_cast<double>(v2), static_cast<double>(v3));
+    if(n>0)
+	{
+		dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.append(".\t.\t.");
+    }
+}
+
+template<typename FloatType>
+inline void string_append_doubles(std::string& dest, const FloatType v1, const FloatType v2, const FloatType v3, const FloatType v4) noexcept
+{
+    char buf[128];
+    const int n=std::snprintf(buf, sizeof(buf), "%.6g\t%.6g\t%.6g\t%.6g", static_cast<double>(v1), static_cast<double>(v2), static_cast<double>(v3), static_cast<double>(v4));
+    if(n>0)
+	{
+		dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.append(".\t.\t.\t.");
+    }
+}
+
+template<typename FloatType>
+inline void string_append_doubles(std::string& dest, const FloatType v1, const FloatType v2, const FloatType v3, const FloatType v4, const FloatType v5) noexcept
+{
+    char buf[160];
+    const int n=std::snprintf(buf, sizeof(buf), "%.6g\t%.6g\t%.6g\t%.6g\t%.6g", static_cast<double>(v1), static_cast<double>(v2), static_cast<double>(v3), static_cast<double>(v4), static_cast<double>(v5));
+    if(n>0)
+	{
+		dest.append(buf, static_cast<std::size_t>(n));
+	}
+    else
+    {
+    	dest.append(".\t.\t.\t.\t.");
+    }
+}
+
+bool read_whole_file_or_pipe_or_stdin_to_string(const std::string& filepath, std::string& result_data) noexcept
+{
+	if(filepath.empty() || filepath=="_stdin")
+	{
+		std::istreambuf_iterator<char> stdin_eos;
+		std::string stdin_data(std::istreambuf_iterator<char>(std::cin), stdin_eos);
+		result_data.swap(stdin_data);
+	}
+	else
+	{
+		std::ifstream infile(filepath.c_str(), std::ios::in|std::ios::binary);
+		if(infile.is_open())
+		{
+			infile.seekg(0, std::ios::end);
+			std::streampos end_pos=infile.tellg();
+			if(end_pos>=0)
+			{
+				std::string file_data;
+				file_data.resize(infile.tellg());
+				infile.seekg(0, std::ios::beg);
+				infile.read(&file_data[0], file_data.size());
+				infile.close();
+				result_data.swap(file_data);
+			}
+			else
+			{
+				infile.clear();
+				infile.seekg(0, std::ios::beg);
+				std::istreambuf_iterator<char> pipe_eos;
+				std::string pipe_data(std::istreambuf_iterator<char>(infile), pipe_eos);
+				result_data.swap(pipe_data);
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 }

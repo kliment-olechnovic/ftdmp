@@ -20,7 +20,7 @@ public:
 		int indicator;
 
 
-		ContourPoint(const SimplePoint& p, const UnsignedInt left_id, const UnsignedInt right_id) :
+		ContourPoint(const SimplePoint& p, const UnsignedInt left_id, const UnsignedInt right_id) noexcept :
 			p(p),
 			angle(FLOATCONST(0.0)),
 			left_id(left_id),
@@ -49,7 +49,7 @@ public:
 		UnsignedInt id_a;
 		UnsignedInt id_b;
 
-		ContactDescriptor() :
+		ContactDescriptor() noexcept :
 			sum_of_arc_angles(FLOATCONST(0.0)),
 			area(FLOATCONST(0.0)),
 			solid_angle_a(FLOATCONST(0.0)),
@@ -63,7 +63,7 @@ public:
 		{
 		}
 
-		void clear()
+		void clear() noexcept
 		{
 			id_a=0;
 			id_b=0;
@@ -82,16 +82,114 @@ public:
 	struct ContactDescriptorGraphics
 	{
 		std::vector<SimplePoint> outer_points;
+		std::vector<int> boundary_mask;
 		SimplePoint barycenter;
 		SimplePoint plane_normal;
 
-		ContactDescriptorGraphics()
+		ContactDescriptorGraphics() noexcept
 		{
 		}
 
-		void clear()
+		void clear() noexcept
 		{
 			outer_points.clear();
+			boundary_mask.clear();
+		}
+	};
+
+	struct PreliminaryCuttingPlanes
+	{
+		bool enabled;
+		std::vector<int> override_statuses;
+		std::vector<SimplePoint> normals;
+		std::vector<SimplePoint> centers;
+
+		PreliminaryCuttingPlanes() : enabled(false)
+		{
+		}
+
+		bool enabled_and_valid() const noexcept
+		{
+			return (enabled && !normals.empty() && normals.size()==centers.size() && normals.size()==override_statuses.size());
+		}
+	};
+
+	struct TessellationVertex
+	{
+		UnsignedInt ids_of_spheres[4];
+		SimplePoint position;
+		Float dist_min;
+		Float dist_max;
+
+		void sort_ids_of_spheres() noexcept
+		{
+			if(ids_of_spheres[0]>ids_of_spheres[1])
+			{
+				std::swap(ids_of_spheres[0], ids_of_spheres[1]);
+			}
+			if(ids_of_spheres[2]>ids_of_spheres[3])
+			{
+				std::swap(ids_of_spheres[2], ids_of_spheres[3]);
+			}
+			if(ids_of_spheres[0]>ids_of_spheres[2])
+			{
+				std::swap(ids_of_spheres[0], ids_of_spheres[2]);
+			}
+			if(ids_of_spheres[1]>ids_of_spheres[3])
+			{
+				std::swap(ids_of_spheres[1], ids_of_spheres[3]);
+			}
+			if(ids_of_spheres[1]>ids_of_spheres[2])
+			{
+				std::swap(ids_of_spheres[1], ids_of_spheres[2]);
+			}
+		}
+
+		bool operator<(const TessellationVertex& obj) const noexcept
+		{
+			return ((ids_of_spheres[0]<obj.ids_of_spheres[0])
+					|| (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]<obj.ids_of_spheres[1])
+					|| (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]==obj.ids_of_spheres[1] && ids_of_spheres[2]<obj.ids_of_spheres[2])
+					|| (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]==obj.ids_of_spheres[1] && ids_of_spheres[2]==obj.ids_of_spheres[2] && ids_of_spheres[3]<obj.ids_of_spheres[3]));
+		}
+
+		bool operator==(const TessellationVertex& obj) const noexcept
+		{
+			return (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]==obj.ids_of_spheres[1] && ids_of_spheres[2]==obj.ids_of_spheres[2] && ids_of_spheres[3]==obj.ids_of_spheres[3]);
+		}
+	};
+
+	struct TessellationEdge
+	{
+		UnsignedInt ids_of_spheres[3];
+		Float length;
+
+		void sort_ids_of_spheres() noexcept
+		{
+			if(ids_of_spheres[0]>ids_of_spheres[1])
+			{
+				std::swap(ids_of_spheres[0], ids_of_spheres[1]);
+			}
+			if(ids_of_spheres[1]>ids_of_spheres[2])
+			{
+				std::swap(ids_of_spheres[1], ids_of_spheres[2]);
+			}
+			if(ids_of_spheres[0]>ids_of_spheres[1])
+			{
+				std::swap(ids_of_spheres[0], ids_of_spheres[1]);
+			}
+		}
+
+		bool operator<(const TessellationEdge& obj) const noexcept
+		{
+			return ((ids_of_spheres[0]<obj.ids_of_spheres[0])
+					|| (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]<obj.ids_of_spheres[1])
+					|| (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]==obj.ids_of_spheres[1] && ids_of_spheres[2]<obj.ids_of_spheres[2]));
+		}
+
+		bool operator==(const TessellationEdge& obj) const noexcept
+		{
+			return (ids_of_spheres[0]==obj.ids_of_spheres[0] && ids_of_spheres[1]==obj.ids_of_spheres[1] && ids_of_spheres[2]==obj.ids_of_spheres[2]);
 		}
 	};
 
@@ -100,8 +198,10 @@ public:
 			const std::vector<int>& spheres_exclusion_statuses,
 			const UnsignedInt a_id,
 			const UnsignedInt b_id,
-			const std::vector<UnsignedInt>& a_neighbor_collisions,
-			ContactDescriptor& result_contact_descriptor)
+			const std::vector<ValuedID>& a_neighbor_collisions,
+			const Float max_circle_radius_restriction,
+			const PreliminaryCuttingPlanes& preliminary_cutting_planes,
+			ContactDescriptor& result_contact_descriptor) noexcept
 	{
 		result_contact_descriptor.clear();
 		if(a_id<spheres.size() && b_id<spheres.size())
@@ -113,15 +213,53 @@ public:
 			if(sphere_intersects_sphere(a, b) && !sphere_contains_sphere(a, b) && !sphere_contains_sphere(b, a))
 			{
 				result_contact_descriptor.intersection_circle_sphere=intersection_circle_of_two_spheres(a, b);
+				if(max_circle_radius_restriction>FLOATCONST(0.0))
+				{
+					result_contact_descriptor.intersection_circle_sphere.r=std::min(result_contact_descriptor.intersection_circle_sphere.r, max_circle_radius_restriction);
+				}
+				else if(max_circle_radius_restriction<FLOATCONST(0.0))
+				{
+					result_contact_descriptor.intersection_circle_sphere.r=(result_contact_descriptor.intersection_circle_sphere.r+max_circle_radius_restriction);
+				}
 				if(result_contact_descriptor.intersection_circle_sphere.r>FLOATCONST(0.0))
 				{
 					bool discarded=false;
 					bool contour_initialized=false;
-					bool nostop=true;
+					if(preliminary_cutting_planes.enabled_and_valid())
 					{
+						result_contact_descriptor.intersection_circle_axis=unit_point(sub_of_points(b.p, a.p));
+						init_contour_from_base_and_axis(a_id, result_contact_descriptor.intersection_circle_sphere, result_contact_descriptor.intersection_circle_axis, result_contact_descriptor.contour);
+						contour_initialized=true;
+						bool cut_performed=false;
+						for(UnsignedInt i=0;i<preliminary_cutting_planes.normals.size() && !discarded;i++)
+						{
+							if(preliminary_cutting_planes.override_statuses[i]==0)
+							{
+								if(mark_and_cut_contour(preliminary_cutting_planes.centers[i], preliminary_cutting_planes.normals[i], spheres.size()+i, result_contact_descriptor.contour))
+								{
+									cut_performed=true;
+								}
+								if(result_contact_descriptor.contour.empty())
+								{
+									discarded=true;
+								}
+							}
+							else if(preliminary_cutting_planes.override_statuses[i]>0)
+							{
+								discarded=true;
+							}
+						}
+						if(!cut_performed)
+						{
+							result_contact_descriptor.contour.clear();
+							contour_initialized=false;
+						}
+					}
+					{
+						bool nostop=true;
 						for(UnsignedInt i=0;i<a_neighbor_collisions.size() && !discarded && nostop;i++)
 						{
-							const UnsignedInt neighbor_id=a_neighbor_collisions[i];
+							const UnsignedInt neighbor_id=a_neighbor_collisions[i].index;
 							if(neighbor_id!=b_id && (neighbor_id>=spheres_exclusion_statuses.size() || spheres_exclusion_statuses[neighbor_id]==0))
 							{
 								const SimpleSphere& c=spheres[neighbor_id];
@@ -219,7 +357,7 @@ public:
 		return (result_contact_descriptor.area>FLOATCONST(0.0));
 	}
 
-	static bool construct_contact_descriptor_graphics(const ContactDescriptor& contact_descriptor, const Float length_step, ContactDescriptorGraphics& result_contact_descriptor_graphics)
+	static bool construct_contact_descriptor_graphics(const ContactDescriptor& contact_descriptor, const Float length_step, ContactDescriptorGraphics& result_contact_descriptor_graphics) noexcept
 	{
 		result_contact_descriptor_graphics.clear();
 		if(contact_descriptor.area>FLOATCONST(0.0))
@@ -235,22 +373,25 @@ public:
 				{
 					result_contact_descriptor_graphics.outer_points.push_back(sum_of_points(contact_descriptor.intersection_circle_sphere.p, rotate_point_around_axis(contact_descriptor.intersection_circle_axis, rotation_angle, first_point)));
 				}
+				result_contact_descriptor_graphics.boundary_mask.resize(result_contact_descriptor_graphics.outer_points.size(), 3);
 				result_contact_descriptor_graphics.barycenter=contact_descriptor.intersection_circle_sphere.p;
 			}
 			else
 			{
-				if(contact_descriptor.sum_of_arc_angles>FLOATCONST(0.0))
 				{
-					result_contact_descriptor_graphics.outer_points.reserve(static_cast<UnsignedInt>(contact_descriptor.sum_of_arc_angles/angle_step)+contact_descriptor.contour.size()+4);
-				}
-				else
-				{
-					result_contact_descriptor_graphics.outer_points.reserve(contact_descriptor.contour.size());
+					UnsignedInt estimated_size=contact_descriptor.contour.size();
+					if(contact_descriptor.sum_of_arc_angles>FLOATCONST(0.0))
+					{
+						estimated_size=(static_cast<UnsignedInt>(contact_descriptor.sum_of_arc_angles/angle_step)+contact_descriptor.contour.size()+4);
+					}
+					result_contact_descriptor_graphics.outer_points.reserve(estimated_size);
+					result_contact_descriptor_graphics.boundary_mask.reserve(estimated_size);
 				}
 				for(UnsignedInt i=0;i<contact_descriptor.contour.size();i++)
 				{
 					const ContourPoint& pr=contact_descriptor.contour[i];
 					result_contact_descriptor_graphics.outer_points.push_back(pr.p);
+					result_contact_descriptor_graphics.boundary_mask.push_back(((pr.right_id==contact_descriptor.id_a) ? 1 : 0)+((pr.left_id==contact_descriptor.id_a) ? 2 : 0));
 					if(pr.angle>FLOATCONST(0.0))
 					{
 						if(pr.angle>angle_step)
@@ -259,6 +400,7 @@ public:
 							for(Float rotation_angle=angle_step;rotation_angle<pr.angle;rotation_angle+=angle_step)
 							{
 								result_contact_descriptor_graphics.outer_points.push_back(sum_of_points(contact_descriptor.intersection_circle_sphere.p, rotate_point_around_axis(contact_descriptor.intersection_circle_axis, rotation_angle, first_v)));
+								result_contact_descriptor_graphics.boundary_mask.push_back(3);
 							}
 						}
 					}
@@ -286,12 +428,61 @@ public:
 		return (!result_contact_descriptor_graphics.outer_points.empty());
 	}
 
+	static bool construct_contact_descriptor_tessellation_vertices_and_edges(const ContactDescriptor& contact_descriptor, std::vector<TessellationEdge>& tes_edges, std::vector<TessellationVertex>& tes_vertices) noexcept
+	{
+		tes_edges.clear();
+		tes_vertices.clear();
+		if(contact_descriptor.area>FLOATCONST(0.0))
+		{
+			if(contact_descriptor.contour.empty())
+			{
+				TessellationEdge te;
+				te.length=contact_descriptor.sum_of_arc_angles*contact_descriptor.intersection_circle_sphere.r;
+				te.ids_of_spheres[0]=contact_descriptor.id_a;
+				te.ids_of_spheres[1]=contact_descriptor.id_b;
+				te.ids_of_spheres[2]=null_id();
+				te.sort_ids_of_spheres();
+				tes_edges.resize(1, te);
+			}
+			else
+			{
+				tes_vertices.reserve(contact_descriptor.contour.size());
+				tes_edges.reserve(contact_descriptor.contour.size());
+				for(UnsignedInt i=0;i<contact_descriptor.contour.size();i++)
+				{
+					const ContourPoint& mid=contact_descriptor.contour[i];
+					const ContourPoint& next=contact_descriptor.contour[(i+1)<contact_descriptor.contour.size() ? (i+1) : 0];
+					{
+						TessellationEdge te;
+						te.length=((mid.right_id==contact_descriptor.id_a) ? mid.angle*contact_descriptor.intersection_circle_sphere.r : distance_from_point_to_point(mid.p, next.p));
+						te.ids_of_spheres[0]=contact_descriptor.id_a;
+						te.ids_of_spheres[1]=contact_descriptor.id_b;
+						te.ids_of_spheres[2]=((mid.right_id==contact_descriptor.id_a) ? null_id() : mid.right_id);
+						te.sort_ids_of_spheres();
+						tes_edges.push_back(te);
+					}
+					{
+						TessellationVertex tv;
+						tv.position=mid.p;
+						tv.ids_of_spheres[0]=contact_descriptor.id_a;
+						tv.ids_of_spheres[1]=contact_descriptor.id_b;
+						tv.ids_of_spheres[2]=((mid.left_id==contact_descriptor.id_a) ? null_id() : mid.left_id);
+						tv.ids_of_spheres[3]=((mid.right_id==contact_descriptor.id_a) ? null_id() : mid.right_id);
+						tv.sort_ids_of_spheres();
+						tes_vertices.push_back(tv);
+					}
+				}
+			}
+		}
+		return (!tes_edges.empty());
+	}
+
 private:
 	static void init_contour_from_base_and_axis(
 			const UnsignedInt a_id,
 			const SimpleSphere& base,
 			const SimplePoint& axis,
-			Contour& result)
+			Contour& result) noexcept
 	{
 		const SimplePoint first_point=point_and_number_product(any_normal_of_vector(axis), base.r*FLOATCONST(1.19));
 		const Float angle_step=PIVALUE/FLOATCONST(3.0);
@@ -306,7 +497,7 @@ private:
 			const SimplePoint& ac_plane_center,
 			const SimplePoint& ac_plane_normal,
 			const UnsignedInt c_id,
-			Contour& contour)
+			Contour& contour) noexcept
 	{
 		const UnsignedInt outsiders_count=mark_contour(ac_plane_center, ac_plane_normal, c_id, contour);
 		if(outsiders_count>0)
@@ -328,7 +519,7 @@ private:
 			const SimplePoint& ac_plane_center,
 			const SimplePoint& ac_plane_normal,
 			const UnsignedInt c_id,
-			Contour& contour)
+			Contour& contour) noexcept
 	{
 		UnsignedInt outsiders_count=0;
 		for(Contour::iterator it=contour.begin();it!=contour.end();++it)
@@ -347,7 +538,7 @@ private:
 			const SimplePoint& ac_plane_center,
 			const SimplePoint& ac_plane_normal,
 			const UnsignedInt c_id,
-			Contour& contour)
+			Contour& contour) noexcept
 	{
 		if(contour.size()<3)
 		{
@@ -431,7 +622,7 @@ private:
 		}
 	}
 
-	static bool test_if_contour_is_still_cuttable(const SimplePoint& a_center, const SimplePoint& closest_possible_cut_point, const Contour& contour)
+	static bool test_if_contour_is_still_cuttable(const SimplePoint& a_center, const SimplePoint& closest_possible_cut_point, const Contour& contour) noexcept
 	{
 		bool cuttable=false;
 		const Float dist_threshold=squared_distance_from_point_to_point(a_center, closest_possible_cut_point);
@@ -447,7 +638,7 @@ private:
 			const SimplePoint& ic_axis,
 			const UnsignedInt a_id,
 			Contour& contour,
-			Float& sum_of_arc_angles)
+			Float& sum_of_arc_angles) noexcept
 	{
 		UnsignedInt outsiders_count=0;
 		for(UnsignedInt i=0;i<contour.size();i++)
@@ -568,13 +759,18 @@ private:
 						i++;
 					}
 				}
+				if(greater_or_equal(sum_of_arc_angles, PIVALUE*FLOATCONST(2.0)) || (contour.size()>2 && equal(sum_of_arc_angles, PIVALUE*FLOATCONST(2.0), 0.001)))
+				{
+					sum_of_arc_angles=PIVALUE*FLOATCONST(2.0);
+					contour.clear();
+				}
 			}
 		}
 
 		return (outsiders_count>0);
 	}
 
-	static Float calculate_contour_area(const SimpleSphere& ic_sphere, const Contour& contour, SimplePoint& contour_barycenter)
+	static Float calculate_contour_area(const SimpleSphere& ic_sphere, const Contour& contour, SimplePoint& contour_barycenter) noexcept
 	{
 		Float area=FLOATCONST(0.0);
 
@@ -605,7 +801,7 @@ private:
 		return area;
 	}
 
-	static Float calculate_contour_solid_angle(const SimpleSphere& a, const SimpleSphere& b, const SimpleSphere& ic_sphere, const Contour& contour)
+	static Float calculate_contour_solid_angle(const SimpleSphere& a, const SimpleSphere& b, const SimpleSphere& ic_sphere, const Contour& contour) noexcept
 	{
 		Float turn_angle=FLOATCONST(0.0);
 
@@ -657,16 +853,25 @@ private:
 		return solid_angle;
 	}
 
-	static bool check_if_contour_is_central(const SimplePoint& center, const Contour& contour, const SimplePoint& contour_barycenter)
+	static bool check_if_contour_is_central(const SimplePoint& center, const Contour& contour, const SimplePoint& contour_barycenter) noexcept
 	{
-		bool central=true;
-		for(UnsignedInt i=0;i<contour.size() && central;i++)
+		bool central=false;
+		for(UnsignedInt i=0;i<contour.size() && !central;i++)
 		{
-			const UnsignedInt j=((i+1)<contour.size() ? (i+1) : 0);
-			const SimplePoint sidepoint=point_and_number_product(sum_of_points(contour[i].p, contour[j].p), FLOATCONST(0.5));
-			if(dot_product(sub_of_points(contour_barycenter, sidepoint), sub_of_points(center, sidepoint))<FLOATCONST(0.0))
+			central=central || greater(contour[i].angle, PIVALUE);
+		}
+		if(!central)
+		{
+			central=true;
+			for(UnsignedInt i=0;i<contour.size() && central;i++)
 			{
-				central=false;
+				const UnsignedInt j=((i+1)<contour.size() ? (i+1) : 0);
+				const SimplePoint u_ij=unit_point(sub_of_points(contour[j].p, contour[i].p));
+				const SimplePoint n_ijb=sub_of_points(contour_barycenter, sum_of_points(contour[i].p, point_and_number_product(u_ij, dot_product(u_ij, sub_of_points(contour_barycenter, contour[i].p)))));
+				if(dot_product(n_ijb, sub_of_points(center, contour[i].p))<FLOATCONST(0.0))
+				{
+					central=false;
+				}
 			}
 		}
 		return central;

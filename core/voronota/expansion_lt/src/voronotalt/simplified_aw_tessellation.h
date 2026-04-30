@@ -3,7 +3,7 @@
 
 #include <map>
 
-#include "preparation_for_tessellation.h"
+#include "spheres_container.h"
 #include "simplified_aw_tessellation_contact_construction.h"
 #include "time_recorder.h"
 
@@ -21,7 +21,7 @@ public:
 		UnsignedInt id_a;
 		UnsignedInt id_b;
 
-		ContactDescriptorSummary() :
+		ContactDescriptorSummary() noexcept :
 			area(FLOATCONST(0.0)),
 			arc_length(FLOATCONST(0.0)),
 			distance(FLOATCONST(0.0)),
@@ -30,7 +30,7 @@ public:
 		{
 		}
 
-		void set(const SimplifiedAWTessellationContactConstruction::ContactDescriptor& cd)
+		void set(const SimplifiedAWTessellationContactConstruction::ContactDescriptor& cd) noexcept
 		{
 			if(cd.area>FLOATCONST(0.0))
 			{
@@ -42,7 +42,7 @@ public:
 			}
 		}
 
-		void ensure_ids_ordered()
+		void ensure_ids_ordered() noexcept
 		{
 			if(id_a>id_b)
 			{
@@ -58,7 +58,7 @@ public:
 		Float distance;
 		UnsignedInt count;
 
-		TotalContactDescriptorsSummary() :
+		TotalContactDescriptorsSummary() noexcept :
 			area(FLOATCONST(0.0)),
 			arc_length(FLOATCONST(0.0)),
 			distance(FLOATCONST(-1.0)),
@@ -66,7 +66,7 @@ public:
 		{
 		}
 
-		void add(const ContactDescriptorSummary& cds)
+		void add(const ContactDescriptorSummary& cds) noexcept
 		{
 			if(cds.area>FLOATCONST(0.0))
 			{
@@ -86,7 +86,7 @@ public:
 		std::vector<ContactDescriptorSummary> contacts_summaries;
 		TotalContactDescriptorsSummary total_contacts_summary;
 
-		Result() : total_spheres(0), total_collisions(0), total_relevant_collisions(0)
+		Result() noexcept : total_spheres(0), total_collisions(0), total_relevant_collisions(0)
 		{
 		}
 	};
@@ -104,7 +104,7 @@ public:
 
 	static void construct_full_tessellation(
 			const std::vector<SimpleSphere>& spheres,
-			Result& result)
+			Result& result) noexcept
 	{
 		TimeRecorder time_recorder;
 		ResultGraphics result_graphics;
@@ -117,18 +117,30 @@ public:
 			const bool with_graphics,
 			Result& result,
 			ResultGraphics& result_graphics,
-			TimeRecorder& time_recorder)
+			TimeRecorder& time_recorder) noexcept
 	{
-		PreparationForTessellation::Result preparation_result;
-		PreparationForTessellation::prepare_for_tessellation(spheres, grouping_of_spheres, preparation_result, time_recorder);
+		SpheresContainer spheres_container;
+		spheres_container.init(spheres, time_recorder);
+		SpheresContainer::ResultOfPreparationForTessellation preparation_result;
+		spheres_container.prepare_for_tessellation(grouping_of_spheres, preparation_result, time_recorder);
+		construct_full_tessellation(spheres_container, preparation_result, with_graphics, result, result_graphics, time_recorder);
+	}
 
+	static void construct_full_tessellation(
+			const SpheresContainer& spheres_container,
+			const SpheresContainer::ResultOfPreparationForTessellation& preparation_result,
+			const bool with_graphics,
+			Result& result,
+			ResultGraphics& result_graphics,
+			TimeRecorder& time_recorder) noexcept
+	{
 		time_recorder.reset();
 
 		result=Result();
 		result_graphics=ResultGraphics();
 
-		result.total_spheres=preparation_result.total_spheres;
-		result.total_collisions=preparation_result.total_collisions;
+		result.total_spheres=spheres_container.input_spheres().size();
+		result.total_collisions=spheres_container.total_collisions();
 		result.total_relevant_collisions=preparation_result.relevant_collision_ids.size();
 
 		std::vector<ContactDescriptorSummary> possible_contacts_summaries(preparation_result.relevant_collision_ids.size());
@@ -141,17 +153,21 @@ public:
 
 		time_recorder.record_elapsed_miliseconds_and_reset("allocate possible contact summaries");
 
-		#pragma omp parallel
+#ifdef VORONOTALT_OPENMP
+#pragma omp parallel
+#endif
 		{
 			SimplifiedAWTessellationContactConstruction::ContactDescriptor cd;
 			cd.neighbor_descriptors.reserve(24);
 
-			#pragma omp for
+#ifdef VORONOTALT_OPENMP
+#pragma omp for
+#endif
 			for(UnsignedInt i=0;i<preparation_result.relevant_collision_ids.size();i++)
 			{
 				const UnsignedInt id_a=preparation_result.relevant_collision_ids[i].first;
 				const UnsignedInt id_b=preparation_result.relevant_collision_ids[i].second;
-				if(SimplifiedAWTessellationContactConstruction::construct_contact_descriptor(spheres, preparation_result.all_exclusion_statuses, id_a, id_b, preparation_result.all_colliding_ids[id_a], 0.2, 5, with_graphics, cd))
+				if(SimplifiedAWTessellationContactConstruction::construct_contact_descriptor(spheres_container.populated_spheres(), spheres_container.all_exclusion_statuses(), id_a, id_b, spheres_container.all_colliding_ids()[id_a], 0.2, 5, with_graphics, cd))
 				{
 					possible_contacts_summaries[i].set(cd);
 					if(with_graphics)
@@ -190,9 +206,10 @@ public:
 
 		result.contacts_summaries.resize(ids_of_valid_pairs.size());
 
-		#pragma omp parallel
 		{
-			#pragma omp for
+#ifdef VORONOTALT_OPENMP
+#pragma omp parallel for
+#endif
 			for(UnsignedInt i=0;i<ids_of_valid_pairs.size();i++)
 			{
 				result.contacts_summaries[i]=possible_contacts_summaries[ids_of_valid_pairs[i]];
@@ -225,7 +242,7 @@ public:
 	static bool group_results(
 			const Result& full_result,
 			const std::vector<int>& grouping_of_spheres,
-			GroupedResult& grouped_result)
+			GroupedResult& grouped_result) noexcept
 	{
 		TimeRecorder time_recorder;
 		return group_results(full_result, grouping_of_spheres, grouped_result, time_recorder);
@@ -235,7 +252,7 @@ public:
 			const Result& full_result,
 			const std::vector<int>& grouping_of_spheres,
 			GroupedResult& grouped_result,
-			TimeRecorder& time_recorder)
+			TimeRecorder& time_recorder) noexcept
 	{
 		time_recorder.reset();
 
@@ -282,6 +299,47 @@ public:
 		}
 
 		return (!grouped_result.grouped_contacts_summaries.empty());
+	}
+
+	static bool restrict_result_contacts(const bool select_all, const std::vector<std::size_t>& indices, Result& result, ResultGraphics& result_graphics) noexcept
+	{
+		if(select_all)
+		{
+			return !result.contacts_summaries.empty();
+		}
+		if(indices.empty() || result.contacts_summaries.empty())
+		{
+			return false;
+		}
+		bool something_selected=false;
+		Result sub_result;
+		ResultGraphics sub_result_graphics;
+		sub_result.contacts_summaries.reserve(indices.size());
+		if(!result_graphics.contacts_graphics.empty())
+		{
+			sub_result_graphics.contacts_graphics.reserve(indices.size());
+		}
+		for(std::size_t i=0;i<indices.size();i++)
+		{
+			const std::size_t id=indices[i];
+			if(id<result.contacts_summaries.size())
+			{
+				something_selected=true;
+				sub_result.contacts_summaries.push_back(result.contacts_summaries[id]);
+				sub_result.total_contacts_summary.add(result.contacts_summaries[id]);
+				if(result_graphics.contacts_graphics.size()==result.contacts_summaries.size())
+				{
+					sub_result_graphics.contacts_graphics.push_back(result_graphics.contacts_graphics[id]);
+				}
+			}
+		}
+		if(something_selected)
+		{
+			result.contacts_summaries.swap(sub_result.contacts_summaries);
+			result.total_contacts_summary=sub_result.total_contacts_summary;
+			result_graphics.contacts_graphics.swap(sub_result_graphics.contacts_graphics);
+		}
+		return something_selected;
 	}
 };
 

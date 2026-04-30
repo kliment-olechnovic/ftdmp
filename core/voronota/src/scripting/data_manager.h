@@ -1512,7 +1512,7 @@ public:
 		reset_data_dependent_on_atoms();
 	}
 
-	void transform_coordinates_of_atoms(const std::set<std::size_t>& ids, const TransformationOfCoordinates& transformation)
+	void transform_coordinates_of_atoms(const std::set<std::size_t>& ids, const TransformationOfCoordinates& transformation, const bool allow_recomputing_dependencies)
 	{
 		if(ids.empty())
 		{
@@ -1532,7 +1532,7 @@ public:
 
 		transformation.transform_coordinates_of_atoms(atoms_, ids);
 
-		if(ids.size()==num_of_all_atoms && atoms_.size()==num_of_all_atoms)
+		if(allow_recomputing_dependencies && ids.size()==num_of_all_atoms && atoms_.size()==num_of_all_atoms)
 		{
 			refresh_by_saving_and_loading();
 		}
@@ -1540,6 +1540,11 @@ public:
 		{
 			reset_data_dependent_on_atoms();
 		}
+	}
+
+	void transform_coordinates_of_atoms(const std::set<std::size_t>& ids, const TransformationOfCoordinates& transformation)
+	{
+		transform_coordinates_of_atoms(ids, transformation, true);
 	}
 
 	void transform_coordinates_of_atoms(const TransformationOfCoordinates& transformation)
@@ -1739,6 +1744,18 @@ public:
 
 		history_of_actions_on_contacts_.enhancing.clear();
 		history_of_actions_on_contacts_.enhancing.push_back(parameters_to_enhance_contacts);
+	}
+
+	void reset_contacts_adjacencies_by_swapping(std::vector< std::map<std::size_t, double> >& adjacencies, const std::vector<double>& adjacency_perimeters)
+	{
+		if(adjacencies.size()==contacts_.size() && adjacency_perimeters.size()==contacts_.size())
+		{
+			contacts_adjacencies_.swap(adjacencies);
+			for(std::size_t i=0;i<contacts_.size();i++)
+			{
+				contacts_[i].value.props.adjuncts["adjacency"]=adjacency_perimeters[i];
+			}
+		}
 	}
 
 	void reset_contacts_display_states()
@@ -2034,8 +2051,22 @@ public:
 		}
 	}
 
+	bool is_saveable_to_stream() const
+	{
+		if(atoms_.empty() || (!contacts_.empty() && history_of_actions_on_contacts_.constructing.empty()))
+		{
+			return false;
+		}
+		return true;
+	}
+
 	void save_to_stream(std::ostream& output) const
 	{
+		if(!is_saveable_to_stream())
+		{
+			throw std::runtime_error(std::string("Object is not saveable to stream."));
+		}
+
 		output << atoms_.size() << "\n";
 		for(std::size_t i=0;i<atoms_.size();i++)
 		{

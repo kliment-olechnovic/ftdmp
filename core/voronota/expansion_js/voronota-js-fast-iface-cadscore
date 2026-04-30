@@ -455,6 +455,8 @@ prepare_atoms=function(params, model_mod_params)
 	voronota_restrict_atoms("-use", params.restrict_input_atoms);
 	voronota_assert_full_success("Failed to restrict input atoms by the input query");
 	
+	var initial_number_of_accepted_atoms=voronota_last_output().results[0].output.atoms_summary_new.number_total;
+	
 	if(model_mod_params!==null)
 	{
 		if(model_mod_params.run_faspr!="")
@@ -491,9 +493,8 @@ prepare_atoms=function(params, model_mod_params)
 			voronota_restrict_atoms("-use", "([-protein] or [-nucleic])");
 		}
 		voronota_assert_full_success("Failed to restrict input atoms to protein or nucleic only");
+		initial_number_of_accepted_atoms=voronota_last_output().results[0].output.atoms_summary_new.number_total;
 	}
-	
-	var initial_number_of_accepted_atoms=voronota_last_output().results[0].output.atoms_summary_new.number_total;
 	
 	if(params.lt_mode!="true")
 	{
@@ -562,7 +563,7 @@ analyze_interface=function(params, target_object, model_object, initial_summary)
 	summary.iface_model_area=result_cadscore.model_target_area_sum;
 	
 	summary.target_atoms=initial_summary.target_atoms;
-	summary.model_atoms=initial_summary.target_atoms;
+	summary.model_atoms=initial_summary.model_atoms;
 	
 	summary.iface_F1=result_cadscore.score_F1;
 	summary.iface_TP=result_cadscore.confusion_TP;

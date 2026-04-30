@@ -9,9 +9,11 @@
 #include "operators/add_figure_of_text.h"
 #include "operators/add_figure_of_triangulation.h"
 #include "operators/add_figure_of_voxels_test.h"
+#include "operators/add_figures_of_primitive_directions.h"
 #include "operators/cad_score_many.h"
 #include "operators/cad_score.h"
 #include "operators/calculate_akbps.h"
+#include "operators/calculate_akbps_layered.h"
 #include "operators/calculate_betweenness.h"
 #include "operators/calculate_burial_depth.h"
 #include "operators/cat_files.h"
@@ -59,6 +61,7 @@
 #include "operators/export_contacts_as_connected_mesh.h"
 #include "operators/export_contacts_as_pymol_cgo.h"
 #include "operators/export_contacts.h"
+#include "operators/export_directional_atom_type_tuples.h"
 #include "operators/export_figures_as_pymol_cgo.h"
 #include "operators/export_global_adjuncts.h"
 #include "operators/export_objects.h"
@@ -143,6 +146,7 @@
 #include "operators/set_tag_of_atoms.h"
 #include "operators/set_tag_of_contacts.h"
 #include "operators/setup_akbps.h"
+#include "operators/setup_akbps_layered.h"
 #include "operators/setup_chemistry_annotating.h"
 #include "operators/setup_loading.h"
 #include "operators/setup_mock_voromqa.h"
@@ -166,6 +170,7 @@
 #include "operators/tournament_sort.h"
 #include "operators/unset_aliases.h"
 #include "operators/upload_virtual_file.h"
+#include "operators/vcblocks.h"
 #include "operators/voromqa_frustration.h"
 #include "operators/voromqa_global.h"
 #include "operators/voromqa_interface_frustration.h"
@@ -254,7 +259,9 @@ public:
 		set_command_for_data_manager("add-figure-of-text", operators::AddFigureOfText(), true);
 		set_command_for_data_manager("add-figure-of-triangulation", operators::AddFigureOfTriangulation(), true);
 		set_command_for_data_manager("add-figure-of-voxels-test", operators::AddFigureOfVoxelsTest(), true);
+		set_command_for_data_manager("add-figures-of-primitive-directions", operators::AddFiguresOfPrimitiveDirections(), true);
 		set_command_for_data_manager("calculate-akbps", operators::CalculateAKBPs(), true);
+		set_command_for_data_manager("calculate-akbps-layered", operators::CalculateAKBPsLayered(), true);
 		set_command_for_data_manager("calculate-betweenness", operators::CalculateBetweenness(), true);
 		set_command_for_data_manager("calculate-burial-depth", operators::CalculateBurialDepth(), true);
 		set_command_for_data_manager("center-atoms", operators::CenterAtoms(), true);
@@ -288,6 +295,7 @@ public:
 		set_command_for_data_manager("export-contacts-as-connected-mesh", operators::ExportContactsAsConnectedMesh(), false);
 		set_command_for_data_manager("export-contacts-as-pymol-cgo", operators::ExportContactsAsPymolCGO(), false);
 		set_command_for_data_manager("export-contacts", operators::ExportContacts(), false);
+		set_command_for_data_manager("export-directional-atom-type-tuples", operators::ExportDirectionalAtomTypeTuples(), false);
 		set_command_for_data_manager("export-figures-as-pymol-cgo", operators::ExportFiguresAsPymolCGO(), false);
 		set_command_for_data_manager("export-selection-of-atoms", operators::ExportSelectionOfAtoms(), false);
 		set_command_for_data_manager("export-selection-of-contacts", operators::ExportSelectionOfContacts(), false);
@@ -371,6 +379,7 @@ public:
 		set_command_for_data_manager("voromqa-interface-frustration", operators::VoroMQAInterfaceFrustration(), true);
 		set_command_for_data_manager("voromqa-local", operators::VoroMQALocal(), true);
 		set_command_for_data_manager("voromqa-membrane-place", operators::VoroMQAMembranePlace(), true);
+		set_command_for_data_manager("vcblocks", operators::VCBlocks(), true);
 		set_command_for_data_manager("zoom-by-atoms", operators::ZoomByAtoms(), false);
 		set_command_for_data_manager("zoom-by-contacts", operators::ZoomByContacts(), false);
 
@@ -384,6 +393,7 @@ public:
 		set_command_for_extra_actions("print-virtual-file", operators::PrintVirtualFile());
 		set_command_for_extra_actions("delete-virtual-files", operators::DeleteVirtualFiles());
 		set_command_for_extra_actions("setup-akbps", operators::SetupAKBPs());
+		set_command_for_extra_actions("setup-akbps-layered", operators::SetupAKBPsLayered());
 		set_command_for_extra_actions("setup-chemistry-annotating", operators::SetupChemistryAnnotating());
 		set_command_for_extra_actions("setup-loading", operators::SetupLoading());
 		set_command_for_extra_actions("setup-mock-voromqa", operators::SetupMockVoroMQA());

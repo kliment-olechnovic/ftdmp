@@ -120,11 +120,11 @@ public:
 						{
 							const std::string example("2zsk");
 							pdbid_buffer=std::vector<char>(example.begin(), example.end());
-							pdbid_buffer.resize(128, 0);
+							pdbid_buffer.resize(1024, 0);
 						}
 						const std::string textbox_id=std::string("##pdbid");
 						bool requested=false;
-						ImGui::PushItemWidth(70*GUIStyleWrapper::scale_factor());
+						ImGui::PushItemWidth(180*GUIStyleWrapper::scale_factor());
 						if(ImGui::InputText(textbox_id.c_str(), pdbid_buffer.data(), pdbid_buffer.size()-1, ImGuiInputTextFlags_EnterReturnsTrue))
 						{
 							requested=true;
@@ -132,7 +132,7 @@ public:
 						ImGui::PopItemWidth();
 						ImGui::SameLine();
 						{
-							const std::string button_id=std::string("fetch");
+							const std::string button_id=std::string("fetch by PDB ID##fetch_from_pdb");
 							if(ImGui::Button(button_id.c_str()))
 							{
 								requested=true;
@@ -140,7 +140,14 @@ public:
 						}
 						if(requested && pdbid_buffer.data()[0]!=0)
 						{
-							const std::string pdbid_str(pdbid_buffer.data());
+							std::string pdbid_str(pdbid_buffer.data());
+							for(std::size_t j=0;j<pdbid_str.size();j++)
+							{
+								if(pdbid_str[j]==',' || pdbid_str[j]==';')
+								{
+									pdbid_str[j]=' ';
+								}
+							}
 							result="fetch-mmcif ";
 							result+=pdbid_str;
 							if(!menu_open_include_heteroatoms)
@@ -170,6 +177,41 @@ public:
 
 						{
 							ImGui::Checkbox("use mmCIF label (entity) IDs##for_fetch", &menu_open_use_label_ids);
+						}
+
+						ImGui::EndMenu();
+					}
+
+					if(ImGui::BeginMenu("Fetch from AlphaFoldDB"))
+					{
+						static std::vector<char> pdbid_buffer;
+						if(pdbid_buffer.empty())
+						{
+							const std::string example("A0A2K6V5L6");
+							pdbid_buffer=std::vector<char>(example.begin(), example.end());
+							pdbid_buffer.resize(1024, 0);
+						}
+						const std::string textbox_id=std::string("##afdbid");
+						bool requested=false;
+						ImGui::PushItemWidth(120*GUIStyleWrapper::scale_factor());
+						if(ImGui::InputText(textbox_id.c_str(), pdbid_buffer.data(), pdbid_buffer.size()-1, ImGuiInputTextFlags_EnterReturnsTrue))
+						{
+							requested=true;
+						}
+						ImGui::PopItemWidth();
+						ImGui::SameLine();
+						{
+							const std::string button_id=std::string("fetch by UniProt ID##fetch_from_afdb");
+							if(ImGui::Button(button_id.c_str()))
+							{
+								requested=true;
+							}
+						}
+						if(requested && pdbid_buffer.data()[0]!=0)
+						{
+							const std::string pdbid_str(pdbid_buffer.data());
+							result="fetch-afdb ";
+							result+=pdbid_str;
 						}
 
 						ImGui::EndMenu();
