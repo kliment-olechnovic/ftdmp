@@ -800,7 +800,7 @@ then
 		| while read -r ORIGINAL_INPUT_FILE OUTPUT_PDB_FILE
 		do
 			mkdir -p "$(dirname ${OUTPUT_PDB_FILE})"
-			cat "$ORIGINAL_INPUT_FILE" | voronota-js-pdb-utensil-filter-atoms > "$OUTPUT_PDB_FILE"
+			cp "$ORIGINAL_INPUT_FILE" "$OUTPUT_PDB_FILE"
 		done
 	fi
 	
