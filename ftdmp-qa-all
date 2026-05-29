@@ -97,6 +97,7 @@ EXTERNAL_SCORES_FILE=""
 REMAP_CADSCORE="false"
 CRUDE_CADSCORE="false"
 HETEROATOMS_FOR_CADSCORE="false"
+USE_CADSCORE_LT_FOR_NOT_ONLY_INTER_CHAIN="false"
 KEEP_TOP_FAST="9999999"
 KEEP_TOP_SLOW="9999999"
 LIMIT_VOROMQA_LIGHT=""
@@ -195,6 +196,10 @@ do
 		;;
 	--heteroatoms-for-cadscore)
 		HETEROATOMS_FOR_CADSCORE="$OPTARG"
+		shift
+		;;
+	--use-cadscore-lt-not-inter-chain)
+		USE_CADSCORE_LT_FOR_NOT_ONLY_INTER_CHAIN="$OPTARG"
 		shift
 		;;
 	--keep-top-fast)
@@ -625,6 +630,12 @@ if [ "$HETEROATOMS_FOR_CADSCORE" == "true" ]
 then
 	export GLOBAL_FTDMP_CADSCORE_INCLUDE_HETEROATOMS="true"
 fi
+
+if [ "$USE_CADSCORE_LT_FOR_NOT_ONLY_INTER_CHAIN" == "true" ]
+then
+	export GLOBAL_FTDMP_CADSCORE_LT_FOR_NOT_ONLY_INTER_CHAIN="true"
+fi
+
 
 ################################################################################
 
