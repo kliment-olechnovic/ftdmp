@@ -127,7 +127,7 @@ voronota_assert_full_success("Failed to input structure");
 voronota_set_chain_name("-use", "[]", "-chain-name", params.rule);
 voronota_assert_full_success("Failed to change chain names");
 
-voronota_export_atoms("-as-pdb", "-file", params.output_file);
+voronota_export_atoms("-as-pdb", "-file", params.output_file, "-pdb-ter");
 voronota_assert_full_success("Failed to output structure");
 EOF
 
